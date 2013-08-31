@@ -67,7 +67,7 @@ int eval_stmt(char* p_stmt)
 
     dlerror();    /* Clear any existing error */
 
-    /* Writing: dyn_func = (double (*)(double)) dlsym(handle, "dyn_func");
+    /* Writing: dyn_func = (int (*)()) dlsym(handle, "dyn_func");
        would seem more natural, but the C99 standard leaves
        casting from "void *" to a function pointer undefined.
        The assignment used below is the POSIX.1-2003 (Technical
@@ -89,38 +89,74 @@ error:
 }
 #endif // 0
 
-int eval_stmt(char *p_str)
+int eval_stmt(char *p_input)
 {
+    FILE *p_stmt_c = NULL;
     void *handle;
-    double (*cosine)();
+    int (*dyn_fn)();
     char *error;
+    char pre_fn[] = "int dyn_func() {\n";
+    size_t pre_fn_len = strlen(pre_fn);
+    char post_fn[] = ";return 0;\n}\n";
+    size_t post_fn_len = strlen(post_fn);
+    size_t input_length;
+    size_t bytes_written;
+
+    input_length = strlen(p_input);
+    p_stmt_c = fopen("stmt.c", "w+");
+    if (p_stmt_c == NULL)
+    {
+        fprintf(stderr, "file open fail\n");
+        goto error;
+    }
+
+    if (system("gcc -rdynamic -shared -o ./stmt stmt.c") != 0) 
+    {
+        goto error;
+    }
+
+
+    bytes_written = fwrite(pre_fn, strlen(pre_fn), 1, p_stmt_c);
+    bytes_written = fwrite(p_stmt, strlen(p_stmt), 1, p_stmt_c);
+    bytes_written = fwrite(post_fn, strlen(post_fn), 1, p_stmt_c);
+    bytes_written = 0;
+    if (bytes_written != )
+    {
+        goto error;
+    }
+
+
+
 
 //    handle = dlopen("libm.so", RTLD_LAZY);
-    handle = dlopen("./bar", RTLD_LAZY);
+    handle = dlopen("./stmt", RTLD_LAZY);
     if (!handle) {
         fprintf(stderr, "%s\n", dlerror());
-        exit(EXIT_FAILURE);
+        goto error;
     }
 
     dlerror();    /* Clear any existing error */
 
-    /* Writing: cosine = (double (*)(double)) dlsym(handle, "cos");
+    /* Writing: dyn_fn = (int (*)()) dlsym(handle, "cos");
        would seem more natural, but the C99 standard leaves
        casting from "void *" to a function pointer undefined.
        The assignment used below is the POSIX.1-2003 (Technical
        Corrigendum 1) workaround; see the Rationale for the
        POSIX specification of dlsym(). */
 
-    *(void **) (&cosine) = dlsym(handle, "cos");
+    *(void **) (&dyn_fn) = dlsym(handle, "dyn_fn");
 
     if ((error = dlerror()) != NULL)  {
         fprintf(stderr, "%s\n", error);
-        exit(EXIT_FAILURE);
+        goto error;
     }
 
-    printf("%f\n", (*cosine)());
+    printf("%d\n", (*dyn_fn)());
     dlclose(handle);
+
     return 0;
+error:
+    return -1;
 }
 
 int main(void)
