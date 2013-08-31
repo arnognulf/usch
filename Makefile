@@ -1,7 +1,7 @@
 all: usch
 
-usch: usch.o
-		   gcc -g3 usch.o -lncursesw -o $@
+usch: shell.o
+		   gcc -g3 shell.o -lncursesw -o $@
 
 clean:
 		rm -rf *o usch
