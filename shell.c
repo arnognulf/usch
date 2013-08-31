@@ -9,7 +9,9 @@
 
 #define CONTROL(x)  ((x) & 0x1F)
 typedef enum {
+    USCH_FN_START,
     USCH_FN_BEGIN,
+    USCH_FN_BEGIN_PARAN,
     USCH_FN_DIV,
     USCH_FN_END,
     USCH_FN_DISABLED,
@@ -26,7 +28,8 @@ int main(void)
     cbreak();
     noecho();
     keypad(stdscr, TRUE);
-    USCH_FN_STATE fn_state;
+    USCH_FN_STATE fn_state = USCH_FN_START;
+    int fn_startpos = 0;
 
     int c;
     int col, row;
@@ -34,6 +37,20 @@ int main(void)
     {
         switch (c)
         {
+            case '(':
+                {
+                    fn_state = USCH_FN_BEGIN_PARAN;
+                    printw("(");
+                    break;
+                }
+            case '\"':
+                {
+                    fn_state = USCH_FN_DIV;
+                    printw("\"");
+                    break;
+                }
+
+
             case KEY_BACKSPACE /* backspace */:
                 {
                     getyx(stdscr, col, row);
@@ -49,6 +66,8 @@ int main(void)
                     {
                         case USCH_FN_BEGIN:
                             {
+                                getyx(stdscr, col, row);
+                                fn_startpos = col;
                                 printw("(\"", c);
                                 fn_state = USCH_FN_DIV;
                                 break;
@@ -83,3 +102,4 @@ int main(void)
 
     return 0;
 }
+
