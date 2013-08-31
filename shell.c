@@ -30,6 +30,7 @@ int main(void)
     keypad(stdscr, TRUE);
     USCH_FN_STATE fn_state = USCH_FN_START;
     int fn_startpos = 0;
+    printw("/* usch */ ");
 
     int c;
     int col, row;
@@ -89,7 +90,6 @@ int main(void)
                     }
                     break;
                 }
-
             default:
                 {
                     printw("%c", c);
