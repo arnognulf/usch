@@ -22,85 +22,20 @@ typedef enum {
     USCH_FN_END,
     USCH_FN_DISABLED,
 } USCH_FN_STATE;
-#if 0
-int eval_stmt(char* p_stmt)
+
+int eval_stmt(char *p_input_tmp)
 {
+    FILE *p_stmt_c = NULL;
     void *handle;
     int (*dyn_func)();
     char *error;
-    FILE *p_stmt_c = NULL;
-    size_t bytes_written = 0;
-    char pre_fn[] = "int dyn_func() {\n";
-    char post_fn[] = ";return 0;\n}\n";
-    size_t stmt_length;
-
-    stmt_length = strlen(pre_fn);
-    p_stmt_c = fopen("stmt.c", "w+");
-    if (p_stmt_c == NULL)
-    {
-        fprintf(stderr, "file open fail\n");
-        goto error;
-    }
-
-    if (system("gcc -rdynamic -shared -o ./stmt stmt.c") != 0) 
-    {
-        goto error;
-    }
-
-
-    bytes_written = fwrite(pre_fn, strlen(pre_fn), 1, p_stmt_c);
-    bytes_written = fwrite(p_stmt, strlen(p_stmt), 1, p_stmt_c);
-    bytes_written = fwrite(post_fn, strlen(post_fn), 1, p_stmt_c);
-    bytes_written = 0;
-    if (bytes_written != bytes_written)
-    {
-        goto error;
-    }
-
-    
-    // handle = dlopen("libm.so", RTLD_LAZY);
-    handle = dlopen("./stmt", RTLD_LAZY);
-    if (!handle) {
-        fprintf(stderr, "%s\n", dlerror());
-        exit(EXIT_FAILURE);
-    }
-
-    dlerror();    /* Clear any existing error */
-
-    /* Writing: dyn_func = (int (*)()) dlsym(handle, "dyn_func");
-       would seem more natural, but the C99 standard leaves
-       casting from "void *" to a function pointer undefined.
-       The assignment used below is the POSIX.1-2003 (Technical
-       Corrigendum 1) workaround; see the Rationale for the
-       POSIX specification of dlsym(). */
-
-    *(void **) (&dyn_func) = dlsym(handle, "dyn_func");
-
-    if ((error = dlerror()) != NULL)  {
-        fprintf(stderr, "\n%s\n", error);
-        goto error;
-    }
-
-    printf("%f\n", (*dyn_func)());
-    dlclose(handle);
-    return 0;
-error:
-    return -1;
-}
-#endif // 0
-
-int eval_stmt(char *p_input)
-{
-    FILE *p_stmt_c = NULL;
-    void *handle;
-    int (*dyn_fn)();
-    char *error;
-    char pre_fn[] = "int dyn_func() {\n";
+    char pre_fn[] = "#include <stdio.h>\nint dyn_func() {\n";
     size_t pre_fn_len = strlen(pre_fn);
     char post_fn[] = ";return 0;\n}\n";
     size_t post_fn_len = strlen(post_fn);
     size_t input_length;
     size_t bytes_written;
+    char p_input[] = "printf(\"herro\")";
 
     input_length = strlen(p_input);
     p_stmt_c = fopen("stmt.c", "w+");
@@ -110,48 +45,50 @@ int eval_stmt(char *p_input)
         goto error;
     }
 
-    if (system("gcc -rdynamic -shared -o ./stmt stmt.c") != 0) 
+
+    bytes_written = fwrite(pre_fn, 1, strlen(pre_fn), p_stmt_c);
+    if (bytes_written != strlen(pre_fn))
     {
+        fprintf(stderr, "write error 1: %d != %d\n", bytes_written, strlen(pre_fn) + 1);
+        
+        goto error;
+    }
+    bytes_written = fwrite(p_input, 1, strlen(p_input), p_stmt_c);
+    if (bytes_written != strlen(p_input))
+    {
+        fprintf(stderr, "write error 2\n");
+        goto error;
+    }
+    bytes_written = fwrite(post_fn, 1, strlen(post_fn), p_stmt_c);
+    if (bytes_written != strlen(post_fn))
+    {
+        fprintf(stderr, "write error 3\n");
+        goto error;
+    }
+    fclose(p_stmt_c);
+    if (system("gcc -rdynamic -shared -fPIC -o ./stmt stmt.c") != 0) 
+    {
+        
+        fprintf(stderr, "compile error\n");
         goto error;
     }
 
-
-    bytes_written = fwrite(pre_fn, strlen(pre_fn), 1, p_stmt_c);
-    bytes_written = fwrite(p_stmt, strlen(p_stmt), 1, p_stmt_c);
-    bytes_written = fwrite(post_fn, strlen(post_fn), 1, p_stmt_c);
-    bytes_written = 0;
-    if (bytes_written != )
-    {
-        goto error;
-    }
-
-
-
-
-//    handle = dlopen("libm.so", RTLD_LAZY);
     handle = dlopen("./stmt", RTLD_LAZY);
     if (!handle) {
         fprintf(stderr, "%s\n", dlerror());
         goto error;
     }
 
-    dlerror();    /* Clear any existing error */
+    dlerror();
 
-    /* Writing: dyn_fn = (int (*)()) dlsym(handle, "cos");
-       would seem more natural, but the C99 standard leaves
-       casting from "void *" to a function pointer undefined.
-       The assignment used below is the POSIX.1-2003 (Technical
-       Corrigendum 1) workaround; see the Rationale for the
-       POSIX specification of dlsym(). */
-
-    *(void **) (&dyn_fn) = dlsym(handle, "dyn_fn");
+    *(void **) (&dyn_func) = dlsym(handle, "dyn_func");
 
     if ((error = dlerror()) != NULL)  {
         fprintf(stderr, "%s\n", error);
         goto error;
     }
 
-    printf("%d\n", (*dyn_fn)());
+    printf("%d\n", (*dyn_func)());
     dlclose(handle);
 
     return 0;
