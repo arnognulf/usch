@@ -31,14 +31,7 @@ int main(void)
     int fn_startpos = 0;
     int c;
     int col, row;
-    //SCREEN *p_screen = newterm(NULL, stdin, stdout);
     USCH_FN_STATE fn_state = USCH_FN_START;
-
-    //if (p_screen == 0)
-    //    return(-1);
-    //cbreak();
-    //noecho();
-    //keypad(stdscr, TRUE);
 
     p_input = malloc(INPUT_BUFFER_MAX);
     if (p_input == NULL)
@@ -86,7 +79,7 @@ int main(void)
                     input_index--;
                     break;
                 }
-            case ' ':
+            case KEY_SPACE:
                 {
                     switch (fn_state)
                     {
@@ -132,19 +125,19 @@ int main(void)
                     }
                     break;
                 }
-            case '\n':
+            case KEY_NEWLINE:
                 {
                     switch (fn_state)
                     {
                         case USCH_FN_START:
                             {
-                                printf("\n%s", prompt);
+                                printf("\n");
                                 fflush(stdout);
                                 break;
                             }
                         case USCH_FN_BEGIN:
                             {
-                                printf("();\n%s", prompt);
+                                printf("();\n");
                                 fflush(stdout);
                                 p_input[input_index++] = '(';
                                 p_input[input_index++] = ')';
@@ -166,7 +159,7 @@ int main(void)
                             }
                         case USCH_FN_DIV_CONT:
                             {
-                                printf("\");\n%s", prompt);
+                                printf("\");\n");
                                 fflush(stdout);
                                 p_input[input_index++] = '"';
                                 p_input[input_index++] = ')';
@@ -184,7 +177,7 @@ int main(void)
                     {
                         goto end;
                     }
-                    printf("%s\n", prompt);
+                    printf("%s", prompt);
                     fflush(stdout);
 
                     fn_state = USCH_FN_START;
@@ -198,8 +191,7 @@ int main(void)
                     }
 
                     p_input[input_index++] = c;
-                    //printf("%c", c);
-                    printf("%d", (unsigned int)c);
+                    printf("%c", c);
                     fflush(stdout);
                     break;
                 }
