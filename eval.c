@@ -3,19 +3,27 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 
-int eval_stmt(char *p_input_tmp)
+int eval_stmt(char *p_input)
 {
     FILE *p_stmt_c = NULL;
     void *handle;
     int (*dyn_func)();
     char *error;
-    char pre_fn[] = "#include <stdio.h>\nint dyn_func() {\n";
-    size_t pre_fn_len = strlen(pre_fn);
+    // TODO: we need to determine wether stmt need to be usch-defined or not
+    // declare dummy function to get overridden errors
+    // use macro to call the real function
+    char pre_fn[] = "\
+                     #include \"usch.h\"\n\
+                     int dyn_func()\n\
+    {\n\
+";
+
+                     size_t pre_fn_len = strlen(pre_fn);
     char post_fn[] = ";return 0;\n}\n";
     size_t post_fn_len = strlen(post_fn);
     size_t input_length;
     size_t bytes_written;
-    char p_input[] = "printf(\"herro\")";
+    //char p_input[] = "printf(\"herro\")";
 
     input_length = strlen(p_input);
     p_stmt_c = fopen("stmt.c", "w+");

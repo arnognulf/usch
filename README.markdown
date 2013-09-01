@@ -7,7 +7,7 @@ Commands are entered as-is with the REPL filling out the blanks (or more correct
 
 All commands not colliding with C functions or macros are declared as:
 
-    int cmd("arg1", "arg2", ... "arg n");
+    int cmd("arg1", "arg2", ..., "arg n");
 
 Additional commands
 -------------------
