@@ -1,7 +1,7 @@
 all: usch
 
-usch: shell.o
-		   gcc -g3 -rdynamic shell.o -lncursesw -ldl -o $@
+usch: shell.o pmcurses.o eval.o
+		   gcc -g3 -rdynamic shell.o pmcurses.o eval.o -ldl -o $@
 
 clean:
 		rm -rf *o usch
