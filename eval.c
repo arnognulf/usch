@@ -2,13 +2,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dlfcn.h>
+#include "usch.h"
 
 int eval_stmt(char *p_input)
 {
     FILE *p_stmt_c = NULL;
     void *handle;
     int (*dyn_func)();
-    char *error;
+    char *p_error = NULL;
+    char **pp_path = NULL;
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
@@ -18,13 +20,17 @@ int eval_stmt(char *p_input)
     {\n\
 ";
 
-                     size_t pre_fn_len = strlen(pre_fn);
+    size_t pre_fn_len = strlen(pre_fn);
     char post_fn[] = ";return 0;\n}\n";
     size_t post_fn_len = strlen(post_fn);
     size_t input_length;
     size_t bytes_written;
     //char p_input[] = "printf(\"herro\")";
 
+    if (usch_strsplit(getenv("PATH"), ":", &pp_path) < 0)
+    {
+        goto error;
+    }
     input_length = strlen(p_input);
     p_stmt_c = fopen("stmt.c", "w+");
     if (p_stmt_c == NULL)
@@ -71,13 +77,14 @@ int eval_stmt(char *p_input)
 
     *(void **) (&dyn_func) = dlsym(handle, "dyn_func");
 
-    if ((error = dlerror()) != NULL)  {
-        fprintf(stderr, "%s\n", error);
+    if ((p_error = dlerror()) != NULL)  {
+        fprintf(stderr, "%s\n", p_error);
         goto error;
     }
 
     printf("%d\n", (*dyn_func)());
     dlclose(handle);
+    free(pp_path);
 
     return 0;
 error:
