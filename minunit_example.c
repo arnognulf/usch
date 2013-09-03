@@ -27,12 +27,12 @@
  int main(int argc, char **argv) {
      char *result = all_tests();
      if (result != 0) {
-         printf("%s\n", result);
+         printf("\033[31m EPIC FAIL!\033[0m %s\n", result);
      }
      else {
-         printf("ALL TESTS PASSED\n");
+         printf("\033[32m A WINNER IS YOU!\033[0m ALL TESTS PASSED\n");
      }
-     printf("Tests run: %d\n", tests_run);
+     printf(" Tests run: %d\n", tests_run);
  
      return result != 0;
  }
