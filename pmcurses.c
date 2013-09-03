@@ -8,6 +8,17 @@ void move(int col, int row)
 {
 
 }
+void backspace(int num)
+{
+    int i;
+    printf("\033[%dD", num);
+    for (i = 0; i < num; i++)
+    {
+        printf(" ");
+    }
+    printf("\033[%dD", num);
+    fflush(stdout);
+}
 char getch() {
     char buf = 0;
     struct termios old = {0};

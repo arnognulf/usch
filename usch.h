@@ -11,6 +11,7 @@ extern "C" {
 #include <errno.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
+
 /*! \file structcmd.h
  *     \brief A Documented file.
  *         
@@ -51,6 +52,7 @@ extern "C" {
      *             \param buf The buffer to read into.
      *                 \param count The number of bytes to read.
      *                 */
+
 static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
 {
     char** pp_out = NULL;
@@ -59,6 +61,7 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
     size_t len_delims;
     size_t i, j;
     size_t num_str = 0;
+    int out_pos = 0;
 
     if (p_in == NULL || p_delims == NULL || ppp_out == NULL)
         goto error;
@@ -223,6 +226,24 @@ static inline int usch_cd(char *p_dir)
 #else
 #define cd(str) usch_cd((str))
 #endif // cd
+static inline int usch_whereis(char** pp_cached_path, int path_items, char* p_item, char** pp_dest)
+{
+    int i;
+    if (pp_cached_path == NULL)
+    {
+        if (usch_strsplit(getenv("PATH"), ":", &pp_cached_path) < 1)
+        {
+            goto error;
+        }
+    }
+    for (i = 0; i < path_items; i++)
+    {
+        char* p_cand = strcat(pp_cached_path[i], p_item);
+    }
+    return 0;
+error:
+    return -1;
+}
 static inline int usch_cmd(size_t num_args, char *p_name, ...)
 {
     va_list p_ap = {{0}};
