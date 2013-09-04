@@ -61,6 +61,7 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
     size_t len_delims;
     size_t i, j;
     size_t num_str = 0;
+    size_t size = 0;
     int out_pos = 0;
 
     if (p_in == NULL || p_delims == NULL || ppp_out == NULL)
@@ -68,6 +69,7 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
 
     len_in = strlen(p_in);
     len_delims = strlen(p_delims);
+    num_str = 1;
     for (i = 0; i < len_in; i++)
     {
         for (j = 0; j < len_delims; j++)
@@ -79,7 +81,8 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
         }
     }
 
-    pp_out = malloc((len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*));
+    size = (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
+    pp_out = malloc(size);
     if (pp_out == NULL)
         goto error;
     
@@ -87,6 +90,7 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
     memcpy(p_out, p_in, len_in + 1);
 
     pp_out[out_pos++] = p_out;
+
     for (i = 0; i < len_in; i++)
     {
         for (j = 0; j < len_delims; j++)
@@ -94,11 +98,11 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
             if (p_out[i] == p_delims[j])
             {
                 p_out[i] = '\0';
-                pp_out[out_pos++] = &p_out[i];
+                pp_out[out_pos++] = &p_out[i+1];
             }
         }
     }
-    pp_out[num_str] = NULL;
+    j = 0;
     
     *ppp_out = pp_out;
     return (int)num_str;
