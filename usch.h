@@ -11,48 +11,18 @@ extern "C" {
 #include <errno.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
+#include <glob.h>
 
-/*! \file structcmd.h
- *     \brief A Documented file.
- *         
- *             Details.
- *             */
-    /*! \def MAX(a,b)
-     *     \brief A macro that returns the maximum of \a a and \a b.
-     *        
-     *            Details.
-     *            */
-    /*! \var typedef unsigned int UINT32
-     *     \brief A type definition for a .
-     *         
-     *             Details.
-     *             */
-    /*! \var int errno
-     *     \brief Contains the last error code.
-     *         \warning Not thread safe!
-     *         */
-    /*! \fn int open(const char *pathname,int flags)
-     *     \brief Opens a file descriptor.
-     *         \param pathname The name of the descriptor.
-     *             \param flags Opening flags.
-     *             */
-    /*! \fn int close(int fd)
-     *     \brief Closes the file descriptor \a fd.
-     *         \param fd The descriptor to close.
-     *         */
-    /*! \fn size_t write(int fd,const char *buf, size_t count)
-     *     \brief Writes \a count bytes from \a buf to the filedescriptor \a fd.
-     *         \param fd The descriptor to write to.
-     *             \param buf The data buffer to write.
-     *                 \param count The number of bytes to write.
-     *                 */
-    /*! \fn int read(int fd,char *buf,size_t count)
-     *     \brief Read bytes from a file descriptor.
-     *         \param fd The descriptor to read from.
-     *             \param buf The buffer to read into.
-     *                 \param count The number of bytes to read.
-     *                 */
-
+/**
+ * <A short one line description>
+ *  
+ *  <Longer description>
+ *  <May span multiple lines or paragraphs as needed>
+ *   
+ *   @param  Description of method's or function's input parameter
+ *   @param  ...
+ *   @return Description of the return value
+ *   */
 static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
 {
     char** pp_out = NULL;
@@ -116,6 +86,16 @@ error:
 //
 //
 //hh
+/**
+ * <A short one line description>
+ *  
+ *  <Longer description>
+ *  <May span multiple lines or paragraphs as needed>
+ *   
+ *   @param  Description of method's or function's input parameter
+ *   @param  ...
+ *   @return Description of the return value
+ *   */
 static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char *p_str, ...)
 {
     va_list p_ap = {{0}};
@@ -149,29 +129,23 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
         pp_argv[i + 1] = va_arg(p_ap, char *);
     }
 
-    child_pid = fork();
-    if(child_pid == 0)
-    {
-        execv(pp_argv[0], pp_argv);
-        if(errno == EACCES)
-        {
-            goto end;
-        }
-        if(errno == ENOEXEC)
-        {
-            goto end;
-        }
-
-        goto end;
-    }
-    waitpid(child_pid, &child_status, WEXITED);
-end:
     va_end(p_ap);
 
     free(pp_argv);
 
     return 0;
 }
+/**
+ * <A short one line description>
+ *  
+ *  <Longer description>
+ *  <May span multiple lines or paragraphs as needed>
+ *   
+ *   @param  Description of method's or function's input parameter
+ *   @param  ...
+ *   @return Description of the return value
+ *   */
+
 static inline int usch_cd(char *p_dir)
 {
     int error; 
@@ -230,6 +204,17 @@ static inline int usch_cd(char *p_dir)
 #else
 #define cd(str) usch_cd((str))
 #endif // cd
+/**
+ * <A short one line description>
+ *  
+ *  <Longer description>
+ *  <May span multiple lines or paragraphs as needed>
+ *   
+ *   @param  Description of method's or function's input parameter
+ *   @param  ...
+ *   @return Description of the return value
+ *   */
+
 static inline int usch_whereis(char** pp_cached_path, int path_items, char* p_item, char** pp_dest)
 {
     int i;
@@ -248,6 +233,17 @@ static inline int usch_whereis(char** pp_cached_path, int path_items, char* p_it
 error:
     return -1;
 }
+/**
+ * <A short one line description>
+ *  
+ *  <Longer description>
+ *  <May span multiple lines or paragraphs as needed>
+ *   
+ *   @param  Description of method's or function's input parameter
+ *   @param  ...
+ *   @return Description of the return value
+ *   */
+
 static inline int usch_cmd(size_t num_args, char *p_name, ...)
 {
     va_list p_ap = {{0}};
