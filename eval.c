@@ -24,10 +24,69 @@
 #include <string.h>
 #include <stdlib.h>
 #include <dlfcn.h>
+#include <ctype.h>
+#include <assert.h>
 #include "usch.h"
+
+typedef struct {
+    char *p_symname;
+} definition_t;
+
+int parse_line(char *p_input, definition_t *p_definition)
+{
+    definition_t definition = {0};
+    int status = 1;
+    size_t i = 0;
+    size_t length;
+    char *p_symname = NULL;
+
+    length = strlen(p_input);
+    p_symname = calloc(length, 0);
+    if (p_symname == NULL)
+    {
+        status = -1;
+        goto end;
+    }
+    while (p_input[i] == ' ' || p_input[i] == '\t')
+        i++;
+
+    for (; i < length; i++)
+    {
+        char c = p_input[i];
+        switch (p_input[i])
+        {
+            case '\t':
+            case ' ':
+                {
+                    break;
+                }
+            case '(':
+                {
+
+                    break;
+                }
+                default:
+                {
+                    if (isalnum(c) != c)
+                    {
+                        p_symname[i] = c;
+                    }
+                    else
+                    {
+                        assert(0);
+                    }
+                    break;
+                }
+        }
+    }
+    p_definition->p_symname = p_symname;
+end:
+    return status;
+}
 
 int eval_stmt(char *p_input)
 {
+    definition_t definition = {0};
     FILE *p_stmt_c = NULL;
     void *handle;
     int (*dyn_func)();
@@ -36,18 +95,21 @@ int eval_stmt(char *p_input)
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
-    char pre_fn[] = "\
-                     #include \"usch.h\"\n\
-                     int dyn_func()\n\
-    {\n\
+    char pre1[] = "\
+#include \"usch.h\"\n\
+#define ";
+    char pre2[] = "\
+(...) usch_cmd(USCH_ARGC(__VA_ARGS__), \"";
+    char pre3[] = "\", #__VA_ARGS__)\n\
+int dyn_func()\n\
+{\n\
 ";
 
-    size_t pre_fn_len = strlen(pre_fn);
     char post_fn[] = ";return 0;\n}\n";
     size_t post_fn_len = strlen(post_fn);
     size_t input_length;
     size_t bytes_written;
-    //char p_input[] = "printf(\"herro\")";
+    char *p_fnname = NULL;
 
     if (usch_strsplit(getenv("PATH"), ":", &pp_path) < 0)
     {
@@ -61,20 +123,23 @@ int eval_stmt(char *p_input)
         goto error;
     }
 
-
-    bytes_written = fwrite(pre_fn, 1, strlen(pre_fn), p_stmt_c);
-    if (bytes_written != strlen(pre_fn))
+    if (parse_line(p_input, &definition) < 1)
     {
-        fprintf(stderr, "write error 1: %d != %d\n", bytes_written, strlen(pre_fn) + 1);
-        
         goto error;
     }
+    bytes_written = fwrite(pre1, 1, strlen(pre1), p_stmt_c);
+    bytes_written = fwrite(definition.p_symname, 1, strlen(definition.p_symname), p_stmt_c);
+    bytes_written = fwrite(pre2, 1, strlen(pre2), p_stmt_c);
+    bytes_written = fwrite(definition.p_symname, 1, strlen(definition.p_symname), p_stmt_c);
+    bytes_written = fwrite(pre3, 1, strlen(pre3), p_stmt_c);
+   
     bytes_written = fwrite(p_input, 1, strlen(p_input), p_stmt_c);
     if (bytes_written != strlen(p_input))
     {
         fprintf(stderr, "write error 2\n");
         goto error;
     }
+
     bytes_written = fwrite(post_fn, 1, strlen(post_fn), p_stmt_c);
     if (bytes_written != strlen(post_fn))
     {
@@ -104,7 +169,7 @@ int eval_stmt(char *p_input)
         goto error;
     }
 
-    printf("%d\n", (*dyn_func)());
+    //printf("%d\n", (*dyn_func)());
     dlclose(handle);
     free(pp_path);
 
