@@ -57,13 +57,30 @@ static char * test_cd()
 
 static char * test_whereis()
 {
-    return "not implemented";
+    char *p_message = NULL;
+    char *p_dest = NULL;
+    int status = usch_whereis("sh", &p_dest);
+    mu_assert("error: usch_whereis(\"sh\", &p_dest) < 1", status > 0);
+    mu_assert("error: usch_whereis(\"sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
+    free(p_dest);
+    p_dest = NULL;
+    status = usch_whereis("/bin/sh", &p_dest);
+    mu_assert("error: usch_whereis(\"sh\", &p_dest) < 1", status > 0);
+    mu_assert("error: usch_whereis(\"/bin/sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
+    free(p_dest);
+    p_dest = NULL;
+    printf("world\n");
+
+    return NULL;
+cleanup:
+    return p_message;
 }
    
 static char * all_tests()
 {
     char *p_message = NULL;
      mu_run_test(test_strsplit);
+     mu_run_test(test_whereis);
      return 0;
 }
 int main(int argc, char **argv)

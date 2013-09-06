@@ -31,10 +31,14 @@ extern "C" {
 #include <string.h>
 #include <malloc.h>
 #include <errno.h>
+#include <glob.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <sys/unistd.h>
 #include <sys/wait.h>
-#include <glob.h>
+#include <unistd.h>
 
+#define USCH_NULCHAR_LEN 1
 /**
  * <A short one line description>
  *  
@@ -237,23 +241,109 @@ static inline int usch_cd(char *p_dir)
  *   @return Description of the return value
  *   */
 
-static inline int usch_whereis(char** pp_cached_path, int path_items, char* p_item, char** pp_dest)
+static inline int usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
+    int status = 0;
     int i;
-    if (pp_cached_path == NULL)
+    char *p_dest = NULL;
+    char **pp_path = NULL;
+    char **pp_relarray = NULL;
+    int num_items = 0;
+    char *p_basename = NULL;
+    char *p_item = NULL;
+    char *p_item_copy = NULL;
+    size_t item_length = strlen(p_search_item);
+
+    if (p_search_item[0] == '/' || p_search_item[0] == '.')
     {
-        if (usch_strsplit(getenv("PATH"), ":", &pp_cached_path) < 1)
+        int basename_index = -1;
+        pp_relarray = (char**)calloc(1, sizeof(char*));
+        if (pp_relarray == NULL)
         {
-            goto error;
+            status = -1;
+            goto end;
         }
+        p_item_copy = strdup(p_search_item);
+        if (p_item_copy == NULL)
+        {
+            status = -1;
+            goto end;
+        }
+
+        for (i = 0; i < item_length; i++)
+        {
+            if (p_item_copy[i] == '/')
+            {
+                basename_index = i;
+            }
+        }
+        if (basename_index < 0)
+        {
+            status = -1;
+            goto end;
+        }
+        p_item_copy[basename_index] = '\0';
+
+        pp_relarray[0] = p_item_copy;
+        pp_path = pp_relarray;
+        num_items = 1;
+        p_item = &p_item_copy[basename_index + 1];
     }
-    for (i = 0; i < path_items; i++)
+    else
     {
-        char* p_cand = strcat(pp_cached_path[i], p_item);
+        p_item = p_search_item;
+        pp_path = pp_cached_path;
+        num_items = path_items;
     }
-    return 0;
-error:
-    return -1;
+
+    for (i = 0; i < num_items; i++)
+    {
+        size_t dir_length = strlen(pp_path[i]);
+        char new_path[dir_length + 1 + item_length + 1];
+        struct stat sb;
+
+        memcpy(new_path, pp_path[i], dir_length);
+        new_path[dir_length] = '/';
+        memcpy(&new_path[dir_length + 1], p_item, item_length);
+        new_path[dir_length + 1 + item_length] = '\0';
+        if (stat(new_path, &sb) == -1)
+            continue;
+
+        status = 1;
+        // TODO: discard if not executable
+        //printf("%s %lo\n", new_path, sb.st_mode);
+        p_dest = (char*)malloc(dir_length + 1 + item_length + 1);
+        if (p_dest == NULL)
+        {
+            status = -1;
+            goto end;
+        }
+        memcpy(p_dest, new_path, dir_length + item_length + 1);
+        *pp_dest = p_dest;
+        p_dest = NULL;
+        goto end;
+    }
+end:
+    free(p_item_copy);
+    free(p_dest);
+
+    return status;
+}
+static inline int usch_whereis(char* p_item, char** pp_dest)
+{
+    char **pp_path = NULL;
+    int status = 0;
+    int num_items = 0;
+    num_items = usch_strsplit(getenv("PATH"), ":", &pp_path);
+    if (num_items < 1)
+    {
+        status = -1;
+        goto end;
+    }
+    status = usch_cached_whereis(pp_path, num_items, p_item, pp_dest);
+end:
+    free(pp_path);
+    return status;
 }
 /**
  * <A short one line description>
@@ -275,6 +365,8 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
     char **pp_argv = NULL;
     pid_t child_pid;
     int child_status;
+    char *p_fullname = NULL;
+    int status = 0;
 
     if (p_name == NULL)
     {
@@ -282,7 +374,12 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
     }
 
     pp_argv = calloc(num_args + 2, sizeof(char*));
-    pp_argv[0] = p_name;
+    status = usch_whereis(p_name, &p_fullname);
+    if (status < 1)
+    {
+        goto end;
+    }
+    pp_argv[0] = p_fullname;
 
     p_actual_format = calloc(num_args*2, sizeof(char));
 
@@ -317,7 +414,8 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
     waitpid(child_pid, &child_status, WEXITED);
 end:
     va_end(p_ap);
-
+    
+    free(p_fullname);
     free(pp_argv);
 
     return 0;
