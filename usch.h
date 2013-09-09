@@ -356,7 +356,7 @@ end:
  *   @return Description of the return value
  *   */
 
-static inline int usch_cmd(size_t num_args, char *p_name, ...)
+static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {
     va_list p_ap = {{0}};
     int i;
@@ -364,8 +364,8 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
     char *p_actual_format = NULL;
     char **pp_argv = NULL;
     pid_t child_pid;
-    int child_status;
-    char *p_fullname = NULL;
+    pid_t w;
+    int child_status = -1;
     int status = 0;
 
     if (p_name == NULL)
@@ -373,13 +373,12 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
         return -1;
     }
 
-    pp_argv = calloc(num_args + 2, sizeof(char*));
-    status = usch_whereis(p_name, &p_fullname);
-    if (status < 1)
+    pp_argv = calloc(num_args + 1, sizeof(char*));
+    if (pp_argv == NULL)
     {
+        status = -1;
         goto end;
     }
-    pp_argv[0] = p_fullname;
 
     p_actual_format = calloc(num_args*2, sizeof(char));
 
@@ -391,49 +390,68 @@ static inline int usch_cmd(size_t num_args, char *p_name, ...)
     p_name = p_actual_format;
 
     va_start(p_ap, p_name);
+
     for (i = 0; i < num_args; i++)
     {
-        pp_argv[i + 1] = va_arg(p_ap, char *);
+        pp_argv[i] = va_arg(p_ap, char *);
     }
 
     child_pid = fork();
+    if ( child_pid == -1 ) {
+        perror("Cannot proceed. fork() error");
+                return 1;
+    }
     if(child_pid == 0)
     {
-        execv(pp_argv[0], pp_argv);
-        if(errno == EACCES)
-        {
-            goto end;
-        }
-        if(errno == ENOEXEC)
-        {
-            goto end;
-        }
+        int execv_status = execvp(pp_argv[0], pp_argv);
 
-        goto end;
+        _exit(execv_status);
     }
-    waitpid(child_pid, &child_status, WEXITED);
-end:
-    va_end(p_ap);
-    
-    free(p_fullname);
-    free(pp_argv);
+    else {                    /* Code executed by parent */
+        do {
+            w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
+            if (w == -1) {
+                perror("waitpid");
+                exit(EXIT_FAILURE);
+            }
 
-    return 0;
+            if (WIFEXITED(child_status)) 
+            {
+                status = WEXITSTATUS(child_status);
+            }
+            else if (WIFSIGNALED(child_status))
+            {
+                printf("killed by signal %d\n", WTERMSIG(child_status));
+            }
+            else if (WIFSTOPPED(child_status))
+            {
+                printf("stopped by signal %d\n", WSTOPSIG(child_status));
+            }
+            else if (WIFCONTINUED(child_status))
+            {
+                printf("continued\n");
+            }
+        } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+    }
+
+end:
+    if (num_args > 1)
+    {
+        va_end(p_ap);
+    }
+ 
+    fflush(stdout);
+    free(pp_argv);
+    free(p_actual_format);
+
+    return status;
 }
 
 #define USCH_ARGC(...) USCH_ARGC_IMPL(__VA_ARGS__, 5,4,3,2,1)
 #define USCH_ARGC_IMPL(_1,_2,_3,_4,_5,N,...) N
+#define USCH_COUNT_ARGS(...) usch_cmd_impl(USCH_ARGC(__VA_ARGS__), "", __VA_ARGS__)
+#define usch_cmd(cmd, ...) USCH_COUNT_ARGS(cmd, ##__VA_ARGS__)
 
-#if 0
-#define ls(...) usch_cmd(USCH_ARGC(__VA_ARGS__), "/bin/ls", __VA_ARGS__)
-
-int main()
-{
-    //ls("-al");
-    ls("-1", "/");
-    exit(0);
-}
-#endif // 0
 #ifdef __cplusplus
 }
 #endif // __cplusplus

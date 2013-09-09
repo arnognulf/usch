@@ -69,19 +69,39 @@ static char * test_whereis()
     mu_assert("error: usch_whereis(\"/bin/sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
     free(p_dest);
     p_dest = NULL;
-    printf("world\n");
 
     return NULL;
 cleanup:
     return p_message;
 }
-   
+
+#define test_num_args(...) usch_cmd("./test_num_args", ##__VA_ARGS__)
+
+static char *test_usch_cmd()
+{
+    char *p_message = NULL;
+    char *p_dest = NULL;
+    int num_args;
+    num_args = test_num_args("arg1");
+    mu_assert("error: test_num_args(\"arg1\") != 2", num_args == 2);
+
+    num_args = test_num_args("arg1", "arg2");
+    mu_assert("error: test_num_args(\"arg1\", \"arg2\") != 3", num_args == 3);
+
+    num_args = test_num_args("arg1", "arg2", "arg3");
+    mu_assert("error: test_num_args(\"arg1\", \"arg2\", \"arg3\") != 3", num_args == 4);
+    return NULL;
+cleanup:
+    return p_message;
+}
+    
 static char * all_tests()
 {
     char *p_message = NULL;
-     mu_run_test(test_strsplit);
-     mu_run_test(test_whereis);
-     return 0;
+    mu_run_test(test_strsplit);
+    mu_run_test(test_whereis);
+    mu_run_test(test_usch_cmd);
+    return 0;
 }
 int main(int argc, char **argv)
 {

@@ -144,20 +144,16 @@ int main(void)
                                 p_input[input_index++] = ';';
                                 break;
                             }
-                        case USCH_FN_DIV:
+                        case USCH_FN_DIV_CONT:
                             {
-                                //getyx(stdscr, col, row);
-                                //row = MAX(strlen(prompt), row - 1);
-                                //move(col, row);
                                 printf(" ");
-                                //move(col, row);
                                 printf(");\n");
                                 fflush(stdout);
                                 p_input[input_index++] = ')';
                                 p_input[input_index++] = ';';
                                 break;
                             }
-                        case USCH_FN_DIV_CONT:
+                        case USCH_FN_DIV:
                             {
                                 printf("\");\n");
                                 fflush(stdout);
@@ -173,6 +169,8 @@ int main(void)
                     }
                     p_input[input_index++] = '\0';
                     status = eval_stmt(p_input);
+                    p_input[0] = '\0';
+                    input_index = 0;
                     if (status)
                     {
                         goto end;
@@ -198,9 +196,6 @@ int main(void)
         }
     }
 end:
-    printf("\nFIN!\n");
-    getch();
-
     return 0;
 }
 
