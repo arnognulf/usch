@@ -86,51 +86,79 @@ end:
     return status;
 }
 
+#define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
+
 int eval_stmt(char *p_input)
 {
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
-    void *handle;
+    int stmt_fd = -1;
+    void *p_handle = NULL;
     int (*dyn_func)();
     char *p_error = NULL;
     char **pp_path = NULL;
+    size_t filename_length;
+    size_t dylib_length;
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
     char usch_h[] = "\
-#include \"usch.h\"\n";
+#include <usch.h>\n";
 
                      char pre1[] = "\
 #define ";
-                     char pre2[] = "\
-                     (...) usch_cmd(\"";
+                     char pre2[] = "(...) usch_cmd(\"";
     char pre3[] = "\", ##__VA_ARGS__)\n";
 
     char dyn_func_def[] = "int dyn_func()\n\
     {\n\
         ";
 
+        char expr_c_filename[] = "expr.c";
+        char dylib_filename[] = "dyn_stmt";
         char post_fn[] = ";return 0;\n}\n";
         size_t post_fn_len = strlen(post_fn);
         size_t input_length;
         size_t bytes_written;
         char *p_fnname = NULL;
+        char *p_tempdir = NULL;
+        char *p_tempfile = NULL;
+        char *p_tempdylib = NULL;
+        size_t tempdir_len = 0;
+        char dir_template[] = "/tmp/usch-XXXXXX";
 
         if (usch_strsplit(getenv("PATH"), ":", &pp_path) < 0)
         {
-            goto error;
+            goto end;
         }
         input_length = strlen(p_input);
-        p_stmt_c = fopen("stmt.c", "w+");
+        p_tempdir = mkdtemp(dir_template);
+        if (p_tempdir == NULL)
+        {
+            fprintf(stderr, "dir creation failed\n");
+            goto end;
+        }
+        tempdir_len = strlen(p_tempdir);
+        filename_length = tempdir_len + 1 + strlen(expr_c_filename) + 1;
+        p_tempfile = malloc(filename_length);
+        if (p_tempfile == NULL)
+        {
+            goto end;
+        }
+        strcpy(p_tempfile, p_tempdir);
+        p_tempfile[tempdir_len] = '/';
+        strcpy(&p_tempfile[tempdir_len + 1], expr_c_filename);
+        p_tempfile[filename_length-1] = '\0';
+        p_stmt_c = fopen(p_tempfile, "w+");
         if (p_stmt_c == NULL)
         {
-            fprintf(stderr, "file open fail\n");
-            goto error;
+            printf("file open fail\n");
+            goto end;
         }
 
         if (parse_line(p_input, &definition) < 1)
         {
-            goto error;
+            goto end;
         }
         bytes_written = fwrite(usch_h, 1, strlen(usch_h), p_stmt_c);
         if (strcmp(definition.p_symname, "cd") != 0)
@@ -146,44 +174,57 @@ int eval_stmt(char *p_input)
         if (bytes_written != strlen(p_input))
         {
             fprintf(stderr, "write error 2\n");
-            goto error;
+            goto end;
         }
-        printf("p_input: %s\n", p_input);
 
         bytes_written = fwrite(post_fn, 1, strlen(post_fn), p_stmt_c);
         if (bytes_written != strlen(post_fn))
         {
-            fprintf(stderr, "write error 3\n");
-            goto error;
+            fprintf(stderr, "usch: write error 3\n");
+            goto end;
         }
         fclose(p_stmt_c);
-        if (system("gcc -rdynamic -shared -fPIC -o ./stmt stmt.c") != 0) 
+        p_stmt_c = NULL;
+        dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
+        p_tempdylib = malloc(dylib_length);
+        if (p_tempdylib == NULL)
         {
-
-            fprintf(stderr, "compile error\n");
-            goto error;
+            goto end;
+        }
+        strcpy(p_tempdylib, p_tempdir);
+        p_tempdylib[tempdir_len] = '/';
+        strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
+        p_tempdylib[dylib_length-1] = '\0';
+        if (usch_shell_cc("-rdynamic", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
+        {
+            fprintf(stderr, "usch: compile error\n");
+            goto end;
         }
 
-        handle = dlopen("./stmt", RTLD_LAZY);
-        if (!handle) {
+        p_handle = dlopen(p_tempdylib, RTLD_LAZY);
+        if (!p_handle) {
             fprintf(stderr, "%s\n", dlerror());
-            goto error;
+            goto end;
         }
 
         dlerror();
 
-        *(void **) (&dyn_func) = dlsym(handle, "dyn_func");
+        *(void **) (&dyn_func) = dlsym(p_handle, "dyn_func");
 
         if ((p_error = dlerror()) != NULL)  {
             fprintf(stderr, "%s\n", p_error);
-            goto error;
+            goto end;
         }
         (*dyn_func)();
 
-        dlclose(handle);
+end:
+        if (p_handle)
+            dlclose(p_handle);
         free(pp_path);
+        free(p_tempfile);
+
+        if (p_stmt_c != NULL)
+            fclose(p_stmt_c);
 
         return 0;
-error:
-        return -1;
 }

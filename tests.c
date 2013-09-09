@@ -94,13 +94,30 @@ static char *test_usch_cmd()
 cleanup:
     return p_message;
 }
-    
+
+#define test_usch_pwd(...) usch_cmd("pwd", ##__VA_ARGS__)
+
+static char *test_usch_chdir()
+{
+    char *p_message = NULL;
+    char *p_dest = NULL;
+    int error;
+    error = cd(".");
+    mu_assert("error: cd(\".\") != 0", error == 0);
+    error = test_usch_pwd();
+    mu_assert("error: test_usch_pwd() != 0", error == 0);
+    return NULL;
+cleanup:
+    return p_message;
+}
+     
 static char * all_tests()
 {
     char *p_message = NULL;
     mu_run_test(test_strsplit);
     mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
+    mu_run_test(test_usch_chdir);
     return 0;
 }
 int main(int argc, char **argv)

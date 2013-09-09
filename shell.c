@@ -69,14 +69,19 @@ int main(void)
 
             case KEY_BACKSPACE:
                 {
-                    printf("back\n");
-                    //getyx(stdscr, col, row);
-                    row = MAX(strlen(prompt), row - 1);
-                    //move(col, row);
-                    printf(" ");
-                    //move(col, row);
-                    // TODO: fix backspace here
-                    input_index--;
+                    if (input_index > 0)
+                    {
+                        printf("\033[D");
+                        //getyx(stdscr, col, row);
+                        row = MAX(strlen(prompt), row - 1);
+                        //move(col, row);
+                        printf(" ");
+                        //move(col, row);
+                        // TODO: fix backspace here
+                        printf("\033[D");
+                        input_index--;
+                        fflush(stdout);
+                    }
                     break;
                 }
             case KEY_SPACE:
@@ -90,7 +95,7 @@ int main(void)
                         case USCH_FN_BEGIN:
                             {
                                 fn_startpos = col;
-                                printf("(\"", c);
+                                printf("(\"");
                                 fflush(stdout);
                                 p_input[input_index++] = '(';
                                 p_input[input_index++] = '"';
@@ -100,7 +105,7 @@ int main(void)
                         case USCH_FN_DIV:
                         case USCH_FN_DIV_CONT:
                             {
-                                printf("\", \"", c);
+                                printf("\", \"");
                                 fflush(stdout);
                                 p_input[input_index++] = '"';
                                 p_input[input_index++] = ',';
@@ -111,7 +116,7 @@ int main(void)
                             }
                         case USCH_FN_DISABLED:
                             {
-                                printf("\")", c);
+                                printf("\")");
                                 p_input[input_index++] = '"';
                                 p_input[input_index++] = ')';
                                 break;
@@ -168,7 +173,10 @@ int main(void)
                             }
                     }
                     p_input[input_index++] = '\0';
-                    status = eval_stmt(p_input);
+                    if (strlen(p_input) > 0)
+                    {
+                        status = eval_stmt(p_input);
+                    }
                     p_input[0] = '\0';
                     input_index = 0;
                     if (status)

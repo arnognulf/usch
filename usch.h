@@ -220,7 +220,7 @@ static inline int usch_cd(char *p_dir)
                 break;
             }
         default:
-            perror("Unknown error");
+            printf("%s\n", p_dir);
             break;
     }
     return error;
@@ -404,13 +404,17 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     if(child_pid == 0)
     {
         int execv_status = execvp(pp_argv[0], pp_argv);
+        fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
 
         _exit(execv_status);
     }
-    else {                    /* Code executed by parent */
-        do {
+    else
+    {
+        do
+        {
             w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
-            if (w == -1) {
+            if (w == -1)
+            {
                 perror("waitpid");
                 exit(EXIT_FAILURE);
             }
@@ -446,9 +450,9 @@ end:
 
     return status;
 }
-
-#define USCH_ARGC(...) USCH_ARGC_IMPL(__VA_ARGS__, 5,4,3,2,1)
-#define USCH_ARGC_IMPL(_1,_2,_3,_4,_5,N,...) N
+// see: https://groups.google.com/forum/#!topic/comp.std.c/d-6Mj5Lko_s
+#define USCH_ARGC(...) USCH_ARGC_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5,4,3,2,1)
+#define USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
 #define USCH_COUNT_ARGS(...) usch_cmd_impl(USCH_ARGC(__VA_ARGS__), "", __VA_ARGS__)
 #define usch_cmd(cmd, ...) USCH_COUNT_ARGS(cmd, ##__VA_ARGS__)
 
