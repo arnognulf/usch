@@ -174,8 +174,27 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
 
 static inline int usch_cd(char *p_dir)
 {
-    int error; 
-    error = chdir(p_dir);
+    int error;
+    glob_t *p_glob = NULL;
+    p_glob = calloc(1, sizeof(glob_t));
+    if (p_glob == NULL)
+    {
+        goto end;
+    }
+    if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, p_glob) == 0)
+    {
+        goto end;
+    }
+    if (p_glob == NULL)
+    {
+        goto end;
+    }
+    if (p_glob->gl_pathc == 0)
+    {
+        goto end;
+    }
+    printf("%s\n", p_glob->gl_pathv[0]);
+    error = chdir(p_glob->gl_pathv[0]);
     switch (error)
     {
         case EACCES:
@@ -222,6 +241,12 @@ static inline int usch_cd(char *p_dir)
         default:
             printf("%s\n", p_dir);
             break;
+    }
+end:
+    if (p_glob)
+    {
+        globfree(p_glob);
+        free(p_glob);
     }
     return error;
 }

@@ -22,15 +22,17 @@ Within the REPL and when including usch.h in a standalone .c file the following 
     int whereis(char **pp_cached_paths, char *p_item, char *pp_destination);
     int strsplit(char *p_str, char *p_delims, char ***ppp_out);
     int strexp(char ***ppp_out, char *p_str1, ...);
+    int strjoin(char ***ppp_out, char *p_delim, char *p_str1, ...);
 
 Using USCH as a scripting language
 ----------------------------------
 Creating an "alias" or enabling to call a command from a C99 file can be done as follows:
 
-    #define cmd(...) usch_cmd(USCH_ARGC(__VA_ARGS__), "cmd", __VA_ARGS__);
+    #define cmd(...) usch_cmd("cmd", __VA_ARGS__);
 
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
+    // This is not done yet...
     int i;
     char **pp_list = NULL;
     for (i = 0, num_items = strexp(&pp_list, "*.h"); i < num_items; i++)

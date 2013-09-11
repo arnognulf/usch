@@ -71,16 +71,8 @@ int main(void)
                 {
                     if (input_index > 0)
                     {
-                        printf("\033[D");
-                        //getyx(stdscr, col, row);
-                        row = MAX(strlen(prompt), row - 1);
-                        //move(col, row);
-                        printf(" ");
-                        //move(col, row);
-                        // TODO: fix backspace here
-                        printf("\033[D");
+                        backspace(1);
                         input_index--;
-                        fflush(stdout);
                     }
                     break;
                 }

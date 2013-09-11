@@ -26,3 +26,5 @@
 #define KEY_SPACE ' '
 void move(int col, int row);
 char getch();
+void backspace(int num);
+
