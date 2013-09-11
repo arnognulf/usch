@@ -175,26 +175,17 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
 static inline int usch_cd(char *p_dir)
 {
     int error;
-    glob_t *p_glob = NULL;
-    p_glob = calloc(1, sizeof(glob_t));
-    if (p_glob == NULL)
+    glob_t glob_data = {0};
+    if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &glob_data) == 0)
     {
         goto end;
     }
-    if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, p_glob) == 0)
+    if (glob_data.gl_pathc == 0)
     {
         goto end;
     }
-    if (p_glob == NULL)
-    {
-        goto end;
-    }
-    if (p_glob->gl_pathc == 0)
-    {
-        goto end;
-    }
-    printf("%s\n", p_glob->gl_pathv[0]);
-    error = chdir(p_glob->gl_pathv[0]);
+    printf("%s\n", glob_data.gl_pathv[0]);
+    error = chdir(glob_data.gl_pathv[0]);
     switch (error)
     {
         case EACCES:
@@ -243,11 +234,7 @@ static inline int usch_cd(char *p_dir)
             break;
     }
 end:
-    if (p_glob)
-    {
-        globfree(p_glob);
-        free(p_glob);
-    }
+    globfree(&glob_data);
     return error;
 }
 #ifdef cd
@@ -387,7 +374,8 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     int i;
     char *s = NULL;
     char *p_actual_format = NULL;
-    char **pp_argv = NULL;
+    char **pp_orig_argv = NULL;
+    char **pp_globbed_argv = NULL;
     pid_t child_pid;
     pid_t w;
     int child_status = -1;
@@ -398,8 +386,8 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
         return -1;
     }
 
-    pp_argv = calloc(num_args + 1, sizeof(char*));
-    if (pp_argv == NULL)
+    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
+    if (pp_orig_argv == NULL)
     {
         status = -1;
         goto end;
@@ -418,7 +406,11 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 
     for (i = 0; i < num_args; i++)
     {
-        pp_argv[i] = va_arg(p_ap, char *);
+        pp_orig_argv[i] = va_arg(p_ap, char *);
+    }
+
+    for (i = 0; i < num_args; i++)
+    {
     }
 
     child_pid = fork();
@@ -428,8 +420,8 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     }
     if(child_pid == 0)
     {
-        int execv_status = execvp(pp_argv[0], pp_argv);
-        fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
+        int execv_status = execvp(pp_orig_argv[0], pp_orig_argv);
+        fprintf(stderr, "usch: no such file or directory; %s\n", pp_orig_argv[0]);
 
         _exit(execv_status);
     }
@@ -470,7 +462,8 @@ end:
     }
  
     fflush(stdout);
-    free(pp_argv);
+    free(pp_globbed_argv);
+    free(pp_orig_argv);
     free(p_actual_format);
 
     return status;
