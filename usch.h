@@ -357,6 +357,12 @@ end:
     free(pp_path);
     return status;
 }
+struct usch_glob_list_t
+{
+    struct usch_glob_list_t *p_next;
+    glob_t glob_data;
+} usch_glob_list_t;
+
 /**
  * <A short one line description>
  *  
@@ -371,16 +377,20 @@ end:
 static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {
     va_list p_ap = {{0}};
-    int i;
+    int i, j;
     char *s = NULL;
     char *p_actual_format = NULL;
+    char **pp_argv = NULL;
     char **pp_orig_argv = NULL;
     char **pp_globbed_argv = NULL;
     pid_t child_pid;
     pid_t w;
     int child_status = -1;
     int status = 0;
-
+    struct usch_glob_list_t *p_glob_list = NULL;
+    struct usch_glob_list_t *p_current_glob_item = NULL;
+    int orig_arg_idx = 0;
+    int num_glob_items = 0;
     if (p_name == NULL)
     {
         return -1;
@@ -411,6 +421,51 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 
     for (i = 0; i < num_args; i++)
     {
+        if (strcmp(pp_orig_argv[i], "--") == 0)
+        {
+            orig_arg_idx++;
+            break;
+        }
+
+        if (p_current_glob_item == NULL)
+        {
+            p_current_glob_item = calloc(1, sizeof(usch_glob_list_t));
+            if (p_current_glob_item == NULL)
+                goto end;
+            p_glob_list = p_current_glob_item;
+        }
+        else
+        {
+            p_current_glob_item->p_next = calloc(1, sizeof(usch_glob_list_t));
+            if (p_current_glob_item->p_next == NULL)
+                goto end;
+            p_current_glob_item = p_current_glob_item->p_next;
+        }
+        if (glob(pp_orig_argv[i], GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &p_current_glob_item->glob_data) == 0)
+        {
+            goto end;
+        }
+        num_glob_items += p_current_glob_item->glob_data.gl_pathc;
+        orig_arg_idx++;
+    }
+    pp_argv = calloc(num_glob_items + num_args - orig_arg_idx + 1, sizeof(char*));
+    p_current_glob_item = p_glob_list;
+
+    j = 0;
+    while (p_current_glob_item != NULL)
+    {
+        for (j = 0; j < p_current_glob_item->glob_data.gl_pathc; j++)
+        {
+            pp_argv[j] = p_current_glob_item->glob_data.gl_pathv[j];
+            printf("argv[%d]: %s\n", j, pp_argv[j]);
+        }
+        p_current_glob_item = p_current_glob_item->p_next;
+    }
+
+    for (i = orig_arg_idx; i < num_args; i++)
+    {
+        pp_argv[j + i] = pp_orig_argv[i];
+        printf("argv[%d]: %s\n", j + i, pp_orig_argv[i]);
     }
 
     child_pid = fork();
@@ -420,7 +475,7 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     }
     if(child_pid == 0)
     {
-        int execv_status = execvp(pp_orig_argv[0], pp_orig_argv);
+        int execv_status = execvp(pp_argv[0], pp_argv);
         fprintf(stderr, "usch: no such file or directory; %s\n", pp_orig_argv[0]);
 
         _exit(execv_status);
@@ -459,6 +514,19 @@ end:
     if (num_args > 1)
     {
         va_end(p_ap);
+    }
+    if (p_glob_list)
+    {
+        p_current_glob_item = p_glob_list;
+        while (p_current_glob_item != NULL)
+        {
+            struct usch_glob_list_t *p_free_glob_item = p_current_glob_item;
+            
+            p_current_glob_item = p_current_glob_item->p_next;
+
+            globfree(&p_free_glob_item->glob_data);
+            free(p_free_glob_item);
+        }
     }
  
     fflush(stdout);

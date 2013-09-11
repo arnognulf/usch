@@ -82,6 +82,9 @@ static char *test_usch_cmd()
     char *p_message = NULL;
     char *p_dest = NULL;
     int num_args;
+    num_args = test_num_args("testdir/*");
+    mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 4);
+
     num_args = test_num_args("arg1");
     mu_assert("error: test_num_args(\"arg1\") != 2", num_args == 2);
 
@@ -89,7 +92,8 @@ static char *test_usch_cmd()
     mu_assert("error: test_num_args(\"arg1\", \"arg2\") != 3", num_args == 3);
 
     num_args = test_num_args("arg1", "arg2", "arg3");
-    mu_assert("error: test_num_args(\"arg1\", \"arg2\", \"arg3\") != 3", num_args == 4);
+    mu_assert("error: test_num_args(\"arg1\", \"arg2\", \"arg3\") != 4", num_args == 4);
+
     return NULL;
 cleanup:
     return p_message;
