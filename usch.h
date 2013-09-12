@@ -187,7 +187,6 @@ static inline int usch_cd(char *p_dir)
     {
         goto end;
     }
-    printf("usch_cd: %s\n", glob_data.gl_pathv[0]);
     error = chdir(glob_data.gl_pathv[0]);
     switch (error)
     {
@@ -233,7 +232,7 @@ static inline int usch_cd(char *p_dir)
                 break;
             }
         default:
-            printf("usch_cd: %s\n", p_dir);
+            printf("cd: %s\n", p_dir);
             break;
     }
 end:
