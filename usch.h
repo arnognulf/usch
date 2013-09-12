@@ -122,15 +122,16 @@ error:
  *   @param  ...
  *   @return Description of the return value
  *   */
+#if 0
 static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char *p_str, ...)
 {
     va_list p_ap = {{0}};
-    int i;
-    char *s = NULL;
+    size_t i;
+    //char *s = NULL;
     char *p_actual_format = NULL;
     char **pp_argv = NULL;
-    pid_t child_pid;
-    int child_status;
+    //pid_t child_pid;
+    //int child_status;
 
     if (p_str == NULL)
     {
@@ -160,7 +161,9 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
     free(pp_argv);
 
     return 0;
+    return -1;
 }
+#endif // 0
 /**
  * <A short one line description>
  *  
@@ -184,7 +187,7 @@ static inline int usch_cd(char *p_dir)
     {
         goto end;
     }
-    printf("%s\n", glob_data.gl_pathv[0]);
+    printf("usch_cd: %s\n", glob_data.gl_pathv[0]);
     error = chdir(glob_data.gl_pathv[0]);
     switch (error)
     {
@@ -230,7 +233,7 @@ static inline int usch_cd(char *p_dir)
                 break;
             }
         default:
-            printf("%s\n", p_dir);
+            printf("usch_cd: %s\n", p_dir);
             break;
     }
 end:
@@ -256,12 +259,11 @@ end:
 static inline int usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
     int status = 0;
-    int i;
+    size_t i;
     char *p_dest = NULL;
     char **pp_path = NULL;
     char **pp_relarray = NULL;
-    int num_items = 0;
-    char *p_basename = NULL;
+    size_t num_items = 0;
     char *p_item = NULL;
     char *p_item_copy = NULL;
     size_t item_length = strlen(p_search_item);
@@ -441,7 +443,7 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
                 goto end;
             p_current_glob_item = p_current_glob_item->p_next;
         }
-        if (glob(pp_orig_argv[i], GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &p_current_glob_item->glob_data) == 0)
+        if (glob(pp_orig_argv[i], GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &p_current_glob_item->glob_data) != 0)
         {
             goto end;
         }
@@ -451,13 +453,13 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     pp_argv = calloc(num_glob_items + num_args - orig_arg_idx + 1, sizeof(char*));
     p_current_glob_item = p_glob_list;
 
+    i = 0;
     j = 0;
     while (p_current_glob_item != NULL)
     {
-        for (j = 0; j < p_current_glob_item->glob_data.gl_pathc; j++)
+        for (j = 0; j < p_current_glob_item->glob_data.gl_pathc; j++, i++)
         {
-            pp_argv[j] = p_current_glob_item->glob_data.gl_pathv[j];
-            printf("argv[%d]: %s\n", j, pp_argv[j]);
+            pp_argv[i] = p_current_glob_item->glob_data.gl_pathv[j];
         }
         p_current_glob_item = p_current_glob_item->p_next;
     }
@@ -465,7 +467,6 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     for (i = orig_arg_idx; i < num_args; i++)
     {
         pp_argv[j + i] = pp_orig_argv[i];
-        printf("argv[%d]: %s\n", j + i, pp_orig_argv[i]);
     }
 
     child_pid = fork();
@@ -475,8 +476,15 @@ static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
     }
     if(child_pid == 0)
     {
+
+        i = 0;
+        while (pp_argv[i] != NULL)
+        {
+            i++;
+        }
+
         int execv_status = execvp(pp_argv[0], pp_argv);
-        fprintf(stderr, "usch: no such file or directory; %s\n", pp_orig_argv[0]);
+        fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
 
         _exit(execv_status);
     }
