@@ -33,20 +33,19 @@ typedef struct
     char *p_symname;
 } usch_def_t;
 
-
 #include "uschshell.h"
 #include "uthash.h"
 
 static int parse_line(char *p_input, usch_def_t *p_definition)
 {
-    usch_def_t definition = {0};
+    usch_def_t definition;
     int status = 1;
     size_t i = 0;
     size_t length;
     char *p_symname = NULL;
 
     length = strlen(p_input);
-    p_symname = calloc(length, 0);
+    p_symname = calloc(length, 1);
     if (p_symname == NULL)
     {
         status = -1;
@@ -93,7 +92,31 @@ end:
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
-int usch_eval(struct usch_context_t *p_context, char *p_input)
+int uschshell_create(uschshell_t **pp_context)
+{
+    return 0;
+}
+void uschshell_free(uschshell_t *p_context)
+{
+    return;
+}
+int fwrite_ok(char* p_str, FILE *p_file)
+{
+    size_t bytes_written;
+    size_t bytes_to_write;
+    bytes_to_write = strlen(p_str);
+    bytes_written = fwrite(p_str, sizeof(char), bytes_to_write, p_file);
+    if (bytes_to_write != bytes_written)
+    {
+        return 0;
+    }
+    else
+    {
+        return 1;
+    }
+
+}
+int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
@@ -122,8 +145,6 @@ int usch_eval(struct usch_context_t *p_context, char *p_input)
         char expr_c_filename[] = "expr.c";
         char dylib_filename[] = "dyn_stmt";
         char post_fn[] = ";return 0;\n}\n";
-        size_t post_fn_len = strlen(post_fn);
-        size_t input_length;
         size_t bytes_written;
         char *p_fnname = NULL;
         char *p_tempdir = NULL;
@@ -136,7 +157,6 @@ int usch_eval(struct usch_context_t *p_context, char *p_input)
         {
             goto end;
         }
-        input_length = strlen(p_input);
         p_tempdir = mkdtemp(dir_template);
         if (p_tempdir == NULL)
         {
@@ -162,32 +182,29 @@ int usch_eval(struct usch_context_t *p_context, char *p_input)
         }
 
         if (parse_line(p_input, &definition) < 1)
-        {
             goto end;
-        }
-        bytes_written = fwrite(usch_h, 1, strlen(usch_h), p_stmt_c);
+        if (!fwrite_ok(usch_h, p_stmt_c))
+            goto end;
         if (strcmp(definition.p_symname, "cd") != 0)
         {
-            bytes_written = fwrite(pre1, 1, strlen(pre1), p_stmt_c);
-            bytes_written = fwrite(definition.p_symname, 1, strlen(definition.p_symname), p_stmt_c);
-            bytes_written = fwrite(pre2, 1, strlen(pre2), p_stmt_c);
-            bytes_written = fwrite(definition.p_symname, 1, strlen(definition.p_symname), p_stmt_c);
-            bytes_written = fwrite(pre3, 1, strlen(pre3), p_stmt_c);
+            if (!fwrite_ok(pre1, p_stmt_c))
+                goto end;
+            if (!fwrite_ok(definition.p_symname, p_stmt_c))
+                goto end;
+            if (!fwrite_ok(pre2, p_stmt_c))
+                goto end;
+            if (!fwrite_ok(definition.p_symname, p_stmt_c))
+                goto end;
+            if (!fwrite(pre3, 1, strlen(pre3), p_stmt_c))
+                goto end;
         }
-        bytes_written = fwrite(dyn_func_def, 1, strlen(dyn_func_def), p_stmt_c);
-        bytes_written = fwrite(p_input, 1, strlen(p_input), p_stmt_c);
-        if (bytes_written != strlen(p_input))
-        {
-            fprintf(stderr, "write error 2\n");
+        if (!fwrite_ok(dyn_func_def, p_stmt_c))
             goto end;
-        }
+        if (!fwrite_ok(p_input, p_stmt_c))
+            goto end;
 
-        bytes_written = fwrite(post_fn, 1, strlen(post_fn), p_stmt_c);
-        if (bytes_written != strlen(post_fn))
-        {
-            fprintf(stderr, "usch: write error 3\n");
+        if (!fwrite_ok(post_fn, p_stmt_c))
             goto end;
-        }
         fclose(p_stmt_c);
         p_stmt_c = NULL;
         dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
@@ -223,6 +240,7 @@ int usch_eval(struct usch_context_t *p_context, char *p_input)
         (*dyn_func)();
 
 end:
+        free(definition.p_symname);
         if (p_handle)
             dlclose(p_handle);
         free(pp_path);

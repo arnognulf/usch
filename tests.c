@@ -23,8 +23,10 @@
 #include <stdio.h>
 #include <assert.h>
 #include <string.h>
-#include "usch.h"
 #include "minunit.h"
+
+#include "usch.h"
+#include "uschshell.h"
  
 int tests_run = 0;
 static char * test_strsplit() {
@@ -45,6 +47,7 @@ cleanup:
     return p_message;
 }
 
+#if 0
 static char * test_strexp()
 {
     return "not implemented";
@@ -54,7 +57,7 @@ static char * test_cd()
 {
     return "not implemented";
 }
-
+#endif // 0
 static char * test_whereis()
 {
     char *p_message = NULL;
@@ -72,6 +75,7 @@ static char * test_whereis()
 
     return NULL;
 cleanup:
+    free(p_dest);
     return p_message;
 }
 
@@ -80,7 +84,6 @@ cleanup:
 static char *test_usch_cmd()
 {
     char *p_message = NULL;
-    char *p_dest = NULL;
     int num_args;
     num_args = test_num_args("testdir/*");
     mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 4);
@@ -104,7 +107,6 @@ cleanup:
 static char *test_usch_chdir()
 {
     char *p_message = NULL;
-    char *p_dest = NULL;
     int error;
     error = cd(".");
     mu_assert("error: cd(\".\") != 0", error == 0);
@@ -114,17 +116,28 @@ static char *test_usch_chdir()
 cleanup:
     return p_message;
 }
-     
-static char * all_tests()
+static char *test_uschshell()
 {
     char *p_message = NULL;
+    int error;
+    uschshell_t *p_context = NULL;
+    error = uschshell_create(&p_context);
+    mu_assert("error: cd(\".\") != 0", error == 0);
+    return NULL;
+cleanup:
+    return p_message;
+}
+      
+static char * all_tests()
+{
     mu_run_test(test_strsplit);
     mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
+    mu_run_test(test_uschshell);
     return 0;
 }
-int main(int argc, char **argv)
+int main()
 {
      char *result = all_tests();
      if (result != 0)

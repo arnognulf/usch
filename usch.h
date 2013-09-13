@@ -98,7 +98,6 @@ static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
             }
         }
     }
-    j = 0;
     
     *ppp_out = pp_out;
     return (int)num_str;
@@ -177,7 +176,7 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
 
 static inline int usch_cd(char *p_dir)
 {
-    int error;
+    int error = 0;
     glob_t glob_data = {0};
     if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &glob_data) == 0)
     {
@@ -337,6 +336,7 @@ static inline int usch_cached_whereis(char** pp_cached_path, int path_items, cha
         goto end;
     }
 end:
+    free(pp_relarray);
     free(p_item_copy);
     free(p_dest);
 
@@ -378,8 +378,7 @@ struct usch_glob_list_t
 static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {
     va_list p_ap = {{0}};
-    int i, j;
-    char *s = NULL;
+    size_t i, j;
     char *p_actual_format = NULL;
     char **pp_argv = NULL;
     char **pp_orig_argv = NULL;

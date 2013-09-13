@@ -3,7 +3,7 @@
 #include <malloc.h>
 
 #include "pmcurses.h"
-#include "usch_eval.h"
+#include "uschshell.h"
 
 #define INPUT_BUFFER_MAX 32676
 #ifndef MAX
@@ -28,9 +28,9 @@ int main(void)
     char *p_input = NULL;
     int input_index = 0;
     char prompt[] = "/* usch */ ";
-    int fn_startpos = 0;
     int c;
-    int col, row;
+    int row;
+    int col = 0;
     USCH_FN_STATE fn_state = USCH_FN_START;
 
     p_input = malloc(INPUT_BUFFER_MAX);
@@ -86,7 +86,6 @@ int main(void)
                             break;
                         case USCH_FN_BEGIN:
                             {
-                                fn_startpos = col;
                                 printf("(\"");
                                 fflush(stdout);
                                 p_input[input_index++] = '(';
@@ -167,7 +166,7 @@ int main(void)
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
-                        status = usch_eval(NULL, p_input);
+                        status = uschshell_eval(NULL, p_input);
                     }
                     p_input[0] = '\0';
                     input_index = 0;
@@ -196,6 +195,7 @@ int main(void)
         }
     }
 end:
+    free(p_input);
     return 0;
 }
 
