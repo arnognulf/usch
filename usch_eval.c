@@ -27,6 +27,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include "usch.h"
+#include "usch_eval.h"
 
 typedef struct {
     char *p_symname;
@@ -88,7 +89,7 @@ end:
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
-int eval_stmt(char *p_input)
+int usch_eval(char *p_input)
 {
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;

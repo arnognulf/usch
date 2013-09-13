@@ -3,7 +3,7 @@
 #include <malloc.h>
 
 #include "pmcurses.h"
-#include "eval.h"
+#include "usch_eval.h"
 
 #define INPUT_BUFFER_MAX 32676
 #ifndef MAX
@@ -167,7 +167,7 @@ int main(void)
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
-                        status = eval_stmt(p_input);
+                        status = usch_eval(p_input);
                     }
                     p_input[0] = '\0';
                     input_index = 0;
