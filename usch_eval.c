@@ -27,13 +27,21 @@
 #include <ctype.h>
 #include <assert.h>
 #include "usch.h"
-#include "usch_eval.h"
 
-typedef struct {
+typedef struct
+{
     char *p_symname;
 } usch_def_t;
 
-int parse_line(char *p_input, usch_def_t *p_definition)
+struct usch_context_t
+{
+    usch_def_t *p_defs;
+} usch_context_t;
+
+#include "usch_eval.h"
+#include "uthash.h"
+
+static int parse_line(char *p_input, usch_def_t *p_definition)
 {
     usch_def_t definition = {0};
     int status = 1;
@@ -89,7 +97,7 @@ end:
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
-int usch_eval(char *p_input)
+int usch_eval(struct usch_context_t *p_context, char *p_input)
 {
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
@@ -229,3 +237,4 @@ end:
 
         return 0;
 }
+

@@ -167,7 +167,7 @@ int main(void)
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
-                        status = usch_eval(p_input);
+                        status = usch_eval(NULL, p_input);
                     }
                     p_input[0] = '\0';
                     input_index = 0;
