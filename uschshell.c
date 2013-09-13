@@ -96,7 +96,7 @@ int uschshell_create(uschshell_t **pp_context)
 {
     return 0;
 }
-void uschshell_free(uschshell_t *p_context)
+void uschshell_destroy(uschshell_t *p_context)
 {
     return;
 }

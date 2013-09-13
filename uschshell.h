@@ -20,15 +20,25 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#ifndef USCHSHELL_H
+#define USCHSHELL_H
+#ifdef __cplusplus
+    extern "C" {
+#endif // __cplusplus
+
 struct uschshell_t;
 typedef struct uschshell_t uschshell_t;
 int uschshell_create(uschshell_t **p_context);
 int uschshell_eval(uschshell_t *p_context, char *p_input);
-void uschshell_free(uschshell_t *p_context);
+void uschshell_destroy(uschshell_t *p_context);
 
 int uschshell_load_impl(uschshell_t *p_context, void *p_type, char *p_symname);
 int uschshell_store_impl(uschshell_t *p_context, char *p_decl, char *p_symname);
 #define usch_eval_load(p_context, type, synname)
 #define usch_eval_store(p_context, type, symname) usch_eval_store_impl((p_context), #type, sizeof((symname)), (void*)&(symname))
 
+#ifdef __cplusplus
+    }
+#endif // __cplusplus
+#endif // USCHSHELL_H
 

@@ -1,11 +1,10 @@
 1. globbing
  1.1 strexp()
- 1.2 cd()
- 1.3 usch_cmd()
 2. cd() 
   should allow no args, va_arg
 3. enter variables in repl
-   load/store at beginning/end of functions, use linked-list and function local variables
+   load/store at beginning/end of functions, use linked-list or hash and function local variables.
+   print updated vars on store
 4. line editing
 5. line history (memory)
 6. persistent line history: .usch_history
@@ -21,3 +20,5 @@
 16. fix makefile to rebuild upon changes in any file.
 17. enter blocks in repl with autmatic newlines
 18. declare functions in repl with automatic newlines
+19. shebang #!/bin/usch
+20. uschshell_interact(uschshell_t *p_context)
