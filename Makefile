@@ -6,8 +6,8 @@ test_num_args:
 tests: tests.o
 		   $(CC) -Wall -Wextra -g3 -rdynamic tests.c -ldl -o $@
 
-usch: shell.o pmcurses.o usch_eval.o
-		   $(CC) -Wall -Wextra -g3 -rdynamic shell.o pmcurses.o usch_eval.o -ldl -o $@
+usch: shell.o pmcurses.o uschshell.o
+		   $(CC) -Wall -Wextra -g3 -rdynamic shell.o pmcurses.o uschshell.o -ldl -o $@
 
 run_tests: tests
 		  ./tests 

@@ -20,7 +20,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
+struct usch_context_t;
 typedef struct usch_context_t usch_context_t;
 int usch_eval_create(usch_context_t **p_context);
 int usch_eval(usch_context_t *p_context, char *p_input);
@@ -28,7 +28,7 @@ void usch_eval_free(usch_context_t *p_context);
 
 int usch_eval_load_impl(usch_context_t *p_context, void *p_type, char *p_symname);
 int usch_eval_store_impl(usch_context_t *p_context, char *p_decl, char *p_symname);
-#define usch_eval_load(p_context, type, symname)
-#define usch_eval_store(p_context, type, synname)
+#define usch_eval_load(p_context, type, synname)
+#define usch_eval_store(p_context, type, symname) usch_eval_store_impl((p_context), #type, sizeof((symname)), (void*)&(symname))
 
 

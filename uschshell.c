@@ -33,12 +33,8 @@ typedef struct
     char *p_symname;
 } usch_def_t;
 
-struct usch_context_t
-{
-    usch_def_t *p_defs;
-} usch_context_t;
 
-#include "usch_eval.h"
+#include "uschshell.h"
 #include "uthash.h"
 
 static int parse_line(char *p_input, usch_def_t *p_definition)
