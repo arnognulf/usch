@@ -40,7 +40,7 @@ void backspace(int num)
 }
 char getch() {
     char buf = 0;
-    struct termios old = {0};
+    struct termios old;
     if (tcgetattr(0, &old) < 0)
         perror("tcsetattr()");
     old.c_lflag &= ~ICANON;

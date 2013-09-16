@@ -34,7 +34,7 @@ typedef struct
 } usch_def_t;
 
 #include "uschshell.h"
-#include "external/uthash/src/uthash.h"
+#include "../external/uthash/src/uthash.h"
 
 static int parse_line(char *p_input, usch_def_t *p_definition)
 {

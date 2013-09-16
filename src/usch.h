@@ -132,7 +132,7 @@ error:
 #if 0
 static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char *p_str, ...)
 {
-    va_list p_ap = {{0}};
+    va_list p_ap;
     size_t i;
     //char *s = NULL;
     char *p_actual_format = NULL;
@@ -184,8 +184,8 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
 static inline int usch_cd_impl(size_t num_args, char *p_dummy, ...)
 {
     int error = 0;
-    glob_t glob_data = {0};
-    va_list p_ap = {{0}};
+    glob_t glob_data;
+    va_list p_ap;
     char *p_dir = NULL;
     char *p_chdir = NULL;
     char format[] = "%s";
@@ -408,7 +408,7 @@ struct usch_glob_list_t
 
 static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {
-    va_list p_ap = {{0}};
+    va_list p_ap;
     size_t i, j;
     char *p_actual_format = NULL;
     char **pp_argv = NULL;

@@ -27,7 +27,8 @@
 
 #include "usch.h"
 #include "uschshell.h"
- 
+#include "../external/uthash/src/uthash.h"
+
 int tests_run = 0;
 static char * test_strsplit() {
     char *p_message = NULL;
@@ -127,7 +128,37 @@ static char *test_uschshell()
 cleanup:
     return p_message;
 }
-      
+typedef struct usch_test_vars_t {
+    int id;
+    UT_hash_handle hh;
+    char name[];
+} usch_test_vars_t;
+static char *test_uthash()
+{
+    char *p_message = NULL;
+    char **n, *names[] = { "joe", "bob", "betty", NULL };
+    usch_test_vars_t *p_s, *p_tmp, *p_users = NULL;
+    int i=0;
+
+    for (n = names; *n != NULL; n++) {
+        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
+        strncpy(p_s->name, *n,strlen(*n));
+        p_s->id = i++;
+        HASH_ADD_STR( p_users, name, p_s );
+    }
+
+    HASH_FIND_STR(p_users, "betty", p_s);
+    mu_assert("error: HASH_FIND_STR(users, \"betty\", p_s) != NULL", p_s != NULL);
+
+cleanup:
+
+    /* free the hash table contents */
+    HASH_ITER(hh, p_users, p_s, p_tmp) {
+        HASH_DEL(p_users, p_s);
+        free(p_s);
+    }
+    return p_message;
+}      
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
@@ -135,6 +166,7 @@ static char * all_tests()
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
     mu_run_test(test_uschshell);
+    mu_run_test(test_uthash);
     return 0;
 }
 int main()
