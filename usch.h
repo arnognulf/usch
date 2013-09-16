@@ -204,8 +204,6 @@ static inline int usch_cd_impl(size_t num_args, char *p_dummy, ...)
 
     if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &glob_data) == 0)
     {
-        printf("%d\n", glob_data.gl_pathc);
-        printf("%s\n", glob_data.gl_pathv[0]);
         p_chdir = glob_data.gl_pathv[0];
     }
     else
@@ -261,7 +259,6 @@ static inline int usch_cd_impl(size_t num_args, char *p_dummy, ...)
             break;
     }
     printf("cd: %s\n", p_chdir);
-end:
     globfree(&glob_data);
     if (num_args > 0)
     {
@@ -275,6 +272,7 @@ end:
 #else
 #warning included header defines cd(), usch_cd() must be called directly
 #endif // cd
+#if 0
 /**
  * <A short one line description>
  *  
@@ -307,7 +305,7 @@ static inline int usch_cached_whereis(char** pp_cached_path, int path_items, cha
             status = -1;
             goto end;
         }
-        p_item_copy = strdup(p_search_item);
+        p_item_copy = calloc(strlen(p_search_item), 1);
         if (p_item_copy == NULL)
         {
             status = -1;
@@ -390,6 +388,7 @@ end:
     free(pp_path);
     return status;
 }
+#endif // 0
 struct usch_glob_list_t
 {
     struct usch_glob_list_t *p_next;
@@ -574,7 +573,7 @@ end:
 
     return status;
 }
-#define USCH_COUNT_ARGS(...) usch_cmd_impl(USCH_ARGC(__VA_ARGS__), "", __VA_ARGS__)
+#define USCH_COUNT_ARGS(...) usch_cmd_impl(USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define usch_cmd(cmd, ...) USCH_COUNT_ARGS(cmd, ##__VA_ARGS__)
 
 #if NEED_VIM_WORKAROUND

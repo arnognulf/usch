@@ -26,10 +26,7 @@
 #include "pmcurses.h"
 
 // poor-man's curses 
-void move(int col, int row)
-{
 
-}
 void backspace(int num)
 {
     int i;

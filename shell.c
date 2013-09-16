@@ -29,8 +29,6 @@ int main(void)
     int input_index = 0;
     char prompt[] = "/* usch */ ";
     int c;
-    int row;
-    int col = 0;
     USCH_FN_STATE fn_state = USCH_FN_START;
 
     p_input = malloc(INPUT_BUFFER_MAX);

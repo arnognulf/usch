@@ -38,7 +38,7 @@ typedef struct
 
 static int parse_line(char *p_input, usch_def_t *p_definition)
 {
-    usch_def_t definition;
+    //usch_def_t definition;
     int status = 1;
     size_t i = 0;
     size_t length;
@@ -91,13 +91,20 @@ end:
 }
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
-
+typedef struct uschshell_t 
+{
+    int foo;
+} uschshell_t;
 int uschshell_create(uschshell_t **pp_context)
 {
+    uschshell_t *p_context = NULL;
+    p_context = calloc(sizeof(uschshell_t), 1);
+    *pp_context = p_context;
     return 0;
 }
 void uschshell_destroy(uschshell_t *p_context)
 {
+    free(p_context);
     return;
 }
 int fwrite_ok(char* p_str, FILE *p_file)
@@ -118,9 +125,11 @@ int fwrite_ok(char* p_str, FILE *p_file)
 }
 int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
+    // TODO: unused for now
+    (void)p_context;
+
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
-    int stmt_fd = -1;
     void *p_handle = NULL;
     int (*dyn_func)();
     char *p_error = NULL;
@@ -145,8 +154,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
         char expr_c_filename[] = "expr.c";
         char dylib_filename[] = "dyn_stmt";
         char post_fn[] = ";return 0;\n}\n";
-        size_t bytes_written;
-        char *p_fnname = NULL;
+        //char *p_fnname = NULL;
         char *p_tempdir = NULL;
         char *p_tempfile = NULL;
         char *p_tempdylib = NULL;

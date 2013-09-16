@@ -57,7 +57,6 @@ static char * test_cd()
 {
     return "not implemented";
 }
-#endif // 0
 static char * test_whereis()
 {
     char *p_message = NULL;
@@ -78,6 +77,7 @@ cleanup:
     free(p_dest);
     return p_message;
 }
+#endif // 0
 
 #define test_num_args(...) usch_cmd("./test_num_args", ##__VA_ARGS__)
 
@@ -131,7 +131,7 @@ cleanup:
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
-    mu_run_test(test_whereis);
+    //mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
     mu_run_test(test_uschshell);

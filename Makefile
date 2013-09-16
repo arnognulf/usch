@@ -1,3 +1,5 @@
+# mkdtemp requires _BSD_SOURCE
+CFLAGS=-D_BSD_SOURCE -Wall -Wextra -Werror -g3
 all: usch tests run_tests test_num_args
 
 test_num_args:
