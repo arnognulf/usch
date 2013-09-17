@@ -117,15 +117,31 @@ static char *test_usch_chdir()
 cleanup:
     return p_message;
 }
-static char *test_uschshell()
+static char *test_uschshell_vars()
 {
     char *p_message = NULL;
     int error;
+    int int_test;
     uschshell_t *p_context = NULL;
     error = uschshell_create(&p_context);
-    mu_assert("error: cd(\".\") != 0", error == 0);
+    mu_assert("error: uschshell_create(&p_context) != 0", error == 0);
+    error = uschshell_define(p_context, sizeof(int_test), "int int_test", (void*)&int_test);
+    mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
+    uschshell_undef(p_context, "int int_test");
+    error = uschshell_load(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
+
+    error = uschshell_define(p_context, sizeof(int_test), "int int_test", (void*)&int_test);
+    mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
+
+    error = uschshell_load(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
+
+
+    uschshell_destroy(p_context);
     return NULL;
 cleanup:
+    uschshell_destroy(p_context);
     return p_message;
 }
 typedef struct usch_test_vars_t {
@@ -165,7 +181,7 @@ static char * all_tests()
     //mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
-    mu_run_test(test_uschshell);
+    mu_run_test(test_uschshell_vars);
     mu_run_test(test_uthash);
     return 0;
 }

@@ -23,8 +23,11 @@
 #ifndef USCHSHELL_H
 #define USCHSHELL_H
 #ifdef __cplusplus
-    extern "C" {
+extern "C" {
 #endif // __cplusplus
+#if DUMMY_VIM_FIX_NEEDED
+}
+#endif // DUMMY_VIM_FIX_NEEDED
 
 struct uschshell_t;
 typedef struct uschshell_t uschshell_t;
@@ -34,11 +37,15 @@ void uschshell_destroy(uschshell_t *p_context);
 
 int uschshell_load_impl(uschshell_t *p_context, void *p_type, char *p_symname);
 int uschshell_store_impl(uschshell_t *p_context, char *p_decl, char *p_symname);
-#define usch_eval_load(p_context, type, synname)
-#define usch_eval_store(p_context, type, symname) usch_eval_store_impl((p_context), #type, sizeof((symname)), (void*)&(symname))
+int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, void* p_data);
+void uschshell_undef(uschshell_t *p_context, char *p_defname);
+int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data);
 
+#if DUMMY_VIM_FIX_NEEDED
+{
+#endif // DUMMY_VIM_FIX_NEEDED
 #ifdef __cplusplus
-    }
+}
 #endif // __cplusplus
 #endif // USCHSHELL_H
 

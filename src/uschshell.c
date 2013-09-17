@@ -91,10 +91,77 @@ end:
 }
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
+typedef enum uschshell_type_t
+{
+    USCHSHELL_TYPE_DATA,
+    USCHSHELL_TYPE_PTR,
+} uschshell_type_t;
+
+typedef struct uschshell_def_t
+{
+    UT_hash_handle hh;
+    uschshell_type_t type;
+    size_t size;
+    char data[8];
+    char defname[];
+} uschshell_def_t;
 typedef struct uschshell_t 
 {
-    int foo;
+    uschshell_def_t *p_defs;
+
 } uschshell_t;
+
+int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, void* p_data)
+{
+    int status = 0;
+    if (p_context == NULL || p_defname == NULL || p_data == NULL)
+        return -1;
+    uschshell_def_t *p_defs = p_context->p_defs;
+    uschshell_def_t *p_def = NULL;
+    HASH_FIND_STR(p_defs, p_defname, p_def);
+    if (p_def != NULL)
+    {
+        status = -1;
+        goto end;
+    }
+    p_def = calloc(sizeof(uschshell_def_t) + strlen(p_defname) + 1, 1);
+    if (p_def == NULL)
+        goto end;
+    HASH_ADD_STR(p_defs, defname, p_def);
+end:
+    return status;
+}
+void uschshell_undef(uschshell_t *p_context, char *p_defname)
+{
+    int status = 0;
+    if (p_context == NULL || p_defname == NULL)
+        return;
+    uschshell_def_t *p_def = NULL;
+    uschshell_def_t *p_defs = p_context->p_defs;
+    HASH_FIND_STR(p_defs, p_defname, p_def);
+    if (p_def != NULL)
+        HASH_DEL(p_defs, p_def);
+    return;
+}
+int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data)
+{
+    int status = 0;
+    if (p_context == NULL || p_defname == NULL)
+        return -1;
+    uschshell_def_t *p_def = NULL;
+    uschshell_def_t *p_defs = p_context->p_defs;
+    HASH_FIND_STR(p_defs, p_defname, p_def);
+    if (p_def != NULL)
+    {
+        memcpy(p_data, p_def->data, p_def->size);
+    }
+    else
+    {
+        status = -1;
+    }
+    return status;
+}
+
 int uschshell_create(uschshell_t **pp_context)
 {
     uschshell_t *p_context = NULL;
@@ -123,6 +190,8 @@ int fwrite_ok(char* p_str, FILE *p_file)
     }
 
 }
+
+
 int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
     // TODO: unused for now
