@@ -127,13 +127,13 @@ int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, v
     p_def = calloc(sizeof(uschshell_def_t) + strlen(p_defname) + 1, 1);
     if (p_def == NULL)
         goto end;
+    p_def->size = var_size;
     HASH_ADD_STR(p_defs, defname, p_def);
 end:
     return status;
 }
 void uschshell_undef(uschshell_t *p_context, char *p_defname)
 {
-    int status = 0;
     if (p_context == NULL || p_defname == NULL)
         return;
     uschshell_def_t *p_def = NULL;
