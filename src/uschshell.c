@@ -26,8 +26,13 @@
 #include <dlfcn.h>
 #include <ctype.h>
 #include <assert.h>
+#include <dirent.h>
 #include "usch.h"
-
+#include "usch_debug.h"
+#define MAX(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
 typedef struct
 {
     char *p_symname;
@@ -76,11 +81,9 @@ static int parse_line(char *p_input, usch_def_t *p_definition)
 
     length = strlen(p_input);
     p_symname = calloc(length, 1);
-    if (p_symname == NULL)
-    {
-        status = -1;
-        goto end;
-    }
+
+    FAIL_IF(p_symname == NULL);
+
     while (p_input[i] == ' ' || p_input[i] == '\t')
         i++;
 
@@ -121,11 +124,6 @@ end:
 }
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
-typedef enum uschshell_type_t
-{
-    USCHSHELL_TYPE_DATA,
-    USCHSHELL_TYPE_PTR,
-} uschshell_type_t;
 
 #define USCHSHELL_DEFINE_SIZE 8
 typedef struct uschshell_def_t
@@ -137,10 +135,17 @@ typedef struct uschshell_def_t
     char data[USCHSHELL_DEFINE_SIZE];
     char defname[];
 } uschshell_def_t;
+
+typedef struct uschshell_cmd_t
+{
+    UT_hash_handle hh;
+    char cmdname[];
+} uschshell_cmd_t;
+
 typedef struct uschshell_t 
 {
     uschshell_def_t *p_defs;
-
+    uschshell_cmd_t *p_cmds;
 } uschshell_t;
 
 int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname)
@@ -152,20 +157,16 @@ int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname)
     uschshell_def_t *p_def = NULL;
     void *p_alloc_data = NULL;
     HASH_FIND_STR(p_defs, p_defname, p_def);
-    if (p_def != NULL)
-    {
-        status = -1;
-        goto end;
-    }
+
+    FAIL_IF(p_def != NULL);
+
     p_def = calloc(sizeof(uschshell_def_t) + strlen(p_defname) + 1, 1);
-    if (p_def == NULL)
-        goto end;
+    FAIL_IF(p_def == NULL);
 
     if (var_size > USCHSHELL_DEFINE_SIZE)
     {
         p_alloc_data = calloc(var_size, 1);
-        if (p_alloc_data == NULL)
-            goto end;
+        FAIL_IF(p_alloc_data == NULL);
         p_def->p_alloc_data = p_alloc_data;
     }
     p_def->size = var_size;
@@ -264,18 +265,16 @@ int uschshell_define_fn(struct uschshell_t *p_context, char *p_fndefname, char *
     uschshell_def_t *p_def = NULL;
     void *p_body_data = NULL;
     HASH_FIND_STR(p_defs, p_fndefname, p_def);
-    if (p_def != NULL)
-    {
-        status = -1;
-        goto end;
-    }
+
+    FAIL_IF(p_def != NULL);
+
     p_def = calloc(sizeof(uschshell_def_t) + strlen(p_fndefname) + 1, 1);
-    if (p_def == NULL)
-        goto end;
+    FAIL_IF(p_def == NULL);
 
     p_body_data = calloc(strlen(p_body) + 1, 1);
-    if (p_body_data == NULL)
-        goto end;
+
+    FAIL_IF(p_body_data == NULL);
+
     p_def->p_body_data = p_body_data;
     strcpy(p_def->defname, p_fndefname);
 
@@ -290,33 +289,39 @@ end:
 
 int uschshell_create(uschshell_t **pp_context)
 {
+    int status = 0;
     uschshell_t *p_context = NULL;
     uschshell_def_t *p_def = NULL;
+    uschshell_cmd_t *p_cmd = NULL;
 
     p_context = calloc(sizeof(uschshell_t), 1);
-    if (p_context == NULL)
-        goto end;
+    FAIL_IF(p_context == NULL);
 
     p_def = calloc(sizeof(uschshell_def_t) + 1, 1);
-    if (p_def == NULL)
-        goto end;
+    FAIL_IF(p_def == NULL);
+
+    p_cmd = calloc(sizeof(uschshell_cmd_t) + 1, 1);
+    FAIL_IF(p_cmd == NULL);
 
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
+    HASH_ADD_STR(p_context->p_cmds, cmdname, p_cmd);
 
     *pp_context = p_context;
     p_context = NULL;
+    p_cmd = NULL;
     p_def = NULL;
 end:
+    free(p_cmd);
     free(p_def);
     free(p_context);
-    return 0;
+    return status;
 }
 void uschshell_destroy(uschshell_t *p_context)
 {
     free(p_context);
     return;
 }
-int fwrite_ok(char* p_str, FILE *p_file)
+static int fwrite_ok(char* p_str, FILE *p_file)
 {
     size_t bytes_written;
     size_t bytes_to_write;
@@ -334,6 +339,7 @@ int fwrite_ok(char* p_str, FILE *p_file)
 }
 static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
 {
+    int status = 0;
     char definitions_h_filename[] = "definitions.h";
     size_t filename_length;
     size_t tempdir_len;
@@ -347,56 +353,112 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
     tempdir_len = strlen(p_tempdir);
     filename_length = tempdir_len + 1 + strlen(definitions_h_filename) + 1;
     p_definitionsfile = calloc(filename_length, 1);
-    if (p_definitionsfile == NULL)
-    {
-        goto end;
-    }
+    FAIL_IF(p_definitionsfile == NULL);
+
     strcpy(p_definitionsfile, p_tempdir);
+
     p_definitionsfile[tempdir_len] = '/';
     strcpy(&p_definitionsfile[tempdir_len + 1], definitions_h_filename);
     p_definitionsfile[filename_length-1] = '\0';
     p_definitions_h = fopen(p_definitionsfile, "w+");
-    if (p_definitions_h == NULL)
-    {
-        printf("file open fail\n");
-        goto end;
-    }
+    FAIL_IF(p_definitions_h == NULL);
+    FAIL_IF(!fwrite_ok("struct uschshell_t;\n", p_definitions_h));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
-        if(fwrite_ok(p_def->defname, p_definitions_h))
-            goto end;
-
-        if(fwrite_ok(";\n", p_definitions_h))
-            goto end;
+        if (strcmp(p_def->defname, "") != 0)
+        {
+            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
+            FAIL_IF(!fwrite_ok(";\n", p_definitions_h));
+        }
     }
-    if(fwrite_ok("\nvoid uschshell_load_vars(uschshell_t *p_context)\n{\n", p_definitions_h))
-        goto end;
+    FAIL_IF(!fwrite_ok("\nvoid uschshell_load_vars(struct uschshell_t *p_context)\n{\n", p_definitions_h));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
-        if(!fwrite_ok("uschshell_load(p_context, \"", p_definitions_h))
-            goto end;
-        if(!fwrite_ok(p_def->defname, p_definitions_h))
-            goto end;
-        if(fwrite_ok("\", (void*)&", p_definitions_h))
-            goto end;
-        if(fwrite_ok(get_symname(p_def->defname), p_definitions_h))
-            goto end;
-        if(fwrite_ok(");\n", p_definitions_h))
-            goto end;
+        if (strcmp(p_def->defname, "") != 0)
+        {
+            FAIL_IF(!fwrite_ok("uschshell_load(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
+            FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
+            FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
+            FAIL_IF(!fwrite_ok(");\n", p_definitions_h));
+        }
     }
 
-    if(fwrite_ok("\n}\n", p_definitions_h))
-        goto end;
+    FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
 
 end:
     if(p_definitions_h)
         fclose(p_definitions_h);
     free(p_definitionsfile);
-    return -1;
+    return status;
 }
+int uschshell_pathhash(uschshell_t *p_context)
+{
+    int status = 0;
+    char **pp_path = NULL;
+    int num_paths = 0;
+    int i;
+    DIR *p_dir;
+    uschshell_cmd_t *p_cmds = NULL;
+    uschshell_cmd_t *p_cmd = NULL;
 
+    if (p_context == NULL)
+        return -1;
+
+    p_cmds = p_context->p_cmds;
+    num_paths = usch_strsplit(getenv("PATH"), ":", &pp_path);
+    FAIL_IF(num_paths < 1);
+
+    for (i = 0; i < num_paths; i++)
+    {
+        struct dirent *p_ent;
+        if ((p_dir = opendir(pp_path[i])) != NULL)
+        {
+            while ((p_ent = readdir(p_dir)) != NULL)
+            {
+                uschshell_cmd_t *p_found_cmd = NULL;
+
+                if (strcmp(p_ent->d_name, "..") == 0)
+                    continue;
+                if (strcmp(p_ent->d_name, ".") == 0)
+                    continue;
+
+                HASH_FIND_STR(p_cmds, p_ent->d_name, p_found_cmd);
+                if (p_found_cmd)
+                    continue;
+                p_cmd = calloc(sizeof(uschshell_cmd_t) + strlen(p_ent->d_name) + 1, 1);
+                FAIL_IF(p_cmd == NULL);
+                strcpy(p_cmd->cmdname, p_ent->d_name);
+
+                HASH_ADD_STR(p_cmds, cmdname, p_cmd);
+            }
+        }
+    }
+end:
+    if (p_dir)
+        closedir(p_dir);
+    free(pp_path);
+    free(p_cmd);
+    return status;
+}
+int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
+{
+    int status = 0;
+    uschshell_cmd_t *p_cmds = NULL;
+    uschshell_cmd_t *p_found_cmd = NULL;
+
+    if (p_context == NULL || p_item == NULL)
+        return -1;
+
+    HASH_FIND_STR(p_cmds, p_item, p_found_cmd);
+    if (p_found_cmd)
+        return 1;
+    else
+        return 0;
+}
 int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
+    int status = 0;
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
     void *p_handle = NULL;
@@ -421,92 +483,58 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     char dir_template[] = "/tmp/usch-XXXXXX";
 
     if (p_context == NULL || p_input == NULL)
-        goto end;
+        return -1;
 
-    if (usch_strsplit(getenv("PATH"), ":", &pp_path) < 0)
-    {
-        goto end;
-    }
+    FAIL_IF(usch_strsplit(getenv("PATH"), ":", &pp_path) < 0);
     p_tempdir = mkdtemp(dir_template);
-    if (p_tempdir == NULL)
-    {
-        fprintf(stderr, "dir creation failed\n");
-        goto end;
-    }
+    FAIL_IF(p_tempdir == NULL);
     tempdir_len = strlen(p_tempdir);
     filename_length = tempdir_len + 1 + strlen(expr_c_filename) + 1;
     p_tempfile = malloc(filename_length);
-    if (p_tempfile == NULL)
-    {
-        goto end;
-    }
+    FAIL_IF(p_tempfile == NULL);
     strcpy(p_tempfile, p_tempdir);
     p_tempfile[tempdir_len] = '/';
     strcpy(&p_tempfile[tempdir_len + 1], expr_c_filename);
     p_tempfile[filename_length-1] = '\0';
     p_stmt_c = fopen(p_tempfile, "w+");
-    if (p_stmt_c == NULL)
-    {
-        printf("file open fail\n");
-        goto end;
-    }
+    FAIL_IF(p_stmt_c == NULL);
 
-    if (write_definitions_h(p_context, p_tempdir) != 0)
-        goto end;
+    FAIL_IF(write_definitions_h(p_context, p_tempdir) != 0);
     
-    if (parse_line(p_input, &definition) < 1)
-        goto end;
+    FAIL_IF(parse_line(p_input, &definition) < 1);
     
-    if (!fwrite_ok("#include <usch.h>\n", p_stmt_c))
-        goto end;
-    if (!fwrite_ok("#include \"definitions.h\"\n", p_stmt_c))
-        goto end;
+    FAIL_IF(!fwrite_ok("#include <usch.h>\n", p_stmt_c));
+    FAIL_IF(!fwrite_ok("#include \"definitions.h\"\n", p_stmt_c));
 
     p_fullpath_uschrc_h = calloc(sizeof(getenv("HOME")) + sizeof(uschrc_h) + 2, 1);
-    if (p_fullpath_uschrc_h == NULL)
-        goto end;
+    FAIL_IF(p_fullpath_uschrc_h == NULL);
     strcpy(p_fullpath_uschrc_h, getenv("HOME"));
     strcpy(p_fullpath_uschrc_h + sizeof(getenv("HOME")) + 2, uschrc_h);
 
     if (stat(p_fullpath_uschrc_h, &sb) != -1)
     {
-        if (!fwrite_ok("#include \"", p_stmt_c))
-            goto end;
-        if (!fwrite_ok(getenv("HOME"), p_stmt_c))
-            goto end;
-        if (!fwrite_ok("/.uschrc.h\"\n", p_stmt_c))
-            goto end;
+        FAIL_IF(!fwrite_ok("#include \"", p_stmt_c));
+        FAIL_IF(!fwrite_ok(getenv("HOME"), p_stmt_c));
+        FAIL_IF(!fwrite_ok("/.uschrc.h\"\n", p_stmt_c));
     }
 
     if (strcmp(definition.p_symname, "cd") != 0)
     {
-
-        if (!fwrite_ok("#define ", p_stmt_c))
-            goto end;
-        if (!fwrite_ok(definition.p_symname, p_stmt_c))
-            goto end;
-        if (!fwrite_ok("(...) usch_cmd(\"", p_stmt_c))
-            goto end;
-        if (!fwrite_ok(definition.p_symname, p_stmt_c))
-            goto end;
-        if (!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c))
-            goto end;
+        FAIL_IF(!fwrite_ok("#define ", p_stmt_c));
+        FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
+        FAIL_IF(!fwrite_ok("(...) usch_cmd(\"", p_stmt_c));
+        FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
+        FAIL_IF(!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c));
     }
-    if (!fwrite_ok("int dyn_func()\n    {\n        ", p_stmt_c))
-        goto end;
-    if (!fwrite_ok(p_input, p_stmt_c))
-        goto end;
+    FAIL_IF(!fwrite_ok("int dyn_func()\n    {\n        ", p_stmt_c));
+    FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
 
-    if (!fwrite_ok(";return 0;\n}\n", p_stmt_c))
-        goto end;
+    FAIL_IF(!fwrite_ok(";return 0;\n}\n", p_stmt_c));
     fclose(p_stmt_c);
     p_stmt_c = NULL;
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
-    if (p_tempdylib == NULL)
-    {
-        goto end;
-    }
+    FAIL_IF(p_tempdylib == NULL);
     strcpy(p_tempdylib, p_tempdir);
     p_tempdylib[tempdir_len] = '/';
     strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
@@ -514,23 +542,17 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     if (usch_shell_cc("-rdynamic", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
-        goto end;
+        ENDOK_IF(1);
     }
 
     p_handle = dlopen(p_tempdylib, RTLD_LAZY);
-    if (!p_handle) {
-        fprintf(stderr, "%s\n", dlerror());
-        goto end;
-    }
+    FAIL_IF(!p_handle);
 
     dlerror();
 
     *(void **) (&dyn_func) = dlsym(p_handle, "dyn_func");
 
-    if ((p_error = dlerror()) != NULL)  {
-        fprintf(stderr, "%s\n", p_error);
-        goto end;
-    }
+    FAIL_IF((p_error = dlerror()) != NULL);
     (*dyn_func)();
 
 end:
@@ -543,6 +565,6 @@ end:
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);
 
-    return 0;
+    return status;
 }
 

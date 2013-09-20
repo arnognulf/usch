@@ -4,6 +4,7 @@
 
 #include "pmcurses.h"
 #include "uschshell.h"
+#include "usch_debug.h"
 
 #define INPUT_BUFFER_MAX 32676
 #ifndef MAX
@@ -30,14 +31,15 @@ int main(void)
     char prompt[] = "/* usch */ ";
     int c;
     USCH_FN_STATE fn_state = USCH_FN_START;
+    struct uschshell_t *p_context = NULL;
 
     p_input = malloc(INPUT_BUFFER_MAX);
-    if (p_input == NULL)
-    {
-        goto end;
-    }
+    FAIL_IF(p_input == NULL);
     printf("%s", prompt);
     fflush(stdout);
+    
+    FAIL_IF(uschshell_create(&p_context) != 0);
+    FAIL_IF(uschshell_pathhash(p_context) != 0);
 
     while ((c = getch()) != EOF && c != CONTROL('d'))
     {
@@ -114,7 +116,7 @@ int main(void)
                             {
                                 printf("%d\n\n", (unsigned int)fn_state);
                                 fflush(stdout);
-                                goto end;
+                                FAIL_IF(1);
                             }
                     }
                     break;
@@ -158,20 +160,17 @@ int main(void)
                             }
                         default:
                             {
-                                goto end;
+                                FAIL_IF(1);
                             }
                     }
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
-                        status = uschshell_eval(NULL, p_input);
+                        status = uschshell_eval(p_context, p_input);
                     }
                     p_input[0] = '\0';
                     input_index = 0;
-                    if (status)
-                    {
-                        goto end;
-                    }
+                    FAIL_IF(status < 0);
                     printf("%s", prompt);
                     fflush(stdout);
 
@@ -193,6 +192,7 @@ int main(void)
         }
     }
 end:
+    uschshell_destroy(p_context);
     free(p_input);
     return 0;
 }

@@ -42,6 +42,9 @@ int uschshell_store(struct uschshell_t *p_context, char *p_defname, void *p_data
 int uschshell_define_fn(struct uschshell_t *p_context, char *p_fndefname, char *p_body);
 int uschshell_undef_fn(struct uschshell_t *p_context, char *p_fndefname);
 
+int uschshell_pathhash(struct uschshell_t *p_context);
+int uschshell_is_cmd(struct uschshell_t *p_context, char *p_item);
+
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED
