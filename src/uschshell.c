@@ -299,19 +299,12 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
-    char usch_h[] = "#include <usch.h>\n";
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     char uschrc_h[] = "/.uschrc.h";
-    char pre1[] = "#define ";
-    char pre2[] = "(...) usch_cmd(\"";
-    char pre3[] = "\", ##__VA_ARGS__)\n";
-
-    char dyn_func_def[] = "int dyn_func()\n    {\n        ";
 
     char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";
-    char post_fn[] = ";return 0;\n}\n";
     //char *p_fnname = NULL;
     char *p_tempdir = NULL;
     char *p_tempfile = NULL;
@@ -349,7 +342,8 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
 
     if (parse_line(p_input, &definition) < 1)
         goto end;
-    if (!fwrite_ok(usch_h, p_stmt_c))
+    
+    if (!fwrite_ok("#include <usch.h>\n", p_stmt_c))
         goto end;
     p_fullpath_uschrc_h = calloc(sizeof(getenv("HOME")) + sizeof(uschrc_h) + 2, 1);
     if (p_fullpath_uschrc_h == NULL)
@@ -369,23 +363,24 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
 
     if (strcmp(definition.p_symname, "cd") != 0)
     {
-        if (!fwrite_ok(pre1, p_stmt_c))
+
+        if (!fwrite_ok("#define ", p_stmt_c))
             goto end;
         if (!fwrite_ok(definition.p_symname, p_stmt_c))
             goto end;
-        if (!fwrite_ok(pre2, p_stmt_c))
+        if (!fwrite_ok("(...) usch_cmd(\"", p_stmt_c))
             goto end;
         if (!fwrite_ok(definition.p_symname, p_stmt_c))
             goto end;
-        if (!fwrite(pre3, 1, strlen(pre3), p_stmt_c))
+        if (!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c))
             goto end;
     }
-    if (!fwrite_ok(dyn_func_def, p_stmt_c))
+    if (!fwrite_ok("int dyn_func()\n    {\n        ", p_stmt_c))
         goto end;
     if (!fwrite_ok(p_input, p_stmt_c))
         goto end;
 
-    if (!fwrite_ok(post_fn, p_stmt_c))
+    if (!fwrite_ok(";return 0;\n}\n", p_stmt_c))
         goto end;
     fclose(p_stmt_c);
     p_stmt_c = NULL;
