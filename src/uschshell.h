@@ -30,16 +30,14 @@ extern "C" {
 #endif // DUMMY_VIM_FIX_NEEDED
 
 struct uschshell_t;
-typedef struct uschshell_t uschshell_t;
-int uschshell_create(uschshell_t **p_context);
-int uschshell_eval(uschshell_t *p_context, char *p_input);
-void uschshell_destroy(uschshell_t *p_context);
+int uschshell_create(struct uschshell_t **p_context);
+int uschshell_eval(struct uschshell_t *p_context, char *p_input);
+void uschshell_destroy(struct uschshell_t *p_context);
 
-int uschshell_load_impl(uschshell_t *p_context, void *p_type, char *p_symname);
-int uschshell_store_impl(uschshell_t *p_context, char *p_decl, char *p_symname);
-int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, void* p_data);
-void uschshell_undef(uschshell_t *p_context, char *p_defname);
-int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data);
+int uschshell_define(struct uschshell_t *p_context, size_t var_size, char *p_defname);
+void uschshell_undef(struct uschshell_t *p_context, char *p_defname);
+int uschshell_load(struct uschshell_t *p_context, char *p_defname, void *p_data);
+int uschshell_store(struct uschshell_t *p_context, char *p_defname, void *p_data);
 
 #if DUMMY_VIM_FIX_NEEDED
 {

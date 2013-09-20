@@ -122,20 +122,62 @@ static char *test_uschshell_vars()
     char *p_message = NULL;
     int error;
     int int_test;
-    uschshell_t *p_context = NULL;
+    float float_test;
+    double double_test;
+    char char_test;
+    char right_str[] = "right";
+    char wrong_str[] = "wrong";
+    char *p_str = NULL;
+    struct uschshell_t *p_context = NULL;
+
     error = uschshell_create(&p_context);
     mu_assert("error: uschshell_create(&p_context) != 0", error == 0);
-    error = uschshell_define(p_context, sizeof(int_test), "int int_test", (void*)&int_test);
+    error = uschshell_define(p_context, sizeof(int_test), "int int_test");
     mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
     uschshell_undef(p_context, "int int_test");
     error = uschshell_load(p_context, "int int_test", (void*)&int_test);
     mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
 
-    error = uschshell_define(p_context, sizeof(int_test), "int int_test", (void*)&int_test);
+    error = uschshell_define(p_context, sizeof(int_test), "int int_test");
     mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
 
+    int_test = 42;
+    error = uschshell_store(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: uschshell_store(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
+
+    int_test = 994;
+
     error = uschshell_load(p_context, "int int_test", (void*)&int_test);
-    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
+    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
+    mu_assert("error: int_test != 42", int_test == 42);
+
+    float_test = 3.14f;
+    error = uschshell_define(p_context, sizeof(float_test), "float float_test");
+    error = uschshell_store(p_context, "float float_test", (void*)&float_test);
+    float_test = 994.0f;
+    error = uschshell_load(p_context, "float float_test", (void*)&float_test);
+    mu_assert("error: float_test != 3.14", float_test == 3.14f);
+
+    p_str = right_str;
+    error = uschshell_define(p_context, sizeof(p_str), "char *p_str");
+    error = uschshell_store(p_context, "char *p_str", (void*)&p_str);
+    p_str = wrong_str;
+    error = uschshell_load(p_context, "char *p_str", (void*)&p_str);
+    mu_assert("error: p_str != right_str", strcmp(p_str, right_str) == 0);
+
+    double_test = 3.14;
+    error = uschshell_define(p_context, sizeof(double_test), "double double_test");
+    error = uschshell_store(p_context, "double double_test", (void*)&double_test);
+    double_test = 994.0f;
+    error = uschshell_load(p_context, "double double_test", (void*)&double_test);
+    mu_assert("error: double_test != 3.14", double_test == 3.14);
+
+    char_test = 'a';
+    error = uschshell_define(p_context, sizeof(char_test), "char char_test");
+    error = uschshell_store(p_context, "char char_test", (void*)&char_test);
+    char_test = 'f';
+    error = uschshell_load(p_context, "char char_test", (void*)&char_test);
+    mu_assert("error: char_test != 3.14", char_test == 'a');
 
 
     uschshell_destroy(p_context);
@@ -153,7 +195,9 @@ static char *test_uthash()
 {
     char *p_message = NULL;
     char **n, *names[] = { "joe", "bob", "betty", NULL };
-    usch_test_vars_t *p_s, *p_tmp, *p_users = NULL;
+    usch_test_vars_t *p_s = NULL;
+    usch_test_vars_t *p_tmp = NULL;
+    usch_test_vars_t *p_users = NULL;
     int i=0;
 
     for (n = names; *n != NULL; n++) {
@@ -171,18 +215,78 @@ cleanup:
     /* free the hash table contents */
     HASH_ITER(hh, p_users, p_s, p_tmp) {
         HASH_DEL(p_users, p_s);
+    }
+    return p_message;
+}
+static char *test_uthash1()
+{
+    char *p_message = NULL;
+    char **n, *names[] = { "mccleoad", NULL };
+    usch_test_vars_t *p_s = NULL;
+    usch_test_vars_t *p_tmp = NULL;
+    usch_test_vars_t *p_users = NULL;
+    int i=0;
+    for (n = names; *n != NULL; n++) {
+        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
+        strncpy(p_s->name, *n, strlen(*n));
+        p_s->id = i++;
+        HASH_ADD_STR( p_users, name, p_s );
+    }
+
+    HASH_FIND_STR(p_users, "mccleoad", p_s);
+
+    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
+
+cleanup:
+
+    /* free the hash table contents */
+    HASH_ITER(hh, p_users, p_s, p_tmp) {
+        HASH_DEL(p_users, p_s);
+    }
+    return p_message;
+}
+
+#if 0
+// TODO: uthash crashes when there is only one element in the hash-set
+static char *test_uthash1()
+{
+    char *p_message = NULL;
+    char **n, *names[] = { "mccleoad", NULL };
+    usch_test_vars_t *p_s = NULL;
+    usch_test_vars_t *p_tmp = NULL;
+    usch_test_vars_t *p_users = NULL;
+    int i=0;
+
+    for (n = names; *n != NULL; n++) {
+        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
+        strncpy(p_s->name, *n,strlen(*n));
+        p_s->id = i++;
+        HASH_ADD_STR( p_users, name, p_s );
+    }
+
+    printf("argh!\n");
+    HASH_FIND_STR(p_users, "mccleoad", p_s);
+    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
+
+cleanup:
+
+    /* free the hash table contents */
+    HASH_ITER(hh, p_users, p_s, p_tmp) {
+        HASH_DEL(p_users, p_s);
         free(p_s);
     }
     return p_message;
-}      
+}
+#endif // 0
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
     //mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
-    mu_run_test(test_uschshell_vars);
     mu_run_test(test_uthash);
+    mu_run_test(test_uthash1);
+    mu_run_test(test_uschshell_vars);
     return 0;
 }
 int main()

@@ -97,12 +97,14 @@ typedef enum uschshell_type_t
     USCHSHELL_TYPE_PTR,
 } uschshell_type_t;
 
+#define USCHSHELL_DEFINE_SIZE 8
 typedef struct uschshell_def_t
 {
     UT_hash_handle hh;
     uschshell_type_t type;
     size_t size;
-    char data[8];
+    void *p_alloc_data;
+    char data[USCHSHELL_DEFINE_SIZE];
     char defname[];
 } uschshell_def_t;
 typedef struct uschshell_t 
@@ -111,13 +113,14 @@ typedef struct uschshell_t
 
 } uschshell_t;
 
-int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, void* p_data)
+int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname)
 {
     int status = 0;
-    if (p_context == NULL || p_defname == NULL || p_data == NULL)
+    if (p_context == NULL || p_defname == NULL)
         return -1;
     uschshell_def_t *p_defs = p_context->p_defs;
     uschshell_def_t *p_def = NULL;
+    void *p_alloc_data = NULL;
     HASH_FIND_STR(p_defs, p_defname, p_def);
     if (p_def != NULL)
     {
@@ -127,9 +130,23 @@ int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname, v
     p_def = calloc(sizeof(uschshell_def_t) + strlen(p_defname) + 1, 1);
     if (p_def == NULL)
         goto end;
+
+    if (var_size > USCHSHELL_DEFINE_SIZE)
+    {
+        p_alloc_data = calloc(var_size, 1);
+        if (p_alloc_data == NULL)
+            goto end;
+        p_def->p_alloc_data = p_alloc_data;
+    }
     p_def->size = var_size;
-    HASH_ADD_STR(p_defs, defname, p_def);
+    strcpy(p_def->defname, p_defname);
+
+    HASH_ADD_STR(p_context->p_defs, defname, p_def);
+    p_def = NULL;
+    p_alloc_data = NULL;
 end:
+    free(p_alloc_data);
+    free(p_def);
     return status;
 }
 void uschshell_undef(uschshell_t *p_context, char *p_defname)
@@ -162,11 +179,45 @@ int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data)
     return status;
 }
 
+int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
+{
+    int status = 0;
+    if (p_context == NULL || p_defname == NULL)
+        return -1;
+    uschshell_def_t *p_def = NULL;
+    uschshell_def_t *p_defs = p_context->p_defs;
+    HASH_FIND_STR(p_defs, p_defname, p_def);
+    if (p_def != NULL)
+    {
+        memcpy(p_def->data, p_data, p_def->size);
+    }
+    else
+    {
+        status = -1;
+    }
+    return status;
+}
 int uschshell_create(uschshell_t **pp_context)
 {
     uschshell_t *p_context = NULL;
+    uschshell_def_t *p_def = NULL;
+
     p_context = calloc(sizeof(uschshell_t), 1);
+    if (p_context == NULL)
+        goto end;
+    
+    p_def = calloc(sizeof(uschshell_def_t) + 1, 1);
+    if (p_def == NULL)
+        goto end;
+    
+    HASH_ADD_STR(p_context->p_defs, defname, p_def);
+
     *pp_context = p_context;
+    p_context = NULL;
+    p_def = NULL;
+end:
+    free(p_def);
+    free(p_context);
     return 0;
 }
 void uschshell_destroy(uschshell_t *p_context)
