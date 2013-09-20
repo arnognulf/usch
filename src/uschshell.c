@@ -36,6 +36,36 @@ typedef struct
 #include "uschshell.h"
 #include "../external/uthash/src/uthash.h"
 
+static size_t get_type_len(char *p_defname)
+{
+    size_t i, last_type_pos;
+    size_t deflen = strlen(p_defname);
+
+    for (i = 0; i < deflen; i++)
+    {
+        if (p_defname[i] == ' ')
+            last_type_pos = i;
+        if (p_defname[i] == '*')
+            last_type_pos = i;
+    }
+    return last_type_pos;
+}
+
+static char *get_symname(char *p_defname)
+{
+    char *p_tmp = p_defname;
+    char *p_symname = p_defname;
+    while (*p_tmp != '\0')
+    {
+        if (*p_tmp == ' ' || *p_tmp == '*')
+        {
+            p_symname = p_tmp;
+        }
+        p_tmp++;
+    }
+    return p_symname + 1;
+}
+
 static int parse_line(char *p_input, usch_def_t *p_definition)
 {
     //usch_def_t definition;
@@ -185,6 +215,25 @@ int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data)
     return status;
 }
 
+static void print_updated_variables(char *p_defname, void *p_data)
+{
+    size_t type_len;
+    type_len = get_type_len(p_defname);
+
+    if (strncmp(p_defname, "unsigned int", type_len) == 0)
+        printf("%s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
+    if (strncmp(p_defname, "char", type_len) == 0)
+        printf("%s = %c\n", get_symname(p_defname), *(char*)p_data);
+    else if (strncmp(p_defname, "int", type_len) == 0)
+        printf("%s = %d\n", get_symname(p_defname), *(int*)p_data);
+    else if (strncmp(p_defname, "double", type_len) == 0)
+        printf("%s = %f\n", get_symname(p_defname), *(double*)p_data);
+    else if (strncmp(p_defname, "float", type_len) == 0)
+        printf("%s = %f\n", get_symname(p_defname), *(float*)p_data);
+    else
+        printf("%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
+}
+
 int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
@@ -196,6 +245,8 @@ int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
     if (p_def != NULL)
     {
         memcpy(p_def->data, p_data, p_def->size);
+
+        print_updated_variables(p_defname, p_def->data);
     }
     else
     {
@@ -281,13 +332,71 @@ int fwrite_ok(char* p_str, FILE *p_file)
     }
 
 }
+static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
+{
+    char definitions_h_filename[] = "definitions.h";
+    size_t filename_length;
+    size_t tempdir_len;
+    char *p_definitionsfile = NULL;
+    FILE *p_definitions_h = NULL;
+    uschshell_def_t *p_defs = NULL;
+    uschshell_def_t *p_def = NULL;
+    uschshell_def_t *p_tmp = NULL;
 
+    p_defs = p_context->p_defs;
+    tempdir_len = strlen(p_tempdir);
+    filename_length = tempdir_len + 1 + strlen(definitions_h_filename) + 1;
+    p_definitionsfile = calloc(filename_length, 1);
+    if (p_definitionsfile == NULL)
+    {
+        goto end;
+    }
+    strcpy(p_definitionsfile, p_tempdir);
+    p_definitionsfile[tempdir_len] = '/';
+    strcpy(&p_definitionsfile[tempdir_len + 1], definitions_h_filename);
+    p_definitionsfile[filename_length-1] = '\0';
+    p_definitions_h = fopen(p_definitionsfile, "w+");
+    if (p_definitions_h == NULL)
+    {
+        printf("file open fail\n");
+        goto end;
+    }
+    HASH_ITER(hh, p_defs, p_def, p_tmp)
+    {
+        if(fwrite_ok(p_def->defname, p_definitions_h))
+            goto end;
+
+        if(fwrite_ok(";\n", p_definitions_h))
+            goto end;
+    }
+    if(fwrite_ok("\nvoid uschshell_load_vars(uschshell_t *p_context)\n{\n", p_definitions_h))
+        goto end;
+    HASH_ITER(hh, p_defs, p_def, p_tmp)
+    {
+        if(!fwrite_ok("uschshell_load(p_context, \"", p_definitions_h))
+            goto end;
+        if(!fwrite_ok(p_def->defname, p_definitions_h))
+            goto end;
+        if(fwrite_ok("\", (void*)&", p_definitions_h))
+            goto end;
+        if(fwrite_ok(get_symname(p_def->defname), p_definitions_h))
+            goto end;
+        if(fwrite_ok(");\n", p_definitions_h))
+            goto end;
+    }
+
+    if(fwrite_ok("\n}\n", p_definitions_h))
+        goto end;
+
+end:
+    if(p_definitions_h)
+        fclose(p_definitions_h);
+    free(p_definitionsfile);
+    return -1;
+}
 
 int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
-    // TODO: unused for now
-    (void)p_context;
-
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
     void *p_handle = NULL;
@@ -305,12 +414,14 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
 
     char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";
-    //char *p_fnname = NULL;
     char *p_tempdir = NULL;
     char *p_tempfile = NULL;
     char *p_tempdylib = NULL;
     size_t tempdir_len = 0;
     char dir_template[] = "/tmp/usch-XXXXXX";
+
+    if (p_context == NULL || p_input == NULL)
+        goto end;
 
     if (usch_strsplit(getenv("PATH"), ":", &pp_path) < 0)
     {
@@ -340,11 +451,17 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
         goto end;
     }
 
+    if (write_definitions_h(p_context, p_tempdir) != 0)
+        goto end;
+    
     if (parse_line(p_input, &definition) < 1)
         goto end;
     
     if (!fwrite_ok("#include <usch.h>\n", p_stmt_c))
         goto end;
+    if (!fwrite_ok("#include \"definitions.h\"\n", p_stmt_c))
+        goto end;
+
     p_fullpath_uschrc_h = calloc(sizeof(getenv("HOME")) + sizeof(uschrc_h) + 2, 1);
     if (p_fullpath_uschrc_h == NULL)
         goto end;
