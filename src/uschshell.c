@@ -443,7 +443,6 @@ end:
 }
 int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
 {
-    int status = 0;
     uschshell_cmd_t *p_cmds = NULL;
     uschshell_cmd_t *p_found_cmd = NULL;
 
