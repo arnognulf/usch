@@ -39,6 +39,9 @@ void uschshell_undef(struct uschshell_t *p_context, char *p_defname);
 int uschshell_load(struct uschshell_t *p_context, char *p_defname, void *p_data);
 int uschshell_store(struct uschshell_t *p_context, char *p_defname, void *p_data);
 
+int uschshell_define_fn(struct uschshell_t *p_context, char *p_fndefname, char *p_body);
+int uschshell_undef_fn(struct uschshell_t *p_context, char *p_fndefname);
+
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED

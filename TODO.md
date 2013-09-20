@@ -14,7 +14,7 @@
 10. proper job control
 11. piping.
 12. redirect to file (tee() may be used as workaround if 11. is fixed)
-13. .uschrc.c or .uschr.c :)
+DONE: 13. .uschrc.c or .uschr.c :)
 14. usch_context_t *p_usch = {...}; usch_eval(p_usch, "int i = x + 32") (may need 13.)
 15. function to set callback for prompt, whats needed? probably 13.
 16. fix makefile to rebuild upon changes in any file.
