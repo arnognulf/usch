@@ -41,6 +41,15 @@ typedef struct
 #include "uschshell.h"
 #include "../external/uthash/src/uthash.h"
 
+static int count_spaces(char *p_input)
+{
+    size_t i = 0;
+    while (p_input[i] != '\0' && (p_input[i] == ' '  || p_input[i] == '\t'))
+    {
+        i++;
+    }
+    return i;
+}
 static size_t get_type_len(char *p_defname)
 {
     size_t i, last_type_pos;
@@ -222,17 +231,17 @@ static void print_updated_variables(char *p_defname, void *p_data)
     type_len = get_type_len(p_defname);
 
     if (strncmp(p_defname, "unsigned int", type_len) == 0)
-        printf(" %s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
+        printf("$%s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
     if (strncmp(p_defname, "char", type_len) == 0)
-        printf(" %s = %c\n", get_symname(p_defname), *(char*)p_data);
+        printf("$%s = %c\n", get_symname(p_defname), *(char*)p_data);
     else if (strncmp(p_defname, "int", type_len) == 0)
-        printf(" %s = %d\n", get_symname(p_defname), *(int*)p_data);
+        printf("$%s = %d\n", get_symname(p_defname), *(int*)p_data);
     else if (strncmp(p_defname, "double", type_len) == 0)
-        printf(" %s = %f\n", get_symname(p_defname), *(double*)p_data);
+        printf("$%s = %f\n", get_symname(p_defname), *(double*)p_data);
     else if (strncmp(p_defname, "float", type_len) == 0)
-        printf(" %s = %f\n", get_symname(p_defname), *(float*)p_data);
+        printf("$%s = %f\n", get_symname(p_defname), *(float*)p_data);
     else
-        printf(" %s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
+        printf("$%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
 }
 
 int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
@@ -391,7 +400,7 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("uschshell_load(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok("\tuschshell_load(p_context, \"", p_definitions_h));
             FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
             FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
             FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
@@ -406,7 +415,7 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("uschshell_store(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok("\tuschshell_store(p_context, \"", p_definitions_h));
             FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
             FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
             FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
@@ -535,10 +544,11 @@ static int is_c_keyword(char *p_item)
     }
     return 0;
 }
+#if 0 
 static int is_end_of_pre_assign(char *p_input)
 {
     size_t i = 0;
-    printf("\npre_assign: %s\n", p_input);
+    printf("\npre_assign: XX%sYY\n", p_input);
     while (p_input[i] != '\0')
     {
 
@@ -550,6 +560,20 @@ static int is_end_of_pre_assign(char *p_input)
     }
     return 0;
 }
+#endif // 0
+static void trim_end_space(char *p_input)
+{
+    size_t i;
+    size_t len = strlen(p_input);
+
+    for (i = len - 1; i > 0; i--)
+    {
+        if (p_input[i] == ' ' || p_input[i] == '\t')
+            p_input[i] = '\0';
+        else
+             break;
+    }
+}
 static int pre_assign(char *p_input, char **pp_pre_assign)
 {
     int status = 0;
@@ -560,14 +584,14 @@ static int pre_assign(char *p_input, char **pp_pre_assign)
 
     FAIL_IF(p_pre_assign == NULL);
 
-    while (p_pre_assign[i] != '\0' || p_pre_assign[i] == ' ' || p_pre_assign[i] == '\t')
-        i++;
-    while (p_pre_assign[i] != '\0' && p_pre_assign[i] != ' ' && p_pre_assign[i] == '\t')
+    i += count_spaces(p_pre_assign);
+    while (p_pre_assign[i] != '\0')
     {
-        if (is_end_of_pre_assign(&p_input[i]))
+        if (p_input[i] == '=')
             p_pre_assign[i] = '\0';
         i++;
     }
+    trim_end_space(p_pre_assign);
     *pp_pre_assign = p_pre_assign;
     p_pre_assign = NULL;
 end:
@@ -587,7 +611,7 @@ static int post_assign(char *p_input, char **pp_post_assign)
 
     while (p_input[i] != '\0')
     {
-        if (p_post_assign[i] == '=')
+        if (p_input[i] == '=')
             strcpy(p_post_assign, &p_input[i+1]);
         i++;
     }
@@ -632,15 +656,7 @@ int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
     else
         return 0;
 }
-static int count_spaces(char *p_input)
-{
-    size_t i = 0;
-    while (p_input[i] != '\0' && (p_input[i] == ' '  || p_input[i] == '\t'))
-    {
-        i++;
-    }
-    return i;
-}
+
 static int is_definition(char *p_input)
 {
     size_t i = 0;
@@ -757,7 +773,6 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     else if(is_definition(p_input))
     {
         FAIL_IF(pre_assign(p_input, &p_pre_assign) != 0);
-        FAIL_IF(post_assign(p_input, &p_post_assign));
         FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
         FAIL_IF(!fwrite_ok(";\n", p_stmt_c));
 
@@ -767,17 +782,21 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
         FAIL_IF(!fwrite_ok("), \"", p_stmt_c));
         FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
         FAIL_IF(!fwrite_ok("\");\n", p_stmt_c));
+        
+        FAIL_IF(post_assign(p_input, &p_post_assign));
         if (strlen(p_post_assign) > 0)
         {
-
+            FAIL_IF(!fwrite_ok("\t", p_stmt_c));
             FAIL_IF(!fwrite_ok(get_symname(p_pre_assign), p_stmt_c));
             FAIL_IF(!fwrite_ok(" = ", p_stmt_c));
             FAIL_IF(!fwrite_ok(p_post_assign, p_stmt_c));
-            FAIL_IF(!fwrite_ok("\n", p_stmt_c));
+            FAIL_IF(!fwrite_ok(";\n", p_stmt_c));
 
-            FAIL_IF(!fwrite_ok("uschshell_store(p_context, sizeof(int_test), \"", p_stmt_c));
+            FAIL_IF(!fwrite_ok("\tuschshell_store(p_context, \"", p_stmt_c));
             FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
-            FAIL_IF(!fwrite_ok("\");\n", p_stmt_c));
+            FAIL_IF(!fwrite_ok("\", (void*)&", p_stmt_c));
+            FAIL_IF(!fwrite_ok(get_symname(p_pre_assign), p_stmt_c));
+            FAIL_IF(!fwrite_ok(");\n", p_stmt_c));
 
         }
 
