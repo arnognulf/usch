@@ -132,7 +132,7 @@ typedef struct uschshell_def_t
     size_t size;
     void *p_body_data;
     void *p_alloc_data;
-    char data[USCHSHELL_DEFINE_SIZE];
+    uint8_t data[USCHSHELL_DEFINE_SIZE];
     char defname[];
 } uschshell_def_t;
 
@@ -222,32 +222,47 @@ static void print_updated_variables(char *p_defname, void *p_data)
     type_len = get_type_len(p_defname);
 
     if (strncmp(p_defname, "unsigned int", type_len) == 0)
-        printf("%s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
+        printf(" %s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
     if (strncmp(p_defname, "char", type_len) == 0)
-        printf("%s = %c\n", get_symname(p_defname), *(char*)p_data);
+        printf(" %s = %c\n", get_symname(p_defname), *(char*)p_data);
     else if (strncmp(p_defname, "int", type_len) == 0)
-        printf("%s = %d\n", get_symname(p_defname), *(int*)p_data);
+        printf(" %s = %d\n", get_symname(p_defname), *(int*)p_data);
     else if (strncmp(p_defname, "double", type_len) == 0)
-        printf("%s = %f\n", get_symname(p_defname), *(double*)p_data);
+        printf(" %s = %f\n", get_symname(p_defname), *(double*)p_data);
     else if (strncmp(p_defname, "float", type_len) == 0)
-        printf("%s = %f\n", get_symname(p_defname), *(float*)p_data);
+        printf(" %s = %f\n", get_symname(p_defname), *(float*)p_data);
     else
-        printf("%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
+        printf(" %s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
 }
 
 int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
+    uint8_t tmp[USCHSHELL_DEFINE_SIZE] = {0};
+    int is_updated = 0;
     if (p_context == NULL || p_defname == NULL)
         return -1;
     uschshell_def_t *p_def = NULL;
     uschshell_def_t *p_defs = p_context->p_defs;
     HASH_FIND_STR(p_defs, p_defname, p_def);
+    
     if (p_def != NULL)
     {
-        memcpy(p_def->data, p_data, p_def->size);
+            memcpy(tmp, p_data, p_def->size);
 
-        print_updated_variables(p_defname, p_def->data);
+            size_t i;
+            for (i = 0; i < p_def->size; i++)
+            {
+                if (((uint8_t*)tmp)[i] != ((uint8_t*)p_def->data)[i])
+                {
+                    is_updated = 1;
+                }
+            }
+
+            memcpy(p_def->data, p_data, p_def->size);
+            if (is_updated)
+                print_updated_variables(p_defname, p_data);
+        //}
     }
     else
     {
@@ -386,6 +401,22 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
 
     FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
 
+    FAIL_IF(!fwrite_ok("\nvoid uschshell_store_vars(struct uschshell_t *p_context)\n{\n", p_definitions_h));
+    HASH_ITER(hh, p_defs, p_def, p_tmp)
+    {
+        if (strcmp(p_def->defname, "") != 0)
+        {
+            FAIL_IF(!fwrite_ok("uschshell_store(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
+            FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
+            FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
+            FAIL_IF(!fwrite_ok(");\n", p_definitions_h));
+        }
+    }
+
+    FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
+
+
 end:
     if(p_definitions_h)
         fclose(p_definitions_h);
@@ -398,7 +429,7 @@ int uschshell_pathhash(uschshell_t *p_context)
     char **pp_path = NULL;
     int num_paths = 0;
     int i;
-    DIR *p_dir;
+    DIR *p_dir = NULL;
     uschshell_cmd_t *p_cmds = NULL;
     uschshell_cmd_t *p_cmd = NULL;
 
@@ -441,16 +472,203 @@ end:
     free(p_cmd);
     return status;
 }
+static int is_reserved_word(char *p_item)
+{
+    size_t i;
+    char *p_keywords[] = { \
+            "printf", \
+            "open"};
+
+    for (i = 0; i < sizeof(p_keywords)/sizeof(p_keywords[0]); i++)
+    {
+        if (strncmp(p_item, p_keywords[i], strlen(p_keywords[i])) == 0)
+            return 1;
+    }
+    return 0;
+}
+static int is_c_keyword(char *p_item)
+{
+    size_t i;
+    char *p_keywords[] = { \
+            "auto", \
+            "break", \
+            "case", \
+            "char", \
+            "const", \
+            "continue", \
+            "default", \
+            "do", \
+            "double", \
+            "else" \
+            "enum", \
+            "extern", \
+            "float", \
+            "for", \
+            "goto", \
+            "if", \
+            "int", \
+            "long", \
+            "register", \
+            "return", \
+            "short", \
+            "signed", \
+            "sizeof", \
+            "static", \
+            "struct", \
+            "switch", \
+            "typedef", \
+            "union", \
+            "unsigned", \
+            "void", \
+            "volatile", \
+            "while", \
+            /* common compiler prefixes, but not actual c keywords: */ \
+            "_", \
+            "inline", \
+            "asm", \
+            "typeof"};
+
+    for (i = 0; i < sizeof(p_keywords)/sizeof(p_keywords[0]); i++)
+    {
+        if (strncmp(p_item, p_keywords[i], strlen(p_keywords[i])) == 0)
+            return 1;
+    }
+    return 0;
+}
+static int is_end_of_pre_assign(char *p_input)
+{
+    size_t i = 0;
+    printf("\npre_assign: %s\n", p_input);
+    while (p_input[i] != '\0')
+    {
+
+        if (p_input[i] == '=')
+            return 1;
+        if (p_input[i] != ' ' || p_input[i] != '\t')
+            return 0;
+        i++;
+    }
+    return 0;
+}
+static int pre_assign(char *p_input, char **pp_pre_assign)
+{
+    int status = 0;
+    char *p_pre_assign = NULL;
+    int i = 0;
+
+    p_pre_assign = strdup(p_input);
+
+    FAIL_IF(p_pre_assign == NULL);
+
+    while (p_pre_assign[i] != '\0' || p_pre_assign[i] == ' ' || p_pre_assign[i] == '\t')
+        i++;
+    while (p_pre_assign[i] != '\0' && p_pre_assign[i] != ' ' && p_pre_assign[i] == '\t')
+    {
+        if (is_end_of_pre_assign(&p_input[i]))
+            p_pre_assign[i] = '\0';
+        i++;
+    }
+    *pp_pre_assign = p_pre_assign;
+    p_pre_assign = NULL;
+end:
+    free(p_pre_assign);
+    return status;
+}
+
+static int post_assign(char *p_input, char **pp_post_assign)
+{
+    int status = 0;
+    char *p_post_assign = NULL;
+    int i;
+
+    p_post_assign = calloc(strlen(p_input) + 1, 1);
+
+    FAIL_IF(p_post_assign == NULL);
+
+    while (p_input[i] != '\0')
+    {
+        if (p_post_assign[i] == '=')
+            strcpy(p_post_assign, &p_input[i+1]);
+        i++;
+    }
+    *pp_post_assign = p_post_assign;
+    p_post_assign = NULL;
+end:
+    free(p_post_assign);
+    return status;
+}
+
+
+
+
 int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
 {
     uschshell_cmd_t *p_cmds = NULL;
     uschshell_cmd_t *p_found_cmd = NULL;
+    int i;
 
     if (p_context == NULL || p_item == NULL)
         return -1;
-
+    if (is_c_keyword(p_item))
+    {
+        return 0;
+    }
+    if (is_reserved_word(p_item))
+    {
+        return 0;
+    }
+    while (p_item[i] != '\0')
+    {
+        if (p_item[i] == ' ')
+            return 0;
+        if (p_item[i] == '(')
+            return 1;
+        i++;
+    }
+    p_cmds = p_context->p_cmds;
     HASH_FIND_STR(p_cmds, p_item, p_found_cmd);
     if (p_found_cmd)
+        return 1;
+    else
+        return 0;
+}
+static int count_spaces(char *p_input)
+{
+    size_t i = 0;
+    while (p_input[i] != '\0' && (p_input[i] == ' '  || p_input[i] == '\t'))
+    {
+        i++;
+    }
+    return i;
+}
+static int is_definition(char *p_input)
+{
+    size_t i = 0;
+    size_t words = 0;
+    size_t unfinished_words = 0;
+
+    i += count_spaces(p_input); 
+
+    while (p_input[i] != '\0')
+    {
+        if (p_input[i] == '=')
+            break;
+        if (p_input[i] == '(')
+            return 0;
+        if (p_input[i] == ' ' || p_input[i] == '\t')
+        {
+            unfinished_words = 0;
+            words++;
+            i += count_spaces(&p_input[i]);
+        }
+        else
+        {
+            unfinished_words = 1;
+            i++;
+        }
+    }
+    words = words + unfinished_words;
+    if (words > 1)
         return 1;
     else
         return 0;
@@ -461,7 +679,9 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
     void *p_handle = NULL;
-    int (*dyn_func)();
+    int (*dyn_func)(uschshell_t*);
+    int (*uschshell_store_vars)(uschshell_t*);
+    int (*uschshell_load_vars)(uschshell_t*);
     char *p_error = NULL;
     char **pp_path = NULL;
     size_t filename_length;
@@ -480,6 +700,8 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     char *p_tempdylib = NULL;
     size_t tempdir_len = 0;
     char dir_template[] = "/tmp/usch-XXXXXX";
+    char *p_pre_assign = NULL;
+    char *p_post_assign = NULL;
 
     if (p_context == NULL || p_input == NULL)
         return -1;
@@ -517,20 +739,61 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
         FAIL_IF(!fwrite_ok("/.uschrc.h\"\n", p_stmt_c));
     }
 
-    if (strcmp(definition.p_symname, "cd") != 0)
+    if (uschshell_is_cmd(p_context, p_input))
     {
-        FAIL_IF(!fwrite_ok("#define ", p_stmt_c));
-        FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
-        FAIL_IF(!fwrite_ok("(...) usch_cmd(\"", p_stmt_c));
-        FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
-        FAIL_IF(!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c));
-    }
-    FAIL_IF(!fwrite_ok("int dyn_func()\n    {\n        ", p_stmt_c));
-    FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
+        if (strcmp(definition.p_symname, "cd") != 0)
+        {
+            FAIL_IF(!fwrite_ok("#define ", p_stmt_c));
+            FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
+            FAIL_IF(!fwrite_ok("(...) usch_cmd(\"", p_stmt_c));
+            FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
+            FAIL_IF(!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c));
+        }
+        FAIL_IF(!fwrite_ok("int dyn_func(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
+        FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
 
-    FAIL_IF(!fwrite_ok(";return 0;\n}\n", p_stmt_c));
+        FAIL_IF(!fwrite_ok("\n\treturn 0;\n}\n", p_stmt_c));
+    }
+    else if(is_definition(p_input))
+    {
+        FAIL_IF(pre_assign(p_input, &p_pre_assign) != 0);
+        FAIL_IF(post_assign(p_input, &p_post_assign));
+        FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
+        FAIL_IF(!fwrite_ok(";\n", p_stmt_c));
+
+        FAIL_IF(!fwrite_ok("int dyn_func(struct uschshell_t *p_context)\n{\n", p_stmt_c));
+        FAIL_IF(!fwrite_ok("\tuschshell_define(p_context, sizeof(", p_stmt_c));
+        FAIL_IF(!fwrite_ok(get_symname(p_pre_assign), p_stmt_c));
+        FAIL_IF(!fwrite_ok("), \"", p_stmt_c));
+        FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
+        FAIL_IF(!fwrite_ok("\");\n", p_stmt_c));
+        if (strlen(p_post_assign) > 0)
+        {
+
+            FAIL_IF(!fwrite_ok(get_symname(p_pre_assign), p_stmt_c));
+            FAIL_IF(!fwrite_ok(" = ", p_stmt_c));
+            FAIL_IF(!fwrite_ok(p_post_assign, p_stmt_c));
+            FAIL_IF(!fwrite_ok("\n", p_stmt_c));
+
+            FAIL_IF(!fwrite_ok("uschshell_store(p_context, sizeof(int_test), \"", p_stmt_c));
+            FAIL_IF(!fwrite_ok(p_pre_assign, p_stmt_c));
+            FAIL_IF(!fwrite_ok("\");\n", p_stmt_c));
+
+        }
+
+        FAIL_IF(!fwrite_ok("\treturn 0;\n}\n", p_stmt_c));
+    }
+    else /* as is */   
+    {
+        FAIL_IF(!fwrite_ok("int dyn_func(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
+        FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
+
+        FAIL_IF(!fwrite_ok(";\n\treturn 0;\n}\n", p_stmt_c));
+    }
+
     fclose(p_stmt_c);
     p_stmt_c = NULL;
+    usch_cmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
     FAIL_IF(p_tempdylib == NULL);
@@ -549,10 +812,21 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
 
     dlerror();
 
+    *(void **) (&uschshell_load_vars) = dlsym(p_handle, "uschshell_load_vars");
+
+    FAIL_IF((p_error = dlerror()) != NULL);
+    (*uschshell_load_vars)(p_context);
+
     *(void **) (&dyn_func) = dlsym(p_handle, "dyn_func");
 
     FAIL_IF((p_error = dlerror()) != NULL);
-    (*dyn_func)();
+    (*dyn_func)(p_context);
+
+    *(void **) (&uschshell_store_vars) = dlsym(p_handle, "uschshell_store_vars");
+
+    FAIL_IF((p_error = dlerror()) != NULL);
+    (*uschshell_store_vars)(p_context);
+
 
 end:
     free(definition.p_symname);
@@ -560,6 +834,8 @@ end:
         dlclose(p_handle);
     free(pp_path);
     free(p_tempfile);
+    free(p_pre_assign);
+    free(p_post_assign);
 
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);

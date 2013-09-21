@@ -51,6 +51,7 @@ int main(void)
                     printf("(");
                     fflush(stdout);
                     p_input[input_index++] = '(';
+                    p_input[input_index+1] = '\0';
                     break;
                 }
             case '\"':
@@ -59,6 +60,7 @@ int main(void)
                     printf("\"");
                     fflush(stdout);
                     p_input[input_index++] = '"';
+                    p_input[input_index+1] = '\0';
                     break;
                 }
             case KEY_TAB:
@@ -78,91 +80,117 @@ int main(void)
                 }
             case KEY_SPACE:
                 {
-                    switch (fn_state)
+                    if (uschshell_is_cmd(p_context, p_input))
                     {
-                        case USCH_FN_START:
-                            printf(" ");
-                            fflush(stdout);
-                            break;
-                        case USCH_FN_BEGIN:
-                            {
-                                printf("(\"");
+                        switch (fn_state)
+                        {
+                            case USCH_FN_START:
+                                printf(" ");
                                 fflush(stdout);
-                                p_input[input_index++] = '(';
-                                p_input[input_index++] = '"';
-                                fn_state = USCH_FN_DIV;
                                 break;
-                            }
-                        case USCH_FN_DIV:
-                        case USCH_FN_DIV_CONT:
-                            {
-                                printf("\", \"");
-                                fflush(stdout);
-                                p_input[input_index++] = '"';
-                                p_input[input_index++] = ',';
-                                p_input[input_index++] = '"';
+                            case USCH_FN_BEGIN:
+                                {
+                                    printf("(\"");
+                                    fflush(stdout);
+                                    p_input[input_index++] = '(';
+                                    p_input[input_index++] = '"';
+                                    p_input[input_index+1] = '\0';
+                                    fn_state = USCH_FN_DIV;
+                                    break;
+                                }
+                            case USCH_FN_DIV:
+                            case USCH_FN_DIV_CONT:
+                                {
+                                    printf("\", \"");
+                                    fflush(stdout);
+                                    p_input[input_index++] = '"';
+                                    p_input[input_index++] = ',';
+                                    p_input[input_index++] = '"';
+                                    p_input[input_index+1] = '\0';
 
-                                fn_state = USCH_FN_DIV_CONT;
-                                break;
-                            }
-                        case USCH_FN_DISABLED:
-                            {
-                                printf("\")");
-                                p_input[input_index++] = '"';
-                                p_input[input_index++] = ')';
-                                break;
-                            }
-                        default:
-                            {
-                                printf("%d\n\n", (unsigned int)fn_state);
-                                fflush(stdout);
-                                FAIL_IF(1);
-                            }
+                                    fn_state = USCH_FN_DIV_CONT;
+                                    break;
+                                }
+                            case USCH_FN_DISABLED:
+                                {
+                                    printf("\")");
+                                    p_input[input_index++] = '"';
+                                    p_input[input_index++] = ')';
+                                    p_input[input_index+1] = '\0';
+                                    break;
+                                }
+                            default:
+                                {
+                                    printf("%d\n\n", (unsigned int)fn_state);
+                                    fflush(stdout);
+                                    FAIL_IF(1);
+                                }
+                        }
+                    }
+                    else
+                    {
+                        printf(" ");
+                        p_input[input_index++] = ' ';
+                        p_input[input_index+1] = '\0';
+                        fflush(stdout);
                     }
                     break;
                 }
             case KEY_NEWLINE:
                 {
-                    switch (fn_state)
+                    if (uschshell_is_cmd(p_context, p_input))
                     {
-                        case USCH_FN_START:
-                            {
-                                printf("\n");
-                                fflush(stdout);
-                                break;
-                            }
-                        case USCH_FN_BEGIN:
-                            {
-                                printf("();\n");
-                                fflush(stdout);
-                                p_input[input_index++] = '(';
-                                p_input[input_index++] = ')';
-                                p_input[input_index++] = ';';
-                                break;
-                            }
-                        case USCH_FN_DIV_CONT:
-                            {
-                                printf(" ");
-                                printf(");\n");
-                                fflush(stdout);
-                                p_input[input_index++] = ')';
-                                p_input[input_index++] = ';';
-                                break;
-                            }
-                        case USCH_FN_DIV:
-                            {
-                                printf("\");\n");
-                                fflush(stdout);
-                                p_input[input_index++] = '"';
-                                p_input[input_index++] = ')';
-                                p_input[input_index++] = ';';
-                                break;
-                            }
-                        default:
-                            {
-                                FAIL_IF(1);
-                            }
-                    }
+
+                        switch (fn_state)
+                        {
+                            case USCH_FN_START:
+                                {
+                                    printf("\n");
+                                    fflush(stdout);
+                                    break;
+                                }
+                            case USCH_FN_BEGIN:
+                                {
+                                    printf("();\n");
+                                    fflush(stdout);
+                                    p_input[input_index++] = '(';
+                                    p_input[input_index++] = ')';
+                                    p_input[input_index++] = ';';
+                                    p_input[input_index+1] = '\0';
+                                    break;
+                                }
+                            case USCH_FN_DIV_CONT:
+                                {
+                                    printf(" ");
+                                    printf(");\n");
+                                    fflush(stdout);
+                                    p_input[input_index++] = ')';
+                                    p_input[input_index++] = ';';
+                                    p_input[input_index+1] = '\0';
+                                    break;
+                                }
+                            case USCH_FN_DIV:
+                                {
+                                    printf("\");\n");
+                                    fflush(stdout);
+                                    p_input[input_index++] = '"';
+                                    p_input[input_index++] = ')';
+                                    p_input[input_index++] = ';';
+                                    p_input[input_index+1] = '\0';
+                                    break;
+                                }
+                            default:
+                                {
+                                    FAIL_IF(1);
+                                }
+                        }
+                        }
+                        else
+                        {
+                            printf("\n");
+                            fflush(stdout);
+                        }
+                
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
@@ -185,6 +213,7 @@ int main(void)
                     }
 
                     p_input[input_index++] = c;
+                    p_input[input_index+1] = '\0';
                     printf("%c", c);
                     fflush(stdout);
                     break;
