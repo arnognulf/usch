@@ -52,7 +52,8 @@ static int count_spaces(char *p_input)
 }
 static size_t get_type_len(char *p_defname)
 {
-    size_t i, last_type_pos;
+    size_t i;
+    size_t last_type_pos = 0;
     size_t deflen = strlen(p_defname);
 
     for (i = 0; i < deflen; i++)
@@ -544,23 +545,7 @@ static int is_c_keyword(char *p_item)
     }
     return 0;
 }
-#if 0 
-static int is_end_of_pre_assign(char *p_input)
-{
-    size_t i = 0;
-    printf("\npre_assign: XX%sYY\n", p_input);
-    while (p_input[i] != '\0')
-    {
 
-        if (p_input[i] == '=')
-            return 1;
-        if (p_input[i] != ' ' || p_input[i] != '\t')
-            return 0;
-        i++;
-    }
-    return 0;
-}
-#endif // 0
 static void trim_end_space(char *p_input)
 {
     size_t i;
@@ -574,6 +559,7 @@ static void trim_end_space(char *p_input)
              break;
     }
 }
+
 static int pre_assign(char *p_input, char **pp_pre_assign)
 {
     int status = 0;
@@ -603,7 +589,7 @@ static int post_assign(char *p_input, char **pp_post_assign)
 {
     int status = 0;
     char *p_post_assign = NULL;
-    int i;
+    int i = 0;
 
     p_post_assign = calloc(strlen(p_input) + 1, 1);
 
@@ -622,14 +608,11 @@ end:
     return status;
 }
 
-
-
-
 int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
 {
     uschshell_cmd_t *p_cmds = NULL;
     uschshell_cmd_t *p_found_cmd = NULL;
-    int i;
+    int i = 0;
 
     if (p_context == NULL || p_item == NULL)
         return -1;
@@ -656,38 +639,204 @@ int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
     else
         return 0;
 }
+#if 0
+static size_t count_assign_operators(char *p_in)
+{
+    if (strlen(p_in) > 2)
+    {
+        if (strncmp(p_in, "<<=", 3) == 0) return 3;
+        if (strncmp(p_in, ">>=", 3) == 0) return 3;
+    }
+    if (strlen(p_in) > 1)
+    {
+        if (strncmp(p_in, "==", 2) == 0) return 2;
+        if (strncmp(p_in, "+=", 2) == 0) return 2;
+        if (strncmp(p_in, "-=", 2) == 0) return 2;
+        if (strncmp(p_in, "*=", 2) == 0) return 2;
+        if (strncmp(p_in, "%=", 2) == 0) return 2;
+        if (strncmp(p_in, "/=", 2) == 0) return 2;
+        if (strncmp(p_in, "|=", 2) == 0) return 2;
+        if (strncmp(p_in, "^=", 2) == 0) return 2;
+        if (strncmp(p_in, "&=", 2) == 0) return 2;
+    }
+    if (strncmp(p_in, "=", 1) == 0) return 1;
+    return 0;
+}
+static size_t count_deref_operators(char *p_in)
+{
+    if (strlen(p_in) > 1)
+        if (strncmp(p_in, "->", 2) == 0) return 2;
+    if (strncmp(p_in, ".", 1) == 0) return 1;
+    return 0;
+}
+static size_t count_arith_operators(char *p_in)
+{
+    if (strlen(p_in) > 1)
+    {
+        if (strncmp(p_in, ">>", 2) == 0) return 2;
+        if (strncmp(p_in, "<<", 2) == 0) return 2;
+        if (strncmp(p_in, "==", 2) == 0) return 2;
+        if (strncmp(p_in, "&&", 2) == 0) return 2;
+        if (strncmp(p_in, "||", 2) == 0) return 2;
+    }                             
+    if (strncmp(p_in, "<", 1) == 0) return 1;
+    if (strncmp(p_in, ">", 1) == 0) return 1;
+    if (strncmp(p_in, "~", 1) == 0) return 1;
+    if (strncmp(p_in, "^", 1) == 0) return 1;
+    if (strncmp(p_in, "&", 1) == 0) return 1;
+    if (strncmp(p_in, "|", 1) == 0) return 1;
+    if (strncmp(p_in, "+", 1) == 0) return 1;
+    if (strncmp(p_in, "-", 1) == 0) return 1;
+    if (strncmp(p_in, "%", 1) == 0) return 1;
+    if (strncmp(p_in, "/", 1) == 0) return 1;
+    if (strncmp(p_in, "!", 1) == 0) return 1;
+    if (strncmp(p_in, "*", 1) == 0) return 1;
+    return 0;
+}
+#endif // 0
 
+static size_t count_stars(char *p_input)
+{
+    size_t i = 0;
+    size_t len = strlen(p_input);
+    size_t num_stars = 0;
+
+    while (i < len)
+    {
+        if (p_input[i] == '*')
+        {
+            num_stars++;
+            i++;
+        }
+        i+=count_spaces(&p_input[i]);
+        i++;
+    }
+    return num_stars;
+}
+static size_t count_identifier(char *p_input)
+{
+    size_t i = 0;
+    if (isdigit(p_input[i]))
+        return 0;
+    while (p_input[i] != '\0' && isalnum(p_input[i]))
+        i++;
+    return i;
+}
+#if 0
+static size_t count_nonidentifier(char *p_input)
+{
+    size_t i = 0;
+    while (p_input[i] != '\0' && isalnum(p_input[i]))
+    {
+        printf("%c\n", p_input[i]);
+        i++;
+    }
+    return i;
+}
+#endif // 0
+// fun excercise: 
+// guess ptr or mult op without type info!
+//
+// does the string have a pointer definition?
+// nope.
+// a *= b
+// probably yes
+// a * b = c...
+// definitely not
+// a = b...
+// empty assignment or pointer decl?
+// a * b...[not:=]
+#if 0
+static int guess_ptr_def(char *p_input)
+{
+    size_t i = 0;
+    size_t len = strlen(p_input);
+    size_t num_nonidentifiers = 0;
+    int has_star = 0;
+    int is_ptr_def = 0;
+    // *a ..
+    if (count_stars(p_input) > 1)
+    {
+        return 0;
+    }
+    // erronous strings that end with * or = will be 
+    // caugt by the compiler 
+    while (i < (len - 1))
+    {
+        // a *= b
+        if (strncmp(&p_input[i], "*=", 2) == 0)
+        {
+            is_ptr_def = 0;
+            break;
+        }
+
+        i += count_identifier(&p_input[i]);
+        num_nonidentifiers = count_nonidentifier(&p_input[i]);
+
+        if (num_nonidentifiers > 1)
+        {
+            printf("num_nonidentifiers\n");
+            is_ptr_def = 0;
+            break;
+        }
+        // a * b
+        // a ** b
+        // a *** b
+        if (p_input[i] == '*')
+        {
+            size_t counted_stars;
+            counted_stars += count_stars(&p_input[i]);
+            if (counted_stars > 1)
+            {
+                is_ptr_def = 1;
+                break;
+            }
+            else
+            {
+                has_star++;
+
+                // a * b * c
+                if (has_star > 1)
+                {
+                    is_ptr_def = 1;
+                    break;
+                }
+
+            }
+        }
+         
+        if (p_input[i] == '=' && has_star)
+        {
+            is_ptr_def = 1;
+            break;
+        }
+ 
+        i++;
+    }
+    return is_ptr_def;
+}
+#endif // 0
 static int is_definition(char *p_input)
 {
     size_t i = 0;
-    size_t words = 0;
-    size_t unfinished_words = 0;
+    size_t id1 = 0;
+    size_t stars = 0;
+    size_t id2 = 0;
 
     i += count_spaces(p_input); 
 
-    while (p_input[i] != '\0')
-    {
-        if (p_input[i] == '=')
-            break;
-        if (p_input[i] == '(')
-            return 0;
-        if (p_input[i] == ' ' || p_input[i] == '\t')
-        {
-            unfinished_words = 0;
-            words++;
-            i += count_spaces(&p_input[i]);
-        }
-        else
-        {
-            unfinished_words = 1;
-            i++;
-        }
-    }
-    words = words + unfinished_words;
-    if (words > 1)
+    id1 = count_identifier(&p_input[i]);
+    i += id1;
+    i += count_spaces(&p_input[i]); 
+    stars = count_stars(&p_input[i]);
+    i += stars;
+    i += count_spaces(&p_input[i]); 
+    id2 = count_identifier(&p_input[i]);
+
+    if (id1 > 0 && id2 > 0)
         return 1;
-    else
-        return 0;
+
+    return 0;
 }
 int uschshell_eval(uschshell_t *p_context, char *p_input)
 {
@@ -855,6 +1004,7 @@ end:
     free(p_tempfile);
     free(p_pre_assign);
     free(p_post_assign);
+    free(p_fullpath_uschrc_h);
 
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);

@@ -7,6 +7,7 @@
 #include "usch_debug.h"
 
 #define INPUT_BUFFER_MAX 32676
+#define INPUT_HISTORY_BUFFERS 15
 #ifndef MAX
 #define MAX(a,b) (((a)>(b))?(a):(b))
 #endif // MAX
@@ -32,8 +33,18 @@ int main(void)
     int c;
     USCH_FN_STATE fn_state = USCH_FN_START;
     struct uschshell_t *p_context = NULL;
+    char *p_history_input[INPUT_HISTORY_BUFFERS] = {0};
+    int history_index;
+    char buf[PMCURSES_GETCH_BUFSZ] = {0};
 
-    p_input = malloc(INPUT_BUFFER_MAX);
+    for (history_index = 0; history_index < INPUT_HISTORY_BUFFERS; history_index++)
+    {
+        p_history_input[history_index] = calloc(INPUT_BUFFER_MAX * sizeof(char), 1);
+        FAIL_IF(p_history_input[history_index] == NULL);
+    }
+
+    history_index = 0;
+    p_input = p_history_input[history_index];
     FAIL_IF(p_input == NULL);
     printf("%s", prompt);
     fflush(stdout);
@@ -41,10 +52,49 @@ int main(void)
     FAIL_IF(uschshell_create(&p_context) != 0);
     FAIL_IF(uschshell_pathhash(p_context) != 0);
 
-    while ((c = getch()) != EOF && c != CONTROL('d'))
+    while ((c = pmcurses_getch(buf)) != EOF && c != CONTROL('d'))
     {
         switch (c)
         {
+            case '\033':
+                {
+#if 0
+                    FAIL_IF(d == EOF);
+                    // ^A EMACS HOME
+                    if (d == 'A')
+                    {};
+                    // ^E EMACS END
+                    if (d == 'E')
+                    {};
+                    // ^C SIGINT 
+                    if (d == 'C')
+                    {};
+                    FAIL_IF(e == EOF);
+
+                    // BACK
+                    if (d == '[' && e == 'D')
+                    {};
+                    // FORW
+                    if (d == '[' && e == 'C')
+                    {};
+                    // UP
+                    if (d == '[' && e == 'A')
+                    {};
+                    // DOWN
+                    if (d == '[' && e == 'B')
+                    {};
+                    FAIL_IF(f == EOF);
+
+                    // HOME
+                    if (d == '[' && e == 'O' && f == 'H')
+                    {};
+                    // END
+                    if (d == '[' && e == 'O' && f == 'F')
+                    {};
+#endif // 0
+                    break;
+                }
+
             case '(':
                 {
                     fn_state = USCH_FN_BEGIN_PARAN;
@@ -73,7 +123,7 @@ int main(void)
                 {
                     if (input_index > 0)
                     {
-                        backspace(1);
+                        pmcurses_backspace(1);
                         input_index--;
                     }
                     break;
@@ -184,13 +234,13 @@ int main(void)
                                     FAIL_IF(1);
                                 }
                         }
-                        }
-                        else
-                        {
-                            printf("\n");
-                            fflush(stdout);
-                        }
-                
+                    }
+                    else
+                    {
+                        printf("\n");
+                        fflush(stdout);
+                    }
+
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
@@ -221,6 +271,11 @@ int main(void)
         }
     }
 end:
+
+    for (history_index = 0; history_index < INPUT_HISTORY_BUFFERS; history_index++)
+    {
+        free(p_history_input[history_index]);
+    }
     uschshell_destroy(p_context);
     free(p_input);
     return 0;

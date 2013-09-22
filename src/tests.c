@@ -152,31 +152,31 @@ static char *test_uschshell_vars()
     mu_assert("error: int_test != 42", int_test == 42);
 
     float_test = 3.14f;
-    error = uschshell_define(p_context, sizeof(float_test), "float float_test");
-    error = uschshell_store(p_context, "float float_test", (void*)&float_test);
+    uschshell_define(p_context, sizeof(float_test), "float float_test");
+    uschshell_store(p_context, "float float_test", (void*)&float_test);
     float_test = 994.0f;
-    error = uschshell_load(p_context, "float float_test", (void*)&float_test);
+    uschshell_load(p_context, "float float_test", (void*)&float_test);
     mu_assert("error: float_test != 3.14", float_test == 3.14f);
 
     p_str = right_str;
-    error = uschshell_define(p_context, sizeof(p_str), "char *p_str");
-    error = uschshell_store(p_context, "char *p_str", (void*)&p_str);
+    uschshell_define(p_context, sizeof(p_str), "char *p_str");
+    uschshell_store(p_context, "char *p_str", (void*)&p_str);
     p_str = wrong_str;
-    error = uschshell_load(p_context, "char *p_str", (void*)&p_str);
+    uschshell_load(p_context, "char *p_str", (void*)&p_str);
     mu_assert("error: p_str != right_str", strcmp(p_str, right_str) == 0);
 
     double_test = 3.14;
-    error = uschshell_define(p_context, sizeof(double_test), "double double_test");
-    error = uschshell_store(p_context, "double double_test", (void*)&double_test);
+    uschshell_define(p_context, sizeof(double_test), "double double_test");
+    uschshell_store(p_context, "double double_test", (void*)&double_test);
     double_test = 994.0f;
-    error = uschshell_load(p_context, "double double_test", (void*)&double_test);
+    uschshell_load(p_context, "double double_test", (void*)&double_test);
     mu_assert("error: double_test != 3.14", double_test == 3.14);
 
     char_test = 'a';
-    error = uschshell_define(p_context, sizeof(char_test), "char char_test");
-    error = uschshell_store(p_context, "char char_test", (void*)&char_test);
+    uschshell_define(p_context, sizeof(char_test), "char char_test");
+    uschshell_store(p_context, "char char_test", (void*)&char_test);
     char_test = 'f';
-    error = uschshell_load(p_context, "char char_test", (void*)&char_test);
+    uschshell_load(p_context, "char char_test", (void*)&char_test);
     mu_assert("error: char_test != 3.14", char_test == 'a');
 
 

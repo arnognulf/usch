@@ -23,11 +23,12 @@
 #include <unistd.h>
 #include <termios.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "pmcurses.h"
 
 // poor-man's curses 
 
-void backspace(int num)
+void pmcurses_backspace(int num)
 {
     int i;
     printf("\033[%dD", num);
@@ -38,9 +39,17 @@ void backspace(int num)
     printf("\033[%dD", num);
     fflush(stdout);
 }
-char getch() {
-    char buf = 0;
+char pmcurses_getch(char *p_buf) {
+    if (p_buf == 0)
+        return EOF;
+    /* mask values for bit pattern of first byte in 
+     * multi-byte UTF-8 sequences: 
+     *   192 - 110xxxxx - for U+0080 to U+07FF 
+     *   224 - 1110xxxx - for U+0800 to U+FFFF 
+     *   240 - 11110xxx - for U+010000 to U+1FFFFF */
+    static unsigned short mask[] = {192, 224, 240};
     struct termios old;
+    char return_char = '?';
     if (tcgetattr(0, &old) < 0)
         perror("tcsetattr()");
     old.c_lflag &= ~ICANON;
@@ -49,13 +58,54 @@ char getch() {
     old.c_cc[VTIME] = 0;
     if (tcsetattr(0, TCSANOW, &old) < 0)
         perror("tcsetattr ICANON");
-    if (read(0, &buf, 1) < 0)
+    if (read(0, p_buf, 1) < 0)
         perror ("read()");
+    return_char = p_buf[0];
+    if (p_buf[0] == ASCII_ESC)
+    {
+        // ^ 
+        if (read(0, &p_buf[1], 1) < 0)
+        {
+            perror ("read()");
+        }
+        if (p_buf[1] == '[')
+        {
+            if (read(0, &p_buf[2], 1) < 0)
+            {
+                perror ("read()");
+            }
+            // HOME = ASCII_ESC [OH
+            // END  = ASCII_ESC [OF
+            if (p_buf[2] == 'O')
+            {
+                if (read(0, &p_buf[3], 1) < 0)
+                {
+                    perror ("read()");
+                }
+            }
+        }
+    }
+    else
+    {
+        int i = 0;
+        if ((p_buf[0] & mask[0]) == mask[0]) i++;
+        if ((p_buf[0] & mask[1]) == mask[1]) i++;
+        if ((p_buf[0] & mask[2]) == mask[2]) i++;
+        if (i)
+        {
+            if (read(0, &p_buf[1], i) < 0)
+            {
+                perror ("read()");
+            }
+            return_char = '?';
+        }
+    }
+
     old.c_lflag |= ICANON;
     old.c_lflag |= ECHO;
     if (tcsetattr(0, TCSADRAIN, &old) < 0)
         perror ("tcsetattr ~ICANON");
-    return (buf);
+    return return_char;
 }
 
 

@@ -20,11 +20,14 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
+#include <stdint.h>
 #define KEY_TAB 9
 #define KEY_BACKSPACE 127
 #define KEY_NEWLINE '\n'
 #define KEY_SPACE ' '
-void move(int col, int row);
-char getch();
-void backspace(int num);
+#define ASCII_ESC '\033'
+#define PMCURSES_GETCH_BUFSZ 5
+void pmcurses_move(int col, int row);
+char pmcurses_getch(char *p_buf);
+void pmcurses_backspace(int num);
 
