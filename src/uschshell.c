@@ -617,13 +617,12 @@ int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
     if (p_context == NULL || p_item == NULL)
         return -1;
     if (is_c_keyword(p_item))
-    {
         return 0;
-    }
     if (is_reserved_word(p_item))
-    {
         return 0;
-    }
+    if (strncmp(p_item, "cd", 2) == 0)
+        return 1;
+
     while (p_item[i] != '\0')
     {
         if (p_item[i] == ' ')
@@ -639,62 +638,6 @@ int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
     else
         return 0;
 }
-#if 0
-static size_t count_assign_operators(char *p_in)
-{
-    if (strlen(p_in) > 2)
-    {
-        if (strncmp(p_in, "<<=", 3) == 0) return 3;
-        if (strncmp(p_in, ">>=", 3) == 0) return 3;
-    }
-    if (strlen(p_in) > 1)
-    {
-        if (strncmp(p_in, "==", 2) == 0) return 2;
-        if (strncmp(p_in, "+=", 2) == 0) return 2;
-        if (strncmp(p_in, "-=", 2) == 0) return 2;
-        if (strncmp(p_in, "*=", 2) == 0) return 2;
-        if (strncmp(p_in, "%=", 2) == 0) return 2;
-        if (strncmp(p_in, "/=", 2) == 0) return 2;
-        if (strncmp(p_in, "|=", 2) == 0) return 2;
-        if (strncmp(p_in, "^=", 2) == 0) return 2;
-        if (strncmp(p_in, "&=", 2) == 0) return 2;
-    }
-    if (strncmp(p_in, "=", 1) == 0) return 1;
-    return 0;
-}
-static size_t count_deref_operators(char *p_in)
-{
-    if (strlen(p_in) > 1)
-        if (strncmp(p_in, "->", 2) == 0) return 2;
-    if (strncmp(p_in, ".", 1) == 0) return 1;
-    return 0;
-}
-static size_t count_arith_operators(char *p_in)
-{
-    if (strlen(p_in) > 1)
-    {
-        if (strncmp(p_in, ">>", 2) == 0) return 2;
-        if (strncmp(p_in, "<<", 2) == 0) return 2;
-        if (strncmp(p_in, "==", 2) == 0) return 2;
-        if (strncmp(p_in, "&&", 2) == 0) return 2;
-        if (strncmp(p_in, "||", 2) == 0) return 2;
-    }                             
-    if (strncmp(p_in, "<", 1) == 0) return 1;
-    if (strncmp(p_in, ">", 1) == 0) return 1;
-    if (strncmp(p_in, "~", 1) == 0) return 1;
-    if (strncmp(p_in, "^", 1) == 0) return 1;
-    if (strncmp(p_in, "&", 1) == 0) return 1;
-    if (strncmp(p_in, "|", 1) == 0) return 1;
-    if (strncmp(p_in, "+", 1) == 0) return 1;
-    if (strncmp(p_in, "-", 1) == 0) return 1;
-    if (strncmp(p_in, "%", 1) == 0) return 1;
-    if (strncmp(p_in, "/", 1) == 0) return 1;
-    if (strncmp(p_in, "!", 1) == 0) return 1;
-    if (strncmp(p_in, "*", 1) == 0) return 1;
-    return 0;
-}
-#endif // 0
-
 static size_t count_stars(char *p_input)
 {
     size_t i = 0;
@@ -722,18 +665,6 @@ static size_t count_identifier(char *p_input)
         i++;
     return i;
 }
-#if 0
-static size_t count_nonidentifier(char *p_input)
-{
-    size_t i = 0;
-    while (p_input[i] != '\0' && isalnum(p_input[i]))
-    {
-        printf("%c\n", p_input[i]);
-        i++;
-    }
-    return i;
-}
-#endif // 0
 // fun excercise: 
 // guess ptr or mult op without type info!
 //

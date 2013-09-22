@@ -189,9 +189,9 @@ static inline int usch_cd_impl(size_t num_args, char *p_dummy, ...)
     char *p_dir = NULL;
     char *p_chdir = NULL;
     char format[] = "%s";
-    char tilde_home[] = "~";
 
-    if (num_args > 0)
+    printf("%d\n", (int)num_args);
+    if (num_args > 1)
     {
         p_dummy = format;
         va_start(p_ap, p_dummy);
@@ -199,7 +199,7 @@ static inline int usch_cd_impl(size_t num_args, char *p_dummy, ...)
     }
     else
     {
-        p_dir = tilde_home;
+        p_dir = getenv("HOME");
     }
 
     if (glob(p_dir, GLOB_MARK | GLOB_NOCHECK | GLOB_TILDE | GLOB_NOMAGIC | GLOB_BRACE, NULL, &glob_data) == 0)

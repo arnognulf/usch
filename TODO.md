@@ -1,10 +1,7 @@
 1. globbing
  1.1 strexp()
-2. cd() 
-  should allow no args, va_arg
-3. enter variables in repl
-   load/store at beginning/end of functions, use linked-list or hash and function local variables.
-   print updated vars on store
+DONE 2. cd() should allow no args, va_arg
+DONE 3. enter variables in repl   load/store at beginning/end of functions, use linked-list or hash and function local variables. print updated vars on store
 4. line editing
 5. line history (memory)
 6. persistent line history: .usch_history
@@ -22,3 +19,5 @@ DONE: 13. .uschrc.c or .uschr.c :)
 18. declare functions in repl with automatic newlines
 19. shebang #!/bin/usch
 20. uschshell_interact(uschshell_t *p_context)
+21. line editing and printing of unicode characters, remember full-width: http://en.wikipedia.org/wiki/Halfwidth_and_fullwidth_forms#In_Unicode
+
