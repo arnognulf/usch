@@ -42,6 +42,7 @@ void pmcurses_backspace(int num)
 char pmcurses_getch(char *p_buf) {
     if (p_buf == 0)
         return EOF;
+    // http://zaemis.blogspot.se/2011/06/reading-unicode-utf-8-by-hand-in-c.html
     /* mask values for bit pattern of first byte in 
      * multi-byte UTF-8 sequences: 
      *   192 - 110xxxxx - for U+0080 to U+07FF 
@@ -63,7 +64,6 @@ char pmcurses_getch(char *p_buf) {
     return_char = p_buf[0];
     if (p_buf[0] == ASCII_ESC)
     {
-        // ^ 
         if (read(0, &p_buf[1], 1) < 0)
         {
             perror ("read()");
