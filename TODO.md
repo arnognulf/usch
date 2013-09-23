@@ -20,4 +20,4 @@ DONE: 13. .uschrc.c or .uschr.c :)
 19. shebang #!/bin/usch
 20. uschshell_interact(uschshell_t *p_context)
 21. line editing and printing of unicode characters, remember full-width: http://en.wikipedia.org/wiki/Halfwidth_and_fullwidth_forms#In_Unicode
-
+22. push back quote chars if nothing entered after space

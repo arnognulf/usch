@@ -232,17 +232,17 @@ static void print_updated_variables(char *p_defname, void *p_data)
     type_len = get_type_len(p_defname);
 
     if (strncmp(p_defname, "unsigned int", type_len) == 0)
-        printf("$%s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
+        printf("%%%s = %d\n", get_symname(p_defname), *(unsigned int*)p_data);
     if (strncmp(p_defname, "char", type_len) == 0)
-        printf("$%s = %c\n", get_symname(p_defname), *(char*)p_data);
+        printf("%%%s = %c\n", get_symname(p_defname), *(char*)p_data);
     else if (strncmp(p_defname, "int", type_len) == 0)
-        printf("$%s = %d\n", get_symname(p_defname), *(int*)p_data);
+        printf("%%%s = %d\n", get_symname(p_defname), *(int*)p_data);
     else if (strncmp(p_defname, "double", type_len) == 0)
-        printf("$%s = %f\n", get_symname(p_defname), *(double*)p_data);
+        printf("%%%s = %f\n", get_symname(p_defname), *(double*)p_data);
     else if (strncmp(p_defname, "float", type_len) == 0)
-        printf("$%s = %f\n", get_symname(p_defname), *(float*)p_data);
+        printf("%%%s = %f\n", get_symname(p_defname), *(float*)p_data);
     else
-        printf("$%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
+        printf("%%%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
 }
 
 int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
