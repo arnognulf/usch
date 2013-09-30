@@ -152,10 +152,27 @@ typedef struct uschshell_cmd_t
     char cmdname[];
 } uschshell_cmd_t;
 
+typedef struct uschshell_lib_t
+{
+    UT_hash_handle hh;
+    void *p_handle;
+    char libname[];
+} uschshell_lib_t;
+
+typedef struct uschshell_sym_t
+{
+    UT_hash_handle hh;
+    void *p_handle;
+    char symname[];
+} uschshell_sym_t;
+
+
 typedef struct uschshell_t 
 {
     uschshell_def_t *p_defs;
     uschshell_cmd_t *p_cmds;
+    uschshell_lib_t *p_libs;
+    uschshell_sym_t *p_syms;
 } uschshell_t;
 
 int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname)
@@ -242,7 +259,8 @@ static void print_updated_variables(char *p_defname, void *p_data)
     else if (strncmp(p_defname, "float", type_len) == 0)
         printf("%%%s = %f\n", get_symname(p_defname), *(float*)p_data);
     else
-        printf("%%%s = 0x%lx\n", get_symname(p_defname), *(uint64_t*)p_data);
+        printf("%%%s = 0x%lx\n", get_symname(p_defname), *(long unsigned int*)p_data);
+
 }
 
 int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
@@ -318,6 +336,8 @@ int uschshell_create(uschshell_t **pp_context)
     uschshell_t *p_context = NULL;
     uschshell_def_t *p_def = NULL;
     uschshell_cmd_t *p_cmd = NULL;
+    uschshell_lib_t *p_lib = NULL;
+    uschshell_sym_t *p_sym = NULL;
 
     p_context = calloc(sizeof(uschshell_t), 1);
     FAIL_IF(p_context == NULL);
@@ -328,14 +348,27 @@ int uschshell_create(uschshell_t **pp_context)
     p_cmd = calloc(sizeof(uschshell_cmd_t) + 1, 1);
     FAIL_IF(p_cmd == NULL);
 
+    p_lib = calloc(sizeof(uschshell_lib_t) + 1, 1);
+    FAIL_IF(p_lib == NULL);
+
+    p_sym = calloc(sizeof(uschshell_sym_t) + 1, 1);
+    FAIL_IF(p_sym == NULL);
+
+
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
     HASH_ADD_STR(p_context->p_cmds, cmdname, p_cmd);
+    HASH_ADD_STR(p_context->p_libs, libname, p_lib);
+    HASH_ADD_STR(p_context->p_syms, symname, p_sym);
 
     *pp_context = p_context;
     p_context = NULL;
     p_cmd = NULL;
     p_def = NULL;
+    p_lib = NULL;
+    p_sym = NULL;
 end:
+    free(p_lib);
+    free(p_sym);
     free(p_cmd);
     free(p_def);
     free(p_context);
@@ -343,6 +376,47 @@ end:
 }
 void uschshell_destroy(uschshell_t *p_context)
 {
+
+    if (p_context)
+    {
+        uschshell_cmd_t *p_tmpcmd = NULL;
+        uschshell_cmd_t *p_cmd = NULL;
+        uschshell_cmd_t *p_cmds = p_context->p_cmds;
+
+        HASH_ITER(hh, p_cmds, p_cmd, p_tmpcmd) {
+            HASH_DEL(p_cmds, p_cmd);
+        }
+
+        uschshell_sym_t *p_tmpsym = NULL;
+        uschshell_sym_t *p_sym = NULL;
+        uschshell_sym_t *p_syms = p_context->p_syms;
+
+        HASH_ITER(hh, p_syms, p_sym, p_tmpsym) {
+            HASH_DEL(p_syms, p_sym);
+        }
+
+        uschshell_lib_t *p_tmplib = NULL;
+        uschshell_lib_t *p_lib = NULL;
+        uschshell_lib_t *p_libs = p_context->p_libs;
+
+        HASH_ITER(hh, p_libs, p_lib, p_tmplib) {
+            if(p_lib->p_handle)
+                dlclose(p_lib->p_handle);
+            HASH_DEL(p_libs, p_lib);
+        }
+
+        uschshell_def_t *p_tmpdef = NULL;
+        uschshell_def_t *p_def = NULL;
+        uschshell_def_t *p_defs = p_context->p_defs;
+
+        HASH_ITER(hh, p_defs, p_def, p_tmpdef) {
+            free(p_def->p_body_data);
+            free(p_def->p_alloc_data);
+
+            HASH_DEL(p_defs, p_def);
+        }
+
+    }
     free(p_context);
     return;
 }
@@ -942,4 +1016,40 @@ end:
 
     return status;
 }
+
+int uschshell_lib(struct uschshell_t *p_context, char *p_dynlib)
+{
+    int status = 0;
+#if 0
+    FAIL_IF(p_context == NULL || p_dynlib == NULL);
+
+end:
+#else
+    (void)p_context;
+    (void)p_dynlib;
+    status = -1;
+#endif // 0
+    return status;
+}
+int uschshell_include(struct uschshell_t *p_context, char *p_header)
+{
+    int status = 0;
+#if 0
+    char *p_header_copy = NULL;
+    FAIL_IF(p_context == NULL || p_header == NULL);
+
+    char* p_include_paths[] = { "/usr/lib/gcc/x86_64-linux-gnu/4.8/include",
+     "/usr/local/include", "/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed", "/usr/include/x86_64-linux-gnu", "/usr/include"
+    };
+    int num_include_paths = sizeof(p_include_paths)/sizeof(p_include_paths[0]);
+end:
+#else
+    (void)p_context;
+    (void)p_header;
+    status = -1;
+#endif // 0
+    return status;
+
+}
+
 

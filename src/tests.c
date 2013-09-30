@@ -24,10 +24,14 @@
 #include <assert.h>
 #include <string.h>
 #include "minunit.h"
+#include "clang-c/Index.h"
+#include <dlfcn.h>
+
+#include "../external/uthash/src/uthash.h"
 
 #include "usch.h"
 #include "uschshell.h"
-#include "../external/uthash/src/uthash.h"
+#include "usch_debug.h"
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -186,6 +190,31 @@ cleanup:
     uschshell_destroy(p_context);
     return p_message;
 }
+#if 0
+static char *test_uschshell_dyld()
+{
+    char *p_message = NULL;
+    int error = 0;
+    struct uschshell_t *p_context = NULL;
+
+    error = uschshell_create(&p_context);
+    mu_assert("error: uschshell_create(&p_context) != 0", error == 0);
+#ifdef __x86_64__
+    error = uschshell_lib(p_context, "/usr/lib/x86_64-linux-gnu/libm.so"); // "m"
+#else
+    error = uschshell_lib(p_context, "/usr/lib/i386-linux-gnu/libm.so");
+#endif // 0
+    mu_assert("error: uschshell_lib() != 0", error == 0);
+    error = uschshell_include(p_context, "<math.h>");
+    mu_assert("error: uschshell_include(p_context, \"<math.h>\") == 0", error != 0);
+
+    uschshell_destroy(p_context);
+    return NULL;
+cleanup:
+    uschshell_destroy(p_context);
+    return p_message;
+}
+#endif // 0
 typedef struct usch_test_vars_t {
     int id;
     UT_hash_handle hh;
@@ -278,6 +307,131 @@ cleanup:
     return p_message;
 }
 #endif // 0
+
+int test_has_symbol(const char* p_dylib_filename, const char* p_sym) 
+{
+    int status = 0;
+    int has_symbol = 0;
+    void *p_handle = NULL;
+    char *p_error = NULL;
+    int (*dyn_func)();
+    
+    p_handle = dlopen(p_dylib_filename, RTLD_LAZY);
+    FAIL_IF(p_handle == NULL);
+
+    *(void **) (&dyn_func) = dlsym(p_handle, p_sym);
+    ENDOK_IF((p_error = dlerror()) != NULL);
+    has_symbol = 1;
+end:
+    if (p_handle)
+        dlclose(p_handle);
+
+    (void)status;
+    return has_symbol;
+}
+enum CXChildVisitResult test_clang_visitor(CXCursor cursor, 
+        CXCursor parent, 
+        CXClientData client_data)
+{
+    (void)parent;
+    (void)client_data;
+    enum CXChildVisitResult res = CXChildVisit_Recurse;
+    CXString cxstr = {0};
+
+    switch (cursor.kind) 
+    {
+    case CXCursor_FunctionDecl:
+    {
+        int num_args = -1;
+        int i;
+        CXType return_type = {0};
+        cxstr = clang_getCursorSpelling(cursor);
+#if 0
+        if (test_has_symbol("/usr/lib/i386-linux-gnu/libm.so", clang_getCString(cxstr)))
+#else
+        if (test_has_symbol("/usr/lib/x86_64-linux-gnu/libm.so", clang_getCString(cxstr)))
+
+#endif // 0
+        {
+            CXString cxretkindstr = {0};
+            return_type = clang_getCursorResultType(cursor);
+            cxretkindstr = clang_getTypeSpelling(return_type);
+
+            printf("%s %s(", clang_getCString(cxretkindstr), clang_getCString(cxstr));
+            num_args = clang_Cursor_getNumArguments(cursor);
+            for (i = 0; i < num_args; i++)
+            {
+                CXString cxkindstr;
+                CXString cxargstr;
+                CXCursor argCursor = {0};
+                CXType argType = {0};
+
+                argCursor = clang_Cursor_getArgument(cursor, i);
+                argType = clang_getCursorType(argCursor);
+                cxkindstr = clang_getTypeSpelling(argType);
+                cxargstr = clang_getCursorSpelling(argCursor);
+                printf("%s %s", clang_getCString(cxkindstr), clang_getCString(cxargstr));
+                if (i != (num_args - 1))
+                    printf(",");
+                clang_disposeString(cxargstr);
+            }
+            printf(") {\n\treturn %s(", clang_getCString(cxstr));
+            for (i = 0; i < num_args; i++)
+            {
+                CXString cxargstr;
+                CXCursor argCursor = {0};
+
+                argCursor = clang_Cursor_getArgument(cursor, i);
+                cxargstr = clang_getCursorSpelling(argCursor);
+                printf("%s", clang_getCString(cxargstr));
+                if (i != (num_args - 1))
+                    printf(",");
+                clang_disposeString(cxargstr);
+            }
+            printf(");\n}\n");
+            clang_disposeString(cxretkindstr);
+        }
+        else
+        {
+            res = CXChildVisit_Continue;
+        }
+        break;
+    }
+    default:
+    {
+        res = CXChildVisit_Continue;
+        break;
+    }
+    }
+    clang_disposeString(cxstr);
+    return res;
+}
+#if 0
+static char *test_clang_parser()
+{
+    char *p_message = NULL;
+    CXTranslationUnit p_tu = NULL;
+    CXIndex p_idx = NULL;
+    unsigned int visitorstatus = 0;
+
+    p_idx = clang_createIndex(0, 0);
+    mu_assert("error: clang_createIndex()", p_idx != NULL);
+
+    p_tu = clang_parseTranslationUnit(p_idx, "/usr/include/math.h", NULL, 0, NULL, 0, 0);
+    mu_assert("error: clang_parseTranslationUnit()", p_tu != NULL);
+
+    visitorstatus = clang_visitChildren(clang_getTranslationUnitCursor(p_tu),
+                                        test_clang_visitor,
+                                        NULL);
+    mu_assert("error: clang_visitChildren()", visitorstatus == 0);
+
+cleanup:
+    clang_disposeTranslationUnit(p_tu);
+    clang_disposeIndex(p_idx);
+
+    return p_message;
+}
+#endif // 0
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
@@ -287,6 +441,8 @@ static char * all_tests()
     mu_run_test(test_uthash);
     mu_run_test(test_uthash1);
     mu_run_test(test_uschshell_vars);
+    //mu_run_test(test_clang_parser);
+    //mu_run_test(test_uschshell_dyld);
     return 0;
 }
 int main()

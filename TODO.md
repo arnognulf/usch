@@ -21,3 +21,6 @@ DONE: 13. .uschrc.c or .uschr.c :)
 20. uschshell_interact(uschshell_t *p_context)
 21. line editing and printing of unicode characters, remember full-width: http://en.wikipedia.org/wiki/Halfwidth_and_fullwidth_forms#In_Unicode
 22. push back quote chars if nothing entered after space
+23. recursive pre-parser?
+[identifier] [identifier [([arg...])]
+24. handle line buffer separately: set_prompt(). add(uchar); insert_at(pos). erase(n). draw()

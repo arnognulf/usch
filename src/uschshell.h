@@ -44,6 +44,8 @@ int uschshell_undef_fn(struct uschshell_t *p_context, char *p_fndefname);
 
 int uschshell_pathhash(struct uschshell_t *p_context);
 int uschshell_is_cmd(struct uschshell_t *p_context, char *p_item);
+int uschshell_lib(struct uschshell_t *p_context, char *p_dynlib);
+int uschshell_include(struct uschshell_t *p_context, char *p_header);
 
 #if DUMMY_VIM_FIX_NEEDED
 {
