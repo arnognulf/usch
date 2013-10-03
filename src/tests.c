@@ -190,7 +190,6 @@ cleanup:
     uschshell_destroy(p_context);
     return p_message;
 }
-#if 0
 static char *test_uschshell_dyld()
 {
     char *p_message = NULL;
@@ -206,7 +205,7 @@ static char *test_uschshell_dyld()
 #endif // 0
     mu_assert("error: uschshell_lib() != 0", error == 0);
     error = uschshell_include(p_context, "<math.h>");
-    mu_assert("error: uschshell_include(p_context, \"<math.h>\") == 0", error != 0);
+    mu_assert("error: uschshell_include(p_context, \"<math.h>\") != 0", error == 0);
 
     uschshell_destroy(p_context);
     return NULL;
@@ -214,7 +213,6 @@ cleanup:
     uschshell_destroy(p_context);
     return p_message;
 }
-#endif // 0
 typedef struct usch_test_vars_t {
     int id;
     UT_hash_handle hh;
@@ -307,8 +305,8 @@ cleanup:
     return p_message;
 }
 #endif // 0
-
-int test_has_symbol(const char* p_dylib_filename, const char* p_sym) 
+#if 0
+static int test_has_symbol(const char* p_dylib_filename, const char* p_sym) 
 {
     int status = 0;
     int has_symbol = 0;
@@ -406,6 +404,7 @@ enum CXChildVisitResult test_clang_visitor(CXCursor cursor,
     clang_disposeString(cxstr);
     return res;
 }
+#endif //0
 #if 0
 static char *test_clang_parser()
 {
@@ -442,7 +441,7 @@ static char * all_tests()
     mu_run_test(test_uthash1);
     mu_run_test(test_uschshell_vars);
     //mu_run_test(test_clang_parser);
-    //mu_run_test(test_uschshell_dyld);
+    mu_run_test(test_uschshell_dyld);
     return 0;
 }
 int main()
