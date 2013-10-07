@@ -176,6 +176,12 @@ typedef struct uschshell_dyfn_t
     char dyfnname[];
 } uschshell_dyfn_t;
 
+typedef struct uschshell_inc_t
+{
+    UT_hash_handle hh;
+    char incname[];
+} uschshell_inc_t;
+
 typedef struct uschshell_t 
 {
     uschshell_def_t *p_defs;
@@ -183,6 +189,7 @@ typedef struct uschshell_t
     uschshell_lib_t *p_libs;
     uschshell_sym_t *p_syms;
     uschshell_dyfn_t *p_dyfns;
+    uschshell_inc_t *p_incs;
     char tmpdir[];
 } uschshell_t;
 
@@ -349,6 +356,7 @@ int uschshell_create(uschshell_t **pp_context)
     uschshell_cmd_t *p_cmd = NULL;
     uschshell_sym_t *p_sym = NULL;
     uschshell_dyfn_t *p_dyfn = NULL;
+    uschshell_inc_t *p_inc = NULL;
     char dir_template[] = "/tmp/usch-XXXXXX";
     char *p_tempdir = NULL;
 
@@ -370,11 +378,14 @@ int uschshell_create(uschshell_t **pp_context)
     p_dyfn = calloc(sizeof(uschshell_dyfn_t) + 1, 1);
     FAIL_IF(p_dyfn == NULL);
 
+    p_inc = calloc(sizeof(uschshell_inc_t) + 1, 1);
+    FAIL_IF(p_inc == NULL);
 
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
     HASH_ADD_STR(p_context->p_cmds, cmdname, p_cmd);
     HASH_ADD_STR(p_context->p_syms, symname, p_sym);
     HASH_ADD_STR(p_context->p_dyfns, dyfnname, p_dyfn);
+    HASH_ADD_STR(p_context->p_incs, incname, p_inc);
     strcpy(p_context->tmpdir, p_tempdir);
 
     *pp_context = p_context;
@@ -383,7 +394,9 @@ int uschshell_create(uschshell_t **pp_context)
     p_def = NULL;
     p_sym = NULL;
     p_dyfn = NULL;
+    p_inc = NULL;
 end:
+    free(p_inc);
     free(p_dyfn);
     free(p_sym);
     free(p_cmd);
@@ -525,6 +538,57 @@ end:
     free(p_definitionsfile);
     return status;
 }
+
+static int write_includes_h(uschshell_t *p_context, char *p_tempdir)
+{
+    int status = 0;
+    char includes_h_filename[] = "includes.h";
+    size_t filename_length;
+    size_t tempdir_len;
+    char *p_includesfile = NULL;
+    FILE *p_includes_h = NULL;
+    uschshell_inc_t *p_incs = NULL;
+    uschshell_inc_t *p_inc = NULL;
+    uschshell_inc_t *p_tmp = NULL;
+
+    p_incs = p_context->p_incs;
+    tempdir_len = strlen(p_tempdir);
+    filename_length = tempdir_len + 1 + strlen(includes_h_filename) + 1;
+    p_includesfile = calloc(filename_length, 1);
+    FAIL_IF(p_includesfile == NULL);
+
+    strcpy(p_includesfile, p_tempdir);
+
+    p_includesfile[tempdir_len] = '/';
+    strcpy(&p_includesfile[tempdir_len + 1], includes_h_filename);
+    p_includesfile[filename_length-1] = '\0';
+    p_includes_h = fopen(p_includesfile, "w+");
+    FAIL_IF(p_includes_h == NULL);
+    HASH_ITER(hh, p_incs, p_inc, p_tmp)
+    {
+        if (strcmp(p_inc->incname, "") != 0)
+        {
+            FAIL_IF(!fwrite_ok("#include ", p_includes_h));
+            if (p_inc->incname[0] == '<' || p_inc->incname[0] == '\"')
+            {
+                FAIL_IF(!fwrite_ok(p_inc->incname, p_includes_h));
+            }
+            else
+            {
+                FAIL_IF(!fwrite_ok("\"", p_includes_h));
+                FAIL_IF(!fwrite_ok(p_inc->incname, p_includes_h));
+                FAIL_IF(!fwrite_ok("\"", p_includes_h));
+            }
+        }
+    }
+
+end:
+    if(p_includes_h)
+        fclose(p_includes_h);
+    free(p_includesfile);
+    return status;
+}
+
 
 static int write_trampolines_h(uschshell_t *p_context, char *p_tempdir)
 {
@@ -755,6 +819,12 @@ int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
         return 0;
     if (strncmp(p_item, "cd", 2) == 0)
         return 1;
+    if (strncmp(p_item, "include", strlen("include")) == 0)
+        return 1;
+    if (strncmp(p_item, "lib", strlen("lib")) == 0)
+        return 1;
+
+
 
     while (p_item[i] != '\0')
     {
@@ -898,7 +968,18 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
 
     if (uschshell_is_cmd(p_context, p_input))
     {
-        if (strcmp(definition.p_symname, "cd") != 0)
+         
+        if (strcmp(definition.p_symname, "include") == 0)
+        {
+            FAIL_IF(!fwrite_ok("#define include", p_stmt_c));
+            FAIL_IF(!fwrite_ok("(header) uschshell_include(p_uschshell_context, (header))\n", p_stmt_c));
+        }
+        else if (strcmp(definition.p_symname, "lib") == 0){
+            FAIL_IF(!fwrite_ok("#define lib", p_stmt_c));
+            FAIL_IF(!fwrite_ok("(libname) uschshell_lib(p_uschshell_context, (libname))\n", p_stmt_c));
+
+        }
+        else if (strcmp(definition.p_symname, "cd") != 0)
         {
             FAIL_IF(!fwrite_ok("#define ", p_stmt_c));
             FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
@@ -1241,7 +1322,7 @@ static enum CXChildVisitResult clang_visitor(
                 FAIL_IF(p_dyfn == NULL);
                 strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
                 p_dyfn->p_dyfndef = bufstr.p_str;
-                printf(bufstr.p_str);
+                //printf(bufstr.p_str);
                 bufstr.p_str = NULL;
 
                 break;
@@ -1299,8 +1380,12 @@ int uschshell_include(struct uschshell_t *p_context, char *p_header)
     char tmp_h[] = "tmp.h";
     FILE *p_includefile = NULL;
     char *p_tmpdir = NULL;
+    uschshell_inc_t *p_inc = NULL;
+    uschshell_inc_t *p_incs = NULL;
+
     FAIL_IF(p_context == NULL || p_header == NULL);
 
+    p_incs = p_context->p_incs;
     p_tmpdir = p_context->tmpdir;
     p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_h) + 1, 1);
     strcpy(p_tmpheader, p_tmpdir);
@@ -1327,6 +1412,10 @@ int uschshell_include(struct uschshell_t *p_context, char *p_header)
     p_includefile = NULL;
     FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
 
+    p_inc = calloc(strlen(p_header) + 1 + sizeof(uschshell_inc_t), 1);
+    FAIL_IF(p_inc == NULL);
+    strcpy(p_inc->incname, p_header);
+    HASH_ADD_STR(p_incs, incname, p_inc);
 end:
     free(p_tmpheader);
     if (p_includefile)
