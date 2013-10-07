@@ -172,7 +172,6 @@ typedef struct uschshell_dyfn_t
 {
     UT_hash_handle hh;
     void *p_handle;
-    int is_defined;
     char *p_dyfndef;
     char dyfnname[];
 } uschshell_dyfn_t;
@@ -526,6 +525,47 @@ end:
     free(p_definitionsfile);
     return status;
 }
+
+static int write_trampolines_h(uschshell_t *p_context, char *p_tempdir)
+{
+    int status = 0;
+    char trampolines_h_filename[] = "trampolines.h";
+    size_t filename_length;
+    size_t tempdir_len;
+    char *p_trampolinesfile = NULL;
+    FILE *p_trampolines_h = NULL;
+    uschshell_dyfn_t *p_dyfns = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    uschshell_dyfn_t *p_tmp = NULL;
+
+    p_dyfns = p_context->p_dyfns;
+    tempdir_len = strlen(p_tempdir);
+    filename_length = tempdir_len + 1 + strlen(trampolines_h_filename) + 1;
+    p_trampolinesfile = calloc(filename_length, 1);
+    FAIL_IF(p_trampolinesfile == NULL);
+
+    strcpy(p_trampolinesfile, p_tempdir);
+
+    p_trampolinesfile[tempdir_len] = '/';
+    strcpy(&p_trampolinesfile[tempdir_len + 1], trampolines_h_filename);
+    p_trampolinesfile[filename_length-1] = '\0';
+    p_trampolines_h = fopen(p_trampolinesfile, "w+");
+    FAIL_IF(p_trampolines_h == NULL);
+    HASH_ITER(hh, p_dyfns, p_dyfn, p_tmp)
+    {
+        if (p_dyfn->p_dyfndef != NULL)
+        {
+            FAIL_IF(!fwrite_ok(p_dyfn->p_dyfndef, p_trampolines_h));
+        }
+    }
+
+end:
+    if(p_trampolines_h)
+        fclose(p_trampolines_h);
+    free(p_trampolinesfile);
+    return status;
+}
+
 int uschshell_pathhash(uschshell_t *p_context)
 {
     int status = 0;
@@ -829,12 +869,15 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
+    FAIL_IF(write_includes_h(p_context, p_tempdir) != 0);
     FAIL_IF(write_definitions_h(p_context, p_tempdir) != 0);
+    FAIL_IF(write_trampolines_h(p_context, p_tempdir) != 0);
     
     FAIL_IF(parse_line(p_input, &definition) < 1);
 
     FAIL_IF(!fwrite_ok("struct uschshell_t;\n", p_stmt_c));
     FAIL_IF(!fwrite_ok("#include <usch.h>\n", p_stmt_c));
+    FAIL_IF(!fwrite_ok("#include \"includes.h\"\n", p_stmt_c));
     FAIL_IF(!fwrite_ok("#include \"definitions.h\"\n", p_stmt_c));
     FAIL_IF(!fwrite_ok("#include \"trampolines.h\"\n", p_stmt_c));
 
@@ -998,7 +1041,7 @@ end:
     return status;
 }
 
-static int has_symbol(uschshell_t *p_context, const char* p_sym) 
+static int has_symbol(struct uschshell_t *p_context, const char* p_sym) 
 {
     int status = 0;
     int symbol_found = 0;
@@ -1063,7 +1106,26 @@ end:
     free(p_newstr);
     return status;
 }
+void* uschshell_getdyfnhandle(uschshell_t *p_context, const char *p_id)
+{
+    int status = 0;
+    uschshell_dyfn_t *p_dyfns = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    void *p_handle = NULL;
 
+    if (p_context == NULL || p_id == NULL)
+        return NULL;
+
+    FAIL_IF(p_context->p_dyfns == NULL);
+    p_dyfns = p_context->p_dyfns;
+
+    HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
+
+    p_handle = p_dyfn->p_handle;
+end:
+    (void)status;
+    return p_handle;
+}
 static enum CXChildVisitResult clang_visitor(
         CXCursor cursor, 
         CXCursor parent, 
@@ -1094,15 +1156,13 @@ static enum CXChildVisitResult clang_visitor(
                 int i;
                 CXType return_type;
 
-                // is defined? remove later
-                // id
-                // trampoline fn 
                 cxstr = clang_getCursorSpelling(cursor);
                 ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
                 ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
                 bufstr.p_str = calloc(1024, 1);
                 bufstr.len = 1024;
                 FAIL_IF(bufstr.p_str == NULL);
+                cxid = clang_getCursorDisplayName(cursor);
 
                 return_type = clang_getCursorResultType(cursor);
                 cxretkindstr = clang_getTypeSpelling(return_type);
@@ -1133,7 +1193,35 @@ static enum CXChildVisitResult clang_visitor(
                     }
                     clang_disposeString(cxargstr);
                 }
-                bufstradd(&bufstr, ")\n{\n\t");
+                bufstradd(&bufstr, ")\n{\n");
+
+                bufstradd(&bufstr, "\t");
+                bufstradd(&bufstr, clang_getCString(cxretkindstr));
+                bufstradd(&bufstr, " (*handle)(");
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxkindstr = {NULL, 0};
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+                    CXType argType;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    argType = clang_getCursorType(argCursor);
+                    cxkindstr = clang_getTypeSpelling(argType);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    bufstradd(&bufstr, clang_getCString(cxkindstr)); 
+
+                    if (i != (num_args - 1))
+                    {
+                        bufstradd(&bufstr, ", "); 
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                bufstradd(&bufstr, ");\n");
+                bufstradd(&bufstr, "\thandle = uschshell_getdyfnhandle(p_uschshell_context, \"");
+                bufstradd(&bufstr, clang_getCString(cxid));
+                bufstradd(&bufstr, "\");\n");
+                bufstradd(&bufstr, "\treturn handle(");
                 for (i = 0; i < num_args; i++)
                 {
                     CXString cxargstr = {NULL, 0};
@@ -1149,6 +1237,13 @@ static enum CXChildVisitResult clang_visitor(
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n}\n");
+                p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
+                FAIL_IF(p_dyfn == NULL);
+                strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
+                p_dyfn->p_dyfndef = bufstr.p_str;
+                printf(bufstr.p_str);
+                bufstr.p_str = NULL;
+
                 break;
             }
         default:
@@ -1157,7 +1252,6 @@ static enum CXChildVisitResult clang_visitor(
                 break;
             }
     }
-    printf(bufstr.p_str);
     p_dyfn = NULL;
     free(p_fnstr);
     p_fnstr = NULL;
