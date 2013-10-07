@@ -205,6 +205,7 @@ static char *test_uschshell_dyld()
 #endif // 0
     mu_assert("error: uschshell_lib() != 0", error == 0);
     error = uschshell_include(p_context, "<math.h>");
+    //error = uschshell_include(p_context, "<xmmintrin.h>");
     mu_assert("error: uschshell_include(p_context, \"<math.h>\") != 0", error == 0);
 
     uschshell_destroy(p_context);

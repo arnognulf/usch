@@ -27,7 +27,7 @@
 #include <ctype.h>
 #include <assert.h>
 #include <dirent.h>
-
+// /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "clang-c/Index.h"
 #include "usch.h"
 #include "usch_debug.h"
@@ -168,6 +168,15 @@ typedef struct uschshell_sym_t
     char symname[];
 } uschshell_sym_t;
 
+typedef struct uschshell_dyfn_t
+{
+    UT_hash_handle hh;
+    void *p_handle;
+    int is_defined;
+    char dyfnname[];
+} uschshell_dyfn_t;
+
+
 
 typedef struct uschshell_t 
 {
@@ -175,6 +184,7 @@ typedef struct uschshell_t
     uschshell_cmd_t *p_cmds;
     uschshell_lib_t *p_libs;
     uschshell_sym_t *p_syms;
+    uschshell_dyfn_t *p_dyfns;
     char tmpdir[];
 } uschshell_t;
 
@@ -340,6 +350,7 @@ int uschshell_create(uschshell_t **pp_context)
     uschshell_def_t *p_def = NULL;
     uschshell_cmd_t *p_cmd = NULL;
     uschshell_sym_t *p_sym = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
     char dir_template[] = "/tmp/usch-XXXXXX";
     char *p_tempdir = NULL;
 
@@ -358,9 +369,14 @@ int uschshell_create(uschshell_t **pp_context)
     p_sym = calloc(sizeof(uschshell_sym_t) + 1, 1);
     FAIL_IF(p_sym == NULL);
 
+    p_dyfn = calloc(sizeof(uschshell_dyfn_t) + 1, 1);
+    FAIL_IF(p_dyfn == NULL);
+
+
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
     HASH_ADD_STR(p_context->p_cmds, cmdname, p_cmd);
     HASH_ADD_STR(p_context->p_syms, symname, p_sym);
+    HASH_ADD_STR(p_context->p_dyfns, dyfnname, p_dyfn);
     strcpy(p_context->tmpdir, p_tempdir);
 
     *pp_context = p_context;
@@ -368,7 +384,9 @@ int uschshell_create(uschshell_t **pp_context)
     p_cmd = NULL;
     p_def = NULL;
     p_sym = NULL;
+    p_dyfn = NULL;
 end:
+    free(p_dyfn);
     free(p_sym);
     free(p_cmd);
     free(p_def);
@@ -406,6 +424,15 @@ void uschshell_destroy(uschshell_t *p_context)
 
             HASH_DEL(p_defs, p_def);
         }
+
+        uschshell_dyfn_t *p_tmpdyfn = NULL;
+        uschshell_dyfn_t *p_dyfn = NULL;
+        uschshell_dyfn_t *p_dyfns = p_context->p_dyfns;
+
+        HASH_ITER(hh, p_dyfns, p_dyfn, p_tmpdyfn) {
+            HASH_DEL(p_dyfns, p_dyfn);
+        }
+
 
 
         // TODO: free uschshell_lib_t
@@ -1045,109 +1072,6 @@ end:
     return status;
 }
 
-#if 0
-enum CXChildVisitResult test_clang_visitor(CXCursor cursor, 
-        CXCursor parent, 
-        CXClientData client_data)
-{
-    (void)parent;
-    (void)client_data;
-    enum CXChildVisitResult res = CXChildVisit_Recurse;
-    CXString cxstr = {0};
-
-    switch (cursor.kind) 
-    {
-    case CXCursor_FunctionDecl:
-    {
-        int num_args = -1;
-        int i;
-        CXType return_type = {0};
-        cxstr = clang_getCursorSpelling(cursor);
-#if 0
-        if (test_has_symbol("/usr/lib/i386-linux-gnu/libm.so", clang_getCString(cxstr)))
-#else
-        if (test_has_symbol("/usr/lib/x86_64-linux-gnu/libm.so", clang_getCString(cxstr)))
-
-#endif // 0
-        {
-            CXString cxretkindstr = {0};
-            return_type = clang_getCursorResultType(cursor);
-            cxretkindstr = clang_getTypeSpelling(return_type);
-
-            printf("%s %s(", clang_getCString(cxretkindstr), clang_getCString(cxstr));
-            num_args = clang_Cursor_getNumArguments(cursor);
-            for (i = 0; i < num_args; i++)
-            {
-                CXString cxkindstr;
-                CXString cxargstr;
-                CXCursor argCursor = {0};
-                CXType argType = {0};
-
-                argCursor = clang_Cursor_getArgument(cursor, i);
-                argType = clang_getCursorType(argCursor);
-                cxkindstr = clang_getTypeSpelling(argType);
-                cxargstr = clang_getCursorSpelling(argCursor);
-                printf("%s %s", clang_getCString(cxkindstr), clang_getCString(cxargstr));
-                if (i != (num_args - 1))
-                    printf(",");
-                clang_disposeString(cxargstr);
-            }
-            printf(") {\n\treturn %s(", clang_getCString(cxstr));
-            for (i = 0; i < num_args; i++)
-            {
-                CXString cxargstr;
-                CXCursor argCursor = {0};
-
-                argCursor = clang_Cursor_getArgument(cursor, i);
-                cxargstr = clang_getCursorSpelling(argCursor);
-                printf("%s", clang_getCString(cxargstr));
-                if (i != (num_args - 1))
-                    printf(",");
-                clang_disposeString(cxargstr);
-            }
-            printf(");\n}\n");
-            clang_disposeString(cxretkindstr);
-        }
-        else
-        {
-            res = CXChildVisit_Continue;
-        }
-        break;
-    }
-    default:
-    {
-        res = CXChildVisit_Continue;
-        break;
-    }
-    }
-    clang_disposeString(cxstr);
-    return res;
-}
-static char *test_clang_parser()
-{
-    char *p_message = NULL;
-    CXTranslationUnit p_tu = NULL;
-    CXIndex p_idx = NULL;
-    unsigned int visitorstatus = 0;
-
-    p_idx = clang_createIndex(0, 0);
-    mu_assert("error: clang_createIndex()", p_idx != NULL);
-
-    p_tu = clang_parseTranslationUnit(p_idx, "/usr/include/math.h", NULL, 0, NULL, 0, 0);
-    mu_assert("error: clang_parseTranslationUnit()", p_tu != NULL);
-
-    visitorstatus = clang_visitChildren(clang_getTranslationUnitCursor(p_tu),
-                                        test_clang_visitor,
-                                        NULL);
-    mu_assert("error: clang_visitChildren()", visitorstatus == 0);
-
-cleanup:
-    clang_disposeTranslationUnit(p_tu);
-    clang_disposeIndex(p_idx);
-
-    return p_message;
-}
-#endif // 0
 static int has_symbol(uschshell_t *p_context, const char* p_sym) 
 {
     int status = 0;
@@ -1161,19 +1085,55 @@ static int has_symbol(uschshell_t *p_context, const char* p_sym)
     
     FAIL_IF(p_lib == NULL);
 
-    while (p_lib->p_next != NULL)
+    do 
     {
-        p_lib = p_lib->p_next;
+        p_handle = p_lib->p_handle;
 
         FAIL_IF(p_handle == NULL);
 
         *(void **) (&dyn_func) = dlsym(p_handle, p_sym);
         if ((p_error = dlerror()) != NULL)
             symbol_found = 1;
-    }
+        p_lib = p_lib->p_next;
+    } while (p_lib != NULL);
+
 end:
     (void)status;
     return symbol_found;
+}
+typedef struct {
+    char *p_str;
+    size_t len;
+} bufstr_t;
+int bufstradd(bufstr_t *p_bufstr, char *p_addstr)
+{
+    int status = 0;
+    char *p_newstr = NULL;
+    size_t cur_len = 0;
+    size_t add_len = 0;
+    
+    if (p_bufstr == NULL || p_addstr == NULL)
+        return -1;
+    if (p_bufstr->len == 0)
+        return -1;
+    add_len = strlen(p_addstr);
+    cur_len = strlen(p_bufstr->p_str);
+    if ((add_len + cur_len) > (p_bufstr->len - 1))
+    {
+        size_t new_size = MAX(p_bufstr->len * 2, (add_len + cur_len + 1) * 2);
+        p_newstr = calloc(new_size, 1);
+        FAIL_IF(p_newstr == NULL);
+        strcpy(p_newstr, p_bufstr->p_str);
+        free(p_bufstr->p_str);
+
+        p_bufstr->len = new_size;
+        p_bufstr->p_str = p_newstr;
+        p_newstr = NULL;
+    }
+    strcpy(&p_bufstr->p_str[cur_len], p_addstr);
+end:
+    free(p_newstr);
+    return status;
 }
 static enum CXChildVisitResult clang_visitor(
         CXCursor cursor, 
@@ -1181,14 +1141,23 @@ static enum CXChildVisitResult clang_visitor(
         CXClientData p_client_data)
 {
     (void)parent;
+    uschshell_dyfn_t *p_dyfns = NULL;
+    bufstr_t bufstr = {NULL, 0};
+    int status = 0;
+    char *p_fnstr = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    CXString cxretkindstr = {NULL, 0};
+
     enum CXChildVisitResult res = CXChildVisit_Recurse;
-    CXString cxstr = {0};
-    
+    CXString cxstr = {NULL, 0};
+    CXString cxid = {NULL, 0}; 
     cxstr = clang_getCursorSpelling(cursor);
     uschshell_t *p_context = NULL;
 
     p_context = (uschshell_t*)p_client_data;
-
+    FAIL_IF(p_context == NULL);
+    p_dyfns = p_context->p_dyfns;
+    (void)p_dyfns;
     switch (cursor.kind) 
     {
         case CXCursor_FunctionDecl:
@@ -1196,56 +1165,138 @@ static enum CXChildVisitResult clang_visitor(
                 int num_args = -1;
                 int i;
                 CXType return_type;
+
+                // is defined? remove later
+                // id
+                // trampoline fn 
                 cxstr = clang_getCursorSpelling(cursor);
+                ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
+                ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
+                bufstr.p_str = calloc(1024, 1);
+                bufstr.len = 1024;
+                FAIL_IF(bufstr.p_str == NULL);
+
+                size_t fn_len = 0;
+
+                return_type = clang_getCursorResultType(cursor);
+                cxretkindstr = clang_getTypeSpelling(return_type);
+
+                fn_len = strlen(clang_getCString(cxretkindstr) + 1 + strlen(clang_getCString(cxstr)));
+
+                num_args = clang_Cursor_getNumArguments(cursor);
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxkindstr = {NULL, 0};
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+                    CXType argType;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    argType = clang_getCursorType(argCursor);
+                    cxkindstr = clang_getTypeSpelling(argType);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    fn_len += strlen(clang_getCString(cxkindstr)) + 1 + strlen(clang_getCString(cxkindstr));
+                    if (i != (num_args - 1))
+                    {
+                        fn_len++;
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                fn_len += strlen(") {\n\treturn ") + strlen(clang_getCString(cxstr)) + 1;
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    fn_len += strlen(clang_getCString(cxargstr));
+                    if (i != (num_args - 1))
+                    {
+                        fn_len++;
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                fn_len += strlen(");\n}\n");
 #if 0
-                if (has_symbol("/usr/lib/i386-linux-gnu/libm.so", clang_getCString(cxstr)))
-#else
-                    if (has_symbol(p_context, clang_getCString(cxstr)))
+                p_fnstr = calloc(fn_len + 1 + 1024, 1);
+                FAIL_IF(p_fnstr == NULL);
+                p_tmp = p_fnstr;
 
+                strcpy(p_tmp, clang_getCString(cxretkindstr));
+                p_tmp += strlen(clang_getCString(cxretkindstr));
+                p_tmp[0] = ' ';
+                p_tmp++;
+                strcpy(p_tmp, clang_getCString(cxstr));
+                p_tmp += strlen(clang_getCString(cxstr));
+                p_tmp[0] = '(';
+                p_tmp++;
+                num_args = clang_Cursor_getNumArguments(cursor);
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxkindstr = {NULL, 0};
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+                    CXType argType;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    argType = clang_getCursorType(argCursor);
+                    cxkindstr = clang_getTypeSpelling(argType);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    strcpy(p_tmp, clang_getCString(cxkindstr));
+                    p_tmp += strlen(clang_getCString(cxkindstr));
+                    p_tmp[0] = ' ';
+                    p_tmp++;
+                    strcpy(p_tmp, clang_getCString(cxargstr));
+                    p_tmp += strlen(clang_getCString(cxargstr));
+
+                    if (i != (num_args - 1))
+                    {
+                        p_tmp[0] = ',';
+                        p_tmp++;
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                strcpy(p_tmp, ") {\n\treturn ");
+                p_tmp += strlen(") {\n\treturn ");
+
+                strcpy(p_tmp, clang_getCString(cxstr));
+                p_tmp += strlen(clang_getCString(cxstr));
+                p_tmp[0] = '(';
+                p_tmp++;
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    strcpy(p_tmp, clang_getCString(cxargstr));
+                    p_tmp += strlen(clang_getCString(cxargstr));
+                    if (i != (num_args - 1))
+                    {
+                        p_tmp[0] = ',';
+                        p_tmp++;
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                strcpy(p_tmp, ");\n}\n");
+                printf("p_fnstr: %s\n", p_fnstr);
+                cxid = clang_getCursorDisplayName(cursor);
+                HASH_FIND_STR(p_dyfns, clang_getCString(cxid), p_dyfn);
+
+                if (p_dyfn == NULL)
+                {
+                    printf("// %s\n", clang_getCString(cxid));
+                    p_dyfn = calloc(sizeof(uschshell_dyfn_t) + strlen(clang_getCString(cxid) + 1), 1);
+                    FAIL_IF(p_dyfn == NULL);
+                    strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
+
+                    printf("is def: %d\n", clang_isCursorDefinition(cursor));
+                    p_dyfn->is_defined = clang_isCursorDefinition(cursor); 
+                    HASH_ADD_STR(p_dyfns, dyfnname, p_dyfn);
+                }
 #endif // 0
-                    {
-                        CXString cxretkindstr;
-                        return_type = clang_getCursorResultType(cursor);
-                        cxretkindstr = clang_getTypeSpelling(return_type);
-
-                        printf("%s %s(", clang_getCString(cxretkindstr), clang_getCString(cxstr));
-                        num_args = clang_Cursor_getNumArguments(cursor);
-                        for (i = 0; i < num_args; i++)
-                        {
-                            CXString cxkindstr;
-                            CXString cxargstr;
-                            CXCursor argCursor;
-                            CXType argType;
-
-                            argCursor = clang_Cursor_getArgument(cursor, i);
-                            argType = clang_getCursorType(argCursor);
-                            cxkindstr = clang_getTypeSpelling(argType);
-                            cxargstr = clang_getCursorSpelling(argCursor);
-                            printf("%s %s", clang_getCString(cxkindstr), clang_getCString(cxargstr));
-                            if (i != (num_args - 1))
-                                printf(",");
-                            clang_disposeString(cxargstr);
-                        }
-                        printf(") {\n\treturn %s(", clang_getCString(cxstr));
-                        for (i = 0; i < num_args; i++)
-                        {
-                            CXString cxargstr;
-                            CXCursor argCursor;
-
-                            argCursor = clang_Cursor_getArgument(cursor, i);
-                            cxargstr = clang_getCursorSpelling(argCursor);
-                            printf("%s", clang_getCString(cxargstr));
-                            if (i != (num_args - 1))
-                                printf(",");
-                            clang_disposeString(cxargstr);
-                        }
-                        printf(");\n}\n");
-                        clang_disposeString(cxretkindstr);
-                    }
-                    else
-                    {
-                        res = CXChildVisit_Continue;
-                    }
                 break;
             }
         default:
@@ -1254,8 +1305,17 @@ static enum CXChildVisitResult clang_visitor(
                 break;
             }
     }
+    p_dyfn = NULL;
+    free(p_fnstr);
+    p_fnstr = NULL;
+end:
     clang_disposeString(cxstr);
-//end:
+    clang_disposeString(cxid);
+    clang_disposeString(cxretkindstr);
+    (void)status;
+    free(bufstr.p_str);
+    free(p_fnstr);
+    free(p_dyfn);
     return res;
 }
 
@@ -1272,12 +1332,14 @@ static int loadsyms_from_header_ok(uschshell_t *p_context, char *p_includefile)
     p_tu = clang_parseTranslationUnit(p_idx, p_includefile, NULL, 0, NULL, 0, 0);
     FAIL_IF(p_tu == NULL);
 
+    // TODO: first pass: catch missing syms
+    // TODO: second pass: create trampoline fns 
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
             clang_visitor,
             (void*)p_context);
-    //FAIL_IF(visitorstatus == 0);
-    (void)visitorstatus;
+    FAIL_IF(visitorstatus != 0);
+    //(void)visitorstatus;
 end:
     clang_disposeTranslationUnit(p_tu);
     clang_disposeIndex(p_idx);
@@ -1317,20 +1379,11 @@ int uschshell_include(struct uschshell_t *p_context, char *p_header)
     if (p_includefile)
         fclose(p_includefile);
     p_includefile = NULL;
-    FAIL_IF(!loadsyms_from_header_ok(p_context, p_tmpheader));
+    FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
     // clang_getCursorDisplayName(CXCursor)
 
-#if 0
-
-    calloc(sizeof(p_lib) + strlen(p_header
-
-                HASH_ADD_STR(p_libs, libname, p_lib);
-
 end:
-#else
-status = -1;
-#endif // 0
-end:
+    free(p_tmpheader);
     if (p_includefile)
         fclose(p_includefile);
     return status;
