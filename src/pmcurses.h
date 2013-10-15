@@ -27,7 +27,21 @@
 #define KEY_SPACE ' '
 #define ASCII_ESC '\033'
 #define PMCURSES_GETCH_BUFSZ 5
+typedef struct pmcurses_t pmcurses_t;
 void pmcurses_move(int col, int row);
 char pmcurses_getch(char *p_buf);
 void pmcurses_backspace(int num);
+
+int pmcurses_create(pmcurses_t **pp_pmcurses);
+void pmcurses_destroy(pmcurses_t *p_pmcurses);
+int pmcurses_insert(pmcurses_t *p_pmcurses, const char *p_token);
+int pmcurses_erase(pmcurses_t *p_pmcurses);
+int pmcurses_back(pmcurses_t *p_pmcurses);
+int pmcurses_forward(pmcurses_t *p_pmcurses);
+int pmcurses_home(pmcurses_t *p_pmcurses);
+int pmcurses_end(pmcurses_t *p_pmcurses);
+int pmcurses_draw(pmcurses_t *p_pmcurses, int height, int width);
+char *pmcurses_gettok(pmcurses_t *p_pmcurses, size_t index);
+size_t pmcurses_linelen(pmcurses_t *p_pmcurses);
+int pmcurses_writeline(pmcurses_t *p_pmcurses, char *p_line);
 

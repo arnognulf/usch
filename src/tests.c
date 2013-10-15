@@ -32,6 +32,7 @@
 #include "usch.h"
 #include "uschshell.h"
 #include "usch_debug.h"
+#include "pmcurses.h"
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -274,175 +275,58 @@ cleanup:
     return p_message;
 }
 
-#if 0
-// TODO: uthash crashes when there is only one element in the hash-set
-static char *test_uthash1()
+static char *test_pmcurses()
 {
     char *p_message = NULL;
-    char **n, *names[] = { "mccleoad", NULL };
-    usch_test_vars_t *p_s = NULL;
-    usch_test_vars_t *p_tmp = NULL;
-    usch_test_vars_t *p_users = NULL;
-    int i=0;
-
-    for (n = names; *n != NULL; n++) {
-        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
-        strncpy(p_s->name, *n,strlen(*n));
-        p_s->id = i++;
-        HASH_ADD_STR( p_users, name, p_s );
-    }
-
-    printf("argh!\n");
-    HASH_FIND_STR(p_users, "mccleoad", p_s);
-    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
-
-cleanup:
-
-    /* free the hash table contents */
-    HASH_ITER(hh, p_users, p_s, p_tmp) {
-        HASH_DEL(p_users, p_s);
-        free(p_s);
-    }
-    return p_message;
-}
-#endif // 0
-#if 0
-static int test_has_symbol(const char* p_dylib_filename, const char* p_sym) 
-{
     int status = 0;
-    int has_symbol = 0;
-    void *p_handle = NULL;
-    char *p_error = NULL;
-    int (*dyn_func)();
-    
-    p_handle = dlopen(p_dylib_filename, RTLD_LAZY);
-    FAIL_IF(p_handle == NULL);
+    pmcurses_t *p_pmcurses = NULL;
+    char *p_str;
+    char *p_line = NULL;
 
-    *(void **) (&dyn_func) = dlsym(p_handle, p_sym);
-    ENDOK_IF((p_error = dlerror()) != NULL);
-    has_symbol = 1;
-end:
-    if (p_handle)
-        dlclose(p_handle);
+    p_line = calloc(256, 1);
+    mu_assert("error: calloc() == 0", p_line != 0);
 
-    (void)status;
-    return has_symbol;
-}
-enum CXChildVisitResult test_clang_visitor(CXCursor cursor, 
-        CXCursor parent, 
-        CXClientData client_data)
-{
-    (void)parent;
-    (void)client_data;
-    enum CXChildVisitResult res = CXChildVisit_Recurse;
-    CXString cxstr = {0};
-
-    switch (cursor.kind) 
-    {
-    case CXCursor_FunctionDecl:
-    {
-        int num_args = -1;
-        int i;
-        CXType return_type = {0};
-        cxstr = clang_getCursorSpelling(cursor);
-#if 0
-        if (test_has_symbol("/usr/lib/i386-linux-gnu/libm.so", clang_getCString(cxstr)))
-#else
-        if (test_has_symbol("/usr/lib/x86_64-linux-gnu/libm.so", clang_getCString(cxstr)))
-
-#endif // 0
-        {
-            CXString cxretkindstr = {0};
-            return_type = clang_getCursorResultType(cursor);
-            cxretkindstr = clang_getTypeSpelling(return_type);
-
-            printf("%s %s(", clang_getCString(cxretkindstr), clang_getCString(cxstr));
-            num_args = clang_Cursor_getNumArguments(cursor);
-            for (i = 0; i < num_args; i++)
-            {
-                CXString cxkindstr;
-                CXString cxargstr;
-                CXCursor argCursor = {0};
-                CXType argType = {0};
-
-                argCursor = clang_Cursor_getArgument(cursor, i);
-                argType = clang_getCursorType(argCursor);
-                cxkindstr = clang_getTypeSpelling(argType);
-                cxargstr = clang_getCursorSpelling(argCursor);
-                printf("%s %s", clang_getCString(cxkindstr), clang_getCString(cxargstr));
-                if (i != (num_args - 1))
-                    printf(",");
-                clang_disposeString(cxargstr);
-            }
-            printf(") {\n\treturn %s(", clang_getCString(cxstr));
-            for (i = 0; i < num_args; i++)
-            {
-                CXString cxargstr;
-                CXCursor argCursor = {0};
-
-                argCursor = clang_Cursor_getArgument(cursor, i);
-                cxargstr = clang_getCursorSpelling(argCursor);
-                printf("%s", clang_getCString(cxargstr));
-                if (i != (num_args - 1))
-                    printf(",");
-                clang_disposeString(cxargstr);
-            }
-            printf(");\n}\n");
-            clang_disposeString(cxretkindstr);
-        }
-        else
-        {
-            res = CXChildVisit_Continue;
-        }
-        break;
-    }
-    default:
-    {
-        res = CXChildVisit_Continue;
-        break;
-    }
-    }
-    clang_disposeString(cxstr);
-    return res;
-}
-#endif //0
-#if 0
-static char *test_clang_parser()
-{
-    char *p_message = NULL;
-    CXTranslationUnit p_tu = NULL;
-    CXIndex p_idx = NULL;
-    unsigned int visitorstatus = 0;
-
-    p_idx = clang_createIndex(0, 0);
-    mu_assert("error: clang_createIndex()", p_idx != NULL);
-
-    p_tu = clang_parseTranslationUnit(p_idx, "/usr/include/math.h", NULL, 0, NULL, 0, 0);
-    mu_assert("error: clang_parseTranslationUnit()", p_tu != NULL);
-
-    visitorstatus = clang_visitChildren(clang_getTranslationUnitCursor(p_tu),
-                                        test_clang_visitor,
-                                        NULL);
-    mu_assert("error: clang_visitChildren()", visitorstatus == 0);
+    status = pmcurses_create(&p_pmcurses);
+    mu_assert("error: pmcurses_create(&p_pmcurses) != 0", status == 0);
+    mu_assert("error: p_pmcurses == NULL", p_pmcurses != NULL);
+    status = pmcurses_insert(p_pmcurses, "a");
+    status = pmcurses_insert(p_pmcurses, "bb");
+    status = pmcurses_insert(p_pmcurses, "ccc");
+    mu_assert("error: pmcurses_insert(p_pmcurses) != 0", status == 0);
+    p_str = pmcurses_gettok(p_pmcurses, 0);
+    mu_assert("error: strcmp(p_str, \"a\") == 0", strcmp(p_str, "a") == 0);
+    p_str = pmcurses_gettok(p_pmcurses, 1);
+    mu_assert("error: pmcurses_gettok(p_pmcurses, 0) == NULL", p_str != NULL);
+    mu_assert("error: strcmp(p_str, \"bb\") == 0", strcmp(p_str, "bb") == 0);
+    p_str = pmcurses_gettok(p_pmcurses, 2);
+    mu_assert("error: strcmp(p_str, \"ccc\") == 0", strcmp(p_str, "ccc") == 0);
+    status = pmcurses_writeline(p_pmcurses, p_line);
+    mu_assert("error: strcmp(p_line, \"abbccc\") != 0", strcmp(p_line, "abbccc") == 0);
+    status = pmcurses_draw(p_pmcurses, 10, 10);
+    printf("\n");
+    mu_assert("error: pmcurses_draw(p_pmcurses, 10, 10) != 0", status == 0);
+    status = pmcurses_back(p_pmcurses);
+    status = pmcurses_insert(p_pmcurses, "dddd");
+    status = pmcurses_writeline(p_pmcurses, p_line);
+    status = pmcurses_draw(p_pmcurses, 10, 10);
+    printf("\n");
+    mu_assert("error: strcmp(p_line, \"abbddddccc\") != 0", strcmp(p_line, "abbddddccc") == 0);
 
 cleanup:
-    clang_disposeTranslationUnit(p_tu);
-    clang_disposeIndex(p_idx);
 
+    free(p_line);
     return p_message;
 }
-#endif // 0
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
-    //mu_run_test(test_whereis);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
     mu_run_test(test_uthash);
     mu_run_test(test_uthash1);
     mu_run_test(test_uschshell_vars);
-    //mu_run_test(test_clang_parser);
     mu_run_test(test_uschshell_dyld);
+    mu_run_test(test_pmcurses);
     return 0;
 }
 int main()

@@ -7,10 +7,10 @@ test_num_args:
 	$(CC) -pedantic -Wall -Wextra -Werror -g3 test_num_args.c -o $@
 
 tests: tests.o uschshell.o pmcurses.o
-		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic tests.o pmcurses.o uschshell.o  -L$(LLVM_DIR)/lib/ -lclang -ldl -o $@
+		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic tests.o pmcurses.o uschshell.o  /usr/lib/llvm-3.4/lib/libclang.so.1 -ldl -o $@
 
 usch: shell.o pmcurses.o uschshell.o
-		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic shell.o pmcurses.o uschshell.o -L$(LLVM_DIR)/lib/ -lclang -ldl -o $@
+		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic shell.o pmcurses.o uschshell.o  /usr/lib/llvm-3.4/lib/libclang.so.1 -ldl -o $@
 
 run_tests: tests
 	LD_LIBRARY_PATH=$(LLVM_DIR)/lib ./tests 
