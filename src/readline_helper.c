@@ -39,7 +39,8 @@
 #include <ctype.h>
 #include "uschshell.h"
 
-static int xgetch() {
+static struct uschshell_t *p_global_context = NULL;
+int xgetch() {
 #if 1
     // http://zaemis.blogspot.se/2011/06/reading-unicode-utf-8-by-hand-in-c.html
     /* mask values for bit pattern of first byte in 
@@ -66,23 +67,36 @@ static int xgetch() {
     old.c_lflag |= ECHO;
     if (tcsetattr(0, TCSADRAIN, &old) < 0)
         perror ("tcsetattr ~ICANON");
+    //printf("hoho: %c\n", buf);
+    //uschshell_preparse
+    {
+        uschshell_state_t state;
+        uschshell_preparse(p_global_context, rl_line_buffer, &state);
+    }
     return (int)buf;
 #else // 0
 #endif // 0
-    return 'x';
+    //return 'x';
 }
+void *xfoo(){
+    uschshell_state_t state;
+    uschshell_preparse(p_global_context, rl_line_buffer, &state);
+    printf("Current buffer:\n%s\n", rl_line_buffer);
+    return NULL;
+}
+
 static void initialize_readline()
 {
    /* Allow conditional parsing of the ~/.inputrc file. */
    rl_readline_name = "usch_test";
-   
+   rl_pre_input_hook = (Function*)(*xfoo); 
    rl_getc_function = (*xgetch);
 
    /* Tell the completer that we want a crack first. */
    //rl_attempted_completion_function = fileman_completion;
 }
 
-static char *stripwhite(char *string)
+char *stripwhite(char *string)
 {
    char *s, *t;
 
@@ -100,29 +114,47 @@ static char *stripwhite(char *string)
    return s;
 }
 
-static void execute_line(struct uschshell_t *p_context, char *p_input)
+void execute_line(struct uschshell_t *p_context, char *p_input)
 {
     uschshell_eval(p_context, p_input);
 }
+
 void prompt(struct uschshell_t *p_context)
 {
-    char *p_line = NULL;
-    char *p_s = NULL;
+    (void)p_context;
+//    char *p_line = NULL;
+ //   char *p_s = NULL;
 
     setlocale(LC_CTYPE, "");
 
     initialize_readline();
     stifle_history(7);
 
-    /* Loop reading and executing lines until the user quits. */
-    for ( ;; )
+    rl_already_prompted = 0;
+    rl_initialize();
+    rl_set_prompt("/* usch */ ");
+    rl_redisplay();
+    for (;;)
     {
-        //char c = '\0';
+#if 0
+        char c = 0;
 
-        //c = xgetch();
-        //rl_stuff_char(c);
-
-        //rl_redisplay();
+        //num = rl_read_key();
+        c = xgetch();
+        if (c) {
+            char str[2] = {0};
+            str[0] = c;
+            rl_insert_text(str);
+            rl_redisplay();
+            //printf("%x\n", str[0]);
+            //count++;
+            //if (count > 1024)
+            //    return;
+        }
+    }
+#endif // 0
+    char *p_line = NULL;
+    char *p_s = NULL;
         p_line = readline ("/* usch */ ");
 
         if (!p_line)
@@ -160,6 +192,7 @@ int main(int argc, char** p_argv)
     (void)argc;
     struct uschshell_t *p_uschshell = NULL;
     uschshell_create(&p_uschshell);
+    p_global_context = p_uschshell;
     prompt(p_uschshell);
     uschshell_destroy(p_uschshell);
 }

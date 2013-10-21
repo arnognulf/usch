@@ -47,6 +47,13 @@ int uschshell_is_cmd(struct uschshell_t *p_context, char *p_item);
 int uschshell_lib(struct uschshell_t *p_context, char *p_dynlib);
 int uschshell_include(struct uschshell_t *p_context, char *p_header);
 
+typedef enum {
+USCHSHELL_STATE_CPARSER,
+USCHSHELL_STATE_CMDARG,
+} uschshell_state_t;
+
+int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state);
+
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED

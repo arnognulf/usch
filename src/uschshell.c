@@ -31,6 +31,7 @@
 #include "clang-c/Index.h"
 #include "usch.h"
 #include "usch_debug.h"
+#include "bufstr.h"
 #define MAX(a,b) \
     ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
@@ -1152,41 +1153,6 @@ end:
     return symbol_found;
 }
 
-typedef struct {
-    char *p_str;
-    size_t len;
-} bufstr_t;
-
-int bufstradd(bufstr_t *p_bufstr, const char *p_addstr)
-{
-    int status = 0;
-    char *p_newstr = NULL;
-    size_t cur_len = 0;
-    size_t add_len = 0;
-    
-    if (p_bufstr == NULL || p_addstr == NULL)
-        return -1;
-    if (p_bufstr->len == 0)
-        return -1;
-    add_len = strlen(p_addstr);
-    cur_len = strlen(p_bufstr->p_str);
-    if ((add_len + cur_len) > (p_bufstr->len - 1))
-    {
-        size_t new_size = MAX(p_bufstr->len * 2, (add_len + cur_len + 1) * 2);
-        p_newstr = calloc(new_size, 1);
-        FAIL_IF(p_newstr == NULL);
-        strcpy(p_newstr, p_bufstr->p_str);
-        free(p_bufstr->p_str);
-
-        p_bufstr->len = new_size;
-        p_bufstr->p_str = p_newstr;
-        p_newstr = NULL;
-    }
-    strcpy(&p_bufstr->p_str[cur_len], p_addstr);
-end:
-    free(p_newstr);
-    return status;
-}
 void* uschshell_getdyfnhandle(uschshell_t *p_context, const char *p_id)
 {
     int status = 0;
@@ -1347,6 +1313,7 @@ end:
     return res;
 }
 
+
 static int loadsyms_from_header_ok(uschshell_t *p_context, char *p_includefile)
 {
     int status = 0;
@@ -1420,6 +1387,196 @@ end:
     free(p_tmpheader);
     if (p_includefile)
         fclose(p_includefile);
+    return status;
+}
+
+static enum CXChildVisitResult clang_preparseVisitor(
+        CXCursor cursor, 
+        CXCursor parent, 
+        CXClientData p_client_data)
+{
+    (void)parent;
+    uschshell_dyfn_t *p_dyfns = NULL;
+    bufstr_t bufstr = {NULL, 0};
+    int status = 0;
+    char *p_fnstr = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    CXString cxretkindstr = {NULL, 0};
+    enum CXChildVisitResult res = CXChildVisit_Recurse;
+    CXString cxstr = {NULL, 0};
+    CXString cxid = {NULL, 0}; 
+    uschshell_t *p_context = NULL;
+
+    cxstr = clang_getCursorSpelling(cursor);
+    p_context = (uschshell_t*)p_client_data;
+    FAIL_IF(p_context == NULL);
+    p_dyfns = p_context->p_dyfns;
+    (void)p_dyfns;
+    switch (cursor.kind) 
+    {
+        case CXCursor_FunctionDecl:
+            {
+                int num_args = -1;
+                int i;
+                CXType return_type;
+
+                cxstr = clang_getCursorSpelling(cursor);
+                ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
+                ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
+                bufstr.p_str = calloc(1024, 1);
+                bufstr.len = 1024;
+                FAIL_IF(bufstr.p_str == NULL);
+                cxid = clang_getCursorDisplayName(cursor);
+
+                return_type = clang_getCursorResultType(cursor);
+                cxretkindstr = clang_getTypeSpelling(return_type);
+
+                bufstradd(&bufstr, clang_getCString(cxretkindstr));
+                bufstradd(&bufstr, " ");
+                bufstradd(&bufstr, clang_getCString(cxstr));
+
+                bufstradd(&bufstr, "(");
+                num_args = clang_Cursor_getNumArguments(cursor);
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxkindstr = {NULL, 0};
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+                    CXType argType;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    argType = clang_getCursorType(argCursor);
+                    cxkindstr = clang_getTypeSpelling(argType);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    bufstradd(&bufstr, clang_getCString(cxkindstr)); 
+                    bufstradd(&bufstr, " "); 
+                    bufstradd(&bufstr, clang_getCString(cxargstr)); 
+                    if (i != (num_args - 1))
+                    {
+                        bufstradd(&bufstr, ", "); 
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                bufstradd(&bufstr, ")\n{\n");
+
+                bufstradd(&bufstr, "\t");
+                bufstradd(&bufstr, clang_getCString(cxretkindstr));
+                bufstradd(&bufstr, " (*handle)(");
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxkindstr = {NULL, 0};
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+                    CXType argType;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    argType = clang_getCursorType(argCursor);
+                    cxkindstr = clang_getTypeSpelling(argType);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    bufstradd(&bufstr, clang_getCString(cxkindstr)); 
+
+                    if (i != (num_args - 1))
+                    {
+                        bufstradd(&bufstr, ", "); 
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                bufstradd(&bufstr, ");\n");
+                bufstradd(&bufstr, "\thandle = uschshell_getdyfnhandle(p_uschshell_context, \"");
+                bufstradd(&bufstr, clang_getCString(cxid));
+                bufstradd(&bufstr, "\");\n");
+                bufstradd(&bufstr, "\treturn handle(");
+                for (i = 0; i < num_args; i++)
+                {
+                    CXString cxargstr = {NULL, 0};
+                    CXCursor argCursor;
+
+                    argCursor = clang_Cursor_getArgument(cursor, i);
+                    cxargstr = clang_getCursorSpelling(argCursor);
+                    bufstradd(&bufstr, clang_getCString(cxargstr));
+                    if (i != (num_args - 1))
+                    {
+                        bufstradd(&bufstr, ","); 
+                    }
+                    clang_disposeString(cxargstr);
+                }
+                bufstradd(&bufstr, ");\n}\n");
+                p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
+                FAIL_IF(p_dyfn == NULL);
+                strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
+                p_dyfn->p_dyfndef = bufstr.p_str;
+                //printf(bufstr.p_str);
+                bufstr.p_str = NULL;
+
+                break;
+            }
+        default:
+            {
+                res = CXChildVisit_Continue;
+                break;
+            }
+    }
+    p_dyfn = NULL;
+    free(p_fnstr);
+    p_fnstr = NULL;
+end:
+    clang_disposeString(cxstr);
+    clang_disposeString(cxid);
+    clang_disposeString(cxretkindstr);
+    (void)status;
+    free(bufstr.p_str);
+    free(p_fnstr);
+    free(p_dyfn);
+    return res;
+}
+
+int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state)
+{
+    (void)p_context;
+    (void)p_line;
+    (void)p_state;
+
+    int status = 0;
+    char *p_preparsefile = NULL;
+    bufstr_t bufstr = {0};
+    CXTranslationUnit p_tu = NULL;
+    CXIndex p_idx = NULL;
+    unsigned int visitorstatus = 0;
+
+    bufstr.p_str = calloc(1,1024);
+    FAIL_IF(bufstr.p_str == NULL);
+    bufstr.len = 1024;
+    bufstradd(&bufstr, "struct uschshell_t;\n");
+    bufstradd(&bufstr, "#include <usch.h>\n");
+    bufstradd(&bufstr, "#include \"includes.h\"\n");
+    bufstradd(&bufstr, "#include \"definitions.h\"\n");
+    bufstradd(&bufstr, "#include \"trampolines.h\"\n");
+    bufstradd(&bufstr, "int dyn_func()\n");
+    bufstradd(&bufstr, "{\n");
+    bufstradd(&bufstr, "\t");
+    bufstradd(&bufstr, p_line);
+    bufstradd(&bufstr, ";\n\treturn 0;\n");
+    bufstradd(&bufstr, "}\n");
+    printf("x: %s\n", bufstr.p_str);
+
+    p_idx = clang_createIndex(0, 0);
+    FAIL_IF(p_idx == NULL);
+    p_tu = clang_parseTranslationUnit(p_idx, p_preparsefile, NULL, 0, NULL, 0, 0);
+    FAIL_IF(p_tu == NULL);
+
+    // TODO: first pass: catch missing syms
+    // TODO: second pass: create trampoline fns 
+    visitorstatus = clang_visitChildren(
+            clang_getTranslationUnitCursor(p_tu),
+            clang_preparseVisitor,
+            (void*)p_context);
+    FAIL_IF(visitorstatus != 0);
+    p_state = USCHSHELL_STATE_CPARSER;
+end:
+    clang_disposeTranslationUnit(p_tu);
+    clang_disposeIndex(p_idx);
+
+    free(bufstr.p_str);
     return status;
 }
 
