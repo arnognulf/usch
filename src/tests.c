@@ -26,13 +26,15 @@
 #include "minunit.h"
 #include "clang-c/Index.h"
 #include <dlfcn.h>
-
+#include <ctype.h>
 #include "../external/uthash/src/uthash.h"
 
 #include "usch.h"
 #include "uschshell.h"
 #include "usch_debug.h"
 #include "pmcurses.h"
+#include <editline/readline.h>
+#include <locale.h>
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -215,11 +217,13 @@ cleanup:
     uschshell_destroy(p_context);
     return p_message;
 }
+
 typedef struct usch_test_vars_t {
     int id;
     UT_hash_handle hh;
     char name[];
 } usch_test_vars_t;
+
 static char *test_uthash()
 {
     char *p_message = NULL;
@@ -274,7 +278,91 @@ cleanup:
     }
     return p_message;
 }
+#if 0
+void initialize_readline ()
+{
+   /* Allow conditional parsing of the ~/.inputrc file. */
+   rl_readline_name = "usch_test";
 
+   /* Tell the completer that we want a crack first. */
+   //rl_attempted_completion_function = fileman_completion;
+}
+
+
+static char *stripwhite(char *string)
+{
+   char *s, *t;
+
+   for (s = string; isspace(*s); s++)
+      ;
+
+   if (*s == 0)
+      return s;
+
+   t = s + strlen(s) - 1;
+   while (t > s && isspace(*t))
+      t--;
+   *++t = '\0';
+
+   return s;
+}
+
+static void execute_line(char *p_expansion)
+{
+    printf("%s\n", p_expansion);
+}
+#endif // 0
+
+#if 0
+static char *test_editline()
+{
+    char *p_message = NULL;
+    char *p_line = NULL;
+    char *p_s = NULL;
+
+    setlocale(LC_CTYPE, "");
+
+    initialize_readline();
+    stifle_history(7);
+
+   /* Loop reading and executing lines until the user quits. */
+   for ( ;; )
+   {
+      p_line = readline ("/* usch */ ");
+
+      if (!p_line)
+         break;
+
+      /* Remove leading and trailing whitespace from the line.
+         Then, if there is anything left, add it to the history list
+         and execute it. */
+      p_s = stripwhite(p_line);
+
+      if (*p_s) {
+
+         char* p_expansion = NULL;
+         int result;
+
+         result = history_expand(p_s, &p_expansion);
+
+         if (result < 0 || result == 2) {
+            fprintf(stderr, "%s\n", p_expansion);
+         } else {
+            add_history(p_expansion);
+            execute_line(p_expansion);
+         }
+         free(p_expansion);
+      }
+
+      free(p_line);
+   }
+
+    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
+
+cleanup:
+
+    return p_message;
+}
 static char *test_pmcurses()
 {
     char *p_message = NULL;
@@ -368,6 +456,8 @@ cleanup:
     free(p_line);
     return p_message;
 }
+#endif // 0
+
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
@@ -377,10 +467,12 @@ static char * all_tests()
     mu_run_test(test_uthash1);
     mu_run_test(test_uschshell_vars);
     mu_run_test(test_uschshell_dyld);
-    mu_run_test(test_pmcurses);
-    mu_run_test(test_input);
+    //mu_run_test(test_pmcurses);
+    //mu_run_test(test_input);
+//    mu_run_test(test_editline);
     return 0;
 }
+
 int main()
 {
      char *result = all_tests();

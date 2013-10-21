@@ -162,6 +162,7 @@ static int tokstrinsert(struct tokstr *p_tokstr, size_t pos, const char *p_addst
     cur_len = toklen(p_tokstr->p_str, p_tokstr->len);
     if (p_tokstr->p_str[0] != '\0')
         cur_len++;
+    
     if ((add_len + cur_len) > (p_tokstr->len - 2))
     {
         size_t new_size = MAX(p_tokstr->len * 2, (add_len + cur_len) * 2);
@@ -174,7 +175,7 @@ static int tokstrinsert(struct tokstr *p_tokstr, size_t pos, const char *p_addst
         p_tokstr->p_str = p_newstr;
         p_newstr = NULL;
     }
-    if (p_tokstr->p_str[pos] == '\0' && p_tokstr->p_str[pos+1] == '\0')
+    if (p_tokstr->p_str[pos+1] == '\0' && p_tokstr->p_str[pos+2] == '\0')
     {
         memcpy(&p_tokstr->p_str[cur_len], p_addstr, add_len);
         p_tokstr->p_str[cur_len+add_len+1] = '\0';
