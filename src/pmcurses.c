@@ -34,6 +34,11 @@
     ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
+#define MIN(a,b) \
+    ({ __typeof__ (a) _a = (a); \
+     __typeof__ (b) _b = (b); \
+     _a < _b ? _a : _b; })
+
 
 struct  tokstr {
     char *p_str;
@@ -213,6 +218,57 @@ void pmcurses_backspace(int num)
     printf("\033[%dD", num);
     fflush(stdout);
 }
+enum pmcurses_key pmcurses_parsekey(char *p_key)
+{
+    enum pmcurses_key key = PMCURSES_PRINTABLE;
+    if (p_key[0] == '\033')
+    {
+        if(p_key[1] == '[')
+            switch (p_key[2])
+            {
+                case 'A':
+                    key = PMCURSES_UP;
+                    break;
+                case 'D':
+                    key = PMCURSES_BACK;
+                    break;
+                case 'C':
+                    key = PMCURSES_FORWARD;
+                    break;
+                case 'B':
+                    key = PMCURSES_DOWN;
+                    break;
+                default:
+                    break;
+            }
+        if(p_key[1] == 'O')
+            switch (p_key[2])
+            {
+                case 'H':
+                    key = PMCURSES_HOME;
+                    break;
+                case 'F':
+                    key = PMCURSES_HOME;
+                    break;
+                default:
+                    break;
+            }
+        // emacs
+        if(p_key[1] == 'A')
+            key = PMCURSES_HOME;
+        if(p_key[1] == 'E')
+            key = PMCURSES_END;
+        if (p_key[1] == 'H')
+            key = PMCURSES_BACKSPACE;
+        if (p_key[1] == 'I')
+            key = PMCURSES_TAB;
+    }
+    if (p_key[0] == 127)
+        key = PMCURSES_BACKSPACE;
+    return key;
+
+}
+
 char pmcurses_getch(char *p_buf) {
     if (p_buf == 0)
         return EOF;
@@ -284,8 +340,12 @@ char pmcurses_getch(char *p_buf) {
 struct pmcurses_t
 {
     size_t bufpos;
+    size_t tokpos;
     size_t oldwidth;
     size_t oldheight;
+    size_t curhpos;
+    size_t curwpos;
+
     struct tokstr stritems;
 };
 
@@ -300,6 +360,8 @@ int pmcurses_create(pmcurses_t **pp_pmcurses)
 
     p_pmcurses = calloc(sizeof(pmcurses_t), 1);
     FAIL_IF(p_pmcurses == NULL);
+    p_pmcurses->bufpos = 0;
+    p_pmcurses->tokpos = 0;
     p_pmcurses->stritems.p_str = p_buf;
     p_pmcurses->stritems.len = 1024;
     p_buf = NULL;
@@ -337,12 +399,20 @@ int pmcurses_back(pmcurses_t *p_pmcurses)
     size_t bufpos;
     bufpos = p_pmcurses->bufpos;
 
-    while(p_pmcurses->stritems.p_str[bufpos] == '\0' && bufpos > 0)
+    printf("%s\n", &p_pmcurses->stritems.p_str[bufpos]);
+    if (p_pmcurses->stritems.p_str[bufpos] == '\0' && bufpos > 0)
+    {
         bufpos--;
-
+        printf("%s\n", &p_pmcurses->stritems.p_str[bufpos]);
+    }
     while (p_pmcurses->stritems.p_str[bufpos] != '\0' && bufpos > 0)
+    {
+        printf("%s\n", &p_pmcurses->stritems.p_str[bufpos]);
         bufpos--;
+    }
+
     p_pmcurses->bufpos = bufpos;
+    p_pmcurses->tokpos--;
 
     return 1;
 }
@@ -387,7 +457,12 @@ char *pmcurses_gettok(pmcurses_t *p_pmcurses, size_t index)
 
     return p_str;
 }
+char *pmcurses_getcurtok(pmcurses_t *p_pmcurses)
+{
+    char *p_str = &p_pmcurses->stritems.p_str[p_pmcurses->bufpos];
 
+    return p_str;
+}
 size_t pmcurses_linelen(pmcurses_t *p_pmcurses)
 {
     return toklen(p_pmcurses->stritems.p_str, p_pmcurses->stritems.len);
@@ -428,13 +503,29 @@ static int print_char(const char *p_str, size_t *p_readlen, size_t *p_displaylen
     *p_readlen = readlen;
     return 1;
 }
-int pmcurses_draw(pmcurses_t *p_pmcurses, int height, int width)
+
+int pmcurses_draw(pmcurses_t *p_pmcurses, int width, int height)
 {
+    // position cursorpos while drawpos < bufpos
+    // get lastpos by subtract cursorpos from drawpos
+    // position cursor! WIN
     int status = 0;
-    size_t bufpos = 0;
+    size_t drawpos = 0;
     size_t displaylen = 0;
     size_t readlen = 0;
     size_t bufsize;
+    size_t bufpos;
+    size_t hpos = 0;
+    size_t wpos = 0;
+    size_t curhpos = 0;
+    size_t curwpos = 0;
+
+    bufpos = p_pmcurses->bufpos;
+    if (p_pmcurses->curwpos > 0)
+        printf("\033[%dD", (int)p_pmcurses->curwpos); // BACK
+    if (p_pmcurses->curhpos > 0)
+        printf("\033[%dA", (int)p_pmcurses->curhpos); // UP 
+
 
     if (p_pmcurses->oldheight != (size_t)height || p_pmcurses->oldwidth != (size_t)width)
     {
@@ -442,22 +533,82 @@ int pmcurses_draw(pmcurses_t *p_pmcurses, int height, int width)
         p_pmcurses->oldwidth = (size_t)width;
     }
     bufsize = p_pmcurses->stritems.len;
-    while (bufpos < (bufsize - 2))
+    while (drawpos < (bufsize - 2))
     {
-        if (p_pmcurses->stritems.p_str[bufpos] == '\0' && p_pmcurses->stritems.p_str[bufpos+1] == '\0')
+        if (p_pmcurses->stritems.p_str[drawpos] == '\0' && p_pmcurses->stritems.p_str[drawpos+1] == '\0')
             break;
-        if (p_pmcurses->stritems.p_str[bufpos] == '\0')
+        if (p_pmcurses->stritems.p_str[drawpos] == '\0')
         {
-            bufpos++;
+            drawpos++;
             continue;
         }
-        FAIL_IF(!print_char(&p_pmcurses->stritems.p_str[bufpos], &readlen, &displaylen));
-        bufpos += readlen;
+        FAIL_IF(!print_char(&p_pmcurses->stritems.p_str[drawpos], &readlen, &displaylen));
+        drawpos += readlen;
+        if (drawpos < bufpos)
+        {
+            curhpos = hpos;
+            curwpos = wpos;
+        }
+        wpos += displaylen;
+        if (wpos == (size_t)width)
+        {
+            wpos = 0;
+            hpos++;
+            curhpos++;
+            curwpos = 0;
+            printf("\n");
+        }
         // note that double-width chars are not split up but instead put on the new line
     }
+    
+    if (((int)wpos - (int)curwpos - 1) > 0)
+        printf("\033[%dD", (int)wpos - (int)curwpos - 1); // BACK
+    if ((hpos - curhpos) > 0)
+        printf("\033[%dA", (int)hpos - (int)curhpos); // UP 
+    p_pmcurses->curwpos = MAX(0, (int)wpos);
+        p_pmcurses->curhpos = MAX(0, (int)hpos);
+
     fflush(stdout);
 end: 
 
     return status;
+}
+
+int pmcurses_delete(pmcurses_t *p_pmcurses)
+{
+    char *p_str = NULL;
+    size_t pos;
+
+    p_str = p_pmcurses->stritems.p_str;
+    pos = p_pmcurses->bufpos;
+    printf("wwooo: %s\n", &p_str[pos]);
+    if (p_str[pos] != '\0')
+    {
+        size_t rest_len = restlen(p_str, pos, p_pmcurses->stritems.len);
+        while (p_str[pos + 1] != '\0')
+        {
+            pos++;
+        }
+        printf("wwooo2: %s\n", &p_str[pos]);
+        if (p_str[pos + 2] == '\0')
+        {
+            p_str[p_pmcurses->bufpos+1] = '\0';
+            p_str[p_pmcurses->bufpos+2] = '\0';
+        }
+        else
+        {
+            memmove(&p_str[p_pmcurses->bufpos], &p_str[pos+2], rest_len-2);
+        }
+    }
+    return 1;
+}
+int pmcurses_backspaceex(pmcurses_t *p_pmcurses)
+{
+    if (p_pmcurses->bufpos > 0)
+    {
+        pmcurses_back(p_pmcurses);
+        pmcurses_delete(p_pmcurses);
+    }
+    return 1;
 }
 

@@ -281,6 +281,7 @@ static char *test_pmcurses()
     int status = 0;
     pmcurses_t *p_pmcurses = NULL;
     char *p_str;
+    char *p_tok;
     char *p_line = NULL;
 
     p_line = calloc(256, 1);
@@ -311,7 +312,57 @@ static char *test_pmcurses()
     status = pmcurses_draw(p_pmcurses, 10, 10);
     printf("\n");
     mu_assert("error: strcmp(p_line, \"abbddddccc\") != 0", strcmp(p_line, "abbddddccc") == 0);
+    pmcurses_back(p_pmcurses);
+    printf("\n");
+    status = pmcurses_draw(p_pmcurses, 10, 10);
+    p_tok = pmcurses_getcurtok(p_pmcurses);
+    printf("%s\n", p_tok);
+    mu_assert("error: strcmp(p_line, \"abbddddccc\") != 0", strcmp(p_tok, "dddd") == 0);
 
+cleanup:
+
+    free(p_line);
+    return p_message;
+}
+static char *test_input()
+{
+    char *p_message = NULL;
+    int status = 0;
+    pmcurses_t *p_pmcurses = NULL;
+    char *p_line = NULL;
+    char c = 0;
+    char buf[5] = {0};
+
+    p_line = calloc(256, 1);
+    mu_assert("error: calloc() == 0", p_line != 0);
+
+    status = pmcurses_create(&p_pmcurses);
+    mu_assert("error: pmcurses_create(&p_pmcurses) != 0", status == 0);
+    mu_assert("error: p_pmcurses == NULL", p_pmcurses != NULL);
+    while ((c = pmcurses_getch(buf)) != EOF)
+    {
+        switch (pmcurses_parsekey(buf))
+        {
+            case PMCURSES_PRINTABLE:
+                {
+                    pmcurses_insert(p_pmcurses, buf);
+                }
+                break;
+            case PMCURSES_BACK:
+                {
+                    pmcurses_back(p_pmcurses);
+                }
+                break;
+            case PMCURSES_FORWARD:
+                {
+                    pmcurses_forward(p_pmcurses);
+                }
+                break;
+            default:
+                break;
+        }
+        pmcurses_draw(p_pmcurses, 124, 28);
+    }
 cleanup:
 
     free(p_line);
@@ -327,6 +378,7 @@ static char * all_tests()
     mu_run_test(test_uschshell_vars);
     mu_run_test(test_uschshell_dyld);
     mu_run_test(test_pmcurses);
+    mu_run_test(test_input);
     return 0;
 }
 int main()
