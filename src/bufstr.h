@@ -1,0 +1,9 @@
+#include <unistd.h>
+
+typedef struct {
+    char *p_str;
+    size_t len;
+} bufstr_t;
+
+int bufstradd(bufstr_t *p_bufstr, const char *p_addstr);
+
