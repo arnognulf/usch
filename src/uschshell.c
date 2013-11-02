@@ -40,9 +40,9 @@ typedef struct
 {
     char *p_symname;
 } usch_def_t;
-
 #include "uschshell.h"
 #include "../external/uthash/src/uthash.h"
+#define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
 
 static int count_spaces(char *p_input)
 {
@@ -191,6 +191,7 @@ typedef struct uschshell_t
     uschshell_sym_t *p_syms;
     uschshell_dyfn_t *p_dyfns;
     uschshell_inc_t *p_incs;
+    char *p_cur_id;
     char tmpdir[];
 } uschshell_t;
 
@@ -361,11 +362,12 @@ int uschshell_create(uschshell_t **pp_context)
     char dir_template[] = "/tmp/usch-XXXXXX";
     char *p_tempdir = NULL;
 
-    p_tempdir = mkdtemp(dir_template);
-    FAIL_IF(p_tempdir == NULL);
-
     p_context = calloc(sizeof(uschshell_t) + strlen(dir_template) + 1, 1);
     FAIL_IF(p_context == NULL);
+
+    p_tempdir = mkdtemp(dir_template);
+    FAIL_IF(p_tempdir == NULL);
+    strcpy(p_context->tmpdir, dir_template);
 
     p_def = calloc(sizeof(uschshell_def_t) + 1, 1);
     FAIL_IF(p_def == NULL);
@@ -988,7 +990,10 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
             FAIL_IF(!fwrite_ok(definition.p_symname, p_stmt_c));
             FAIL_IF(!fwrite_ok("\", ##__VA_ARGS__)\n", p_stmt_c));
         }
-        FAIL_IF(!fwrite_ok("int dyn_func(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
+        FAIL_IF(!fwrite_ok("int ", p_stmt_c));
+
+        FAIL_IF(!fwrite_ok(USCHSHELL_DYN_FUNCNAME, p_stmt_c));
+        FAIL_IF(!fwrite_ok("(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
         FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
 
         FAIL_IF(!fwrite_ok("\n\treturn 0;\n}\n", p_stmt_c));
@@ -1027,7 +1032,9 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     }
     else /* as is */   
     {
-        FAIL_IF(!fwrite_ok("int dyn_func(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
+        FAIL_IF(!fwrite_ok("int ", p_stmt_c));
+        FAIL_IF(!fwrite_ok(USCHSHELL_DYN_FUNCNAME, p_stmt_c));
+        FAIL_IF(!fwrite_ok("(struct uschshell_t *p_context)\n{\n\t", p_stmt_c));
         FAIL_IF(!fwrite_ok(p_input, p_stmt_c));
 
         FAIL_IF(!fwrite_ok(";\n\treturn 0;\n}\n", p_stmt_c));
@@ -1063,7 +1070,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input)
     FAIL_IF((p_error = dlerror()) != NULL);
     (*set_context)(p_context);
 
-    *(void **) (&dyn_func) = dlsym(p_handle, "dyn_func");
+    *(void **) (&dyn_func) = dlsym(p_handle, USCHSHELL_DYN_FUNCNAME);
     FAIL_IF((p_error = dlerror()) != NULL);
     (*dyn_func)(p_context);
 
@@ -1390,6 +1397,13 @@ end:
     return status;
 }
 
+struct usch_ids
+{
+    struct usch_ids *p_usch_ids;
+    char name[];
+};
+
+
 static enum CXChildVisitResult clang_preparseVisitor(
         CXCursor cursor, 
         CXCursor parent, 
@@ -1401,118 +1415,36 @@ static enum CXChildVisitResult clang_preparseVisitor(
     int status = 0;
     char *p_fnstr = NULL;
     uschshell_dyfn_t *p_dyfn = NULL;
-    CXString cxretkindstr = {NULL, 0};
+    //CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr = {NULL, 0};
-    CXString cxid = {NULL, 0}; 
+    //CXString cxid = {NULL, 0}; 
     uschshell_t *p_context = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
+    //printf("%s\n", clang_getCString(cxstr));
     p_context = (uschshell_t*)p_client_data;
     FAIL_IF(p_context == NULL);
     p_dyfns = p_context->p_dyfns;
     (void)p_dyfns;
     switch (cursor.kind) 
     {
-        case CXCursor_FunctionDecl:
-            {
-                int num_args = -1;
-                int i;
-                CXType return_type;
-
-                cxstr = clang_getCursorSpelling(cursor);
-                ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
-                ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
-                bufstr.p_str = calloc(1024, 1);
-                bufstr.len = 1024;
-                FAIL_IF(bufstr.p_str == NULL);
-                cxid = clang_getCursorDisplayName(cursor);
-
-                return_type = clang_getCursorResultType(cursor);
-                cxretkindstr = clang_getTypeSpelling(return_type);
-
-                bufstradd(&bufstr, clang_getCString(cxretkindstr));
-                bufstradd(&bufstr, " ");
-                bufstradd(&bufstr, clang_getCString(cxstr));
-
-                bufstradd(&bufstr, "(");
-                num_args = clang_Cursor_getNumArguments(cursor);
-                for (i = 0; i < num_args; i++)
-                {
-                    CXString cxkindstr = {NULL, 0};
-                    CXString cxargstr = {NULL, 0};
-                    CXCursor argCursor;
-                    CXType argType;
-
-                    argCursor = clang_Cursor_getArgument(cursor, i);
-                    argType = clang_getCursorType(argCursor);
-                    cxkindstr = clang_getTypeSpelling(argType);
-                    cxargstr = clang_getCursorSpelling(argCursor);
-                    bufstradd(&bufstr, clang_getCString(cxkindstr)); 
-                    bufstradd(&bufstr, " "); 
-                    bufstradd(&bufstr, clang_getCString(cxargstr)); 
-                    if (i != (num_args - 1))
-                    {
-                        bufstradd(&bufstr, ", "); 
-                    }
-                    clang_disposeString(cxargstr);
-                }
-                bufstradd(&bufstr, ")\n{\n");
-
-                bufstradd(&bufstr, "\t");
-                bufstradd(&bufstr, clang_getCString(cxretkindstr));
-                bufstradd(&bufstr, " (*handle)(");
-                for (i = 0; i < num_args; i++)
-                {
-                    CXString cxkindstr = {NULL, 0};
-                    CXString cxargstr = {NULL, 0};
-                    CXCursor argCursor;
-                    CXType argType;
-
-                    argCursor = clang_Cursor_getArgument(cursor, i);
-                    argType = clang_getCursorType(argCursor);
-                    cxkindstr = clang_getTypeSpelling(argType);
-                    cxargstr = clang_getCursorSpelling(argCursor);
-                    bufstradd(&bufstr, clang_getCString(cxkindstr)); 
-
-                    if (i != (num_args - 1))
-                    {
-                        bufstradd(&bufstr, ", "); 
-                    }
-                    clang_disposeString(cxargstr);
-                }
-                bufstradd(&bufstr, ");\n");
-                bufstradd(&bufstr, "\thandle = uschshell_getdyfnhandle(p_uschshell_context, \"");
-                bufstradd(&bufstr, clang_getCString(cxid));
-                bufstradd(&bufstr, "\");\n");
-                bufstradd(&bufstr, "\treturn handle(");
-                for (i = 0; i < num_args; i++)
-                {
-                    CXString cxargstr = {NULL, 0};
-                    CXCursor argCursor;
-
-                    argCursor = clang_Cursor_getArgument(cursor, i);
-                    cxargstr = clang_getCursorSpelling(argCursor);
-                    bufstradd(&bufstr, clang_getCString(cxargstr));
-                    if (i != (num_args - 1))
-                    {
-                        bufstradd(&bufstr, ","); 
-                    }
-                    clang_disposeString(cxargstr);
-                }
-                bufstradd(&bufstr, ");\n}\n");
-                p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
-                FAIL_IF(p_dyfn == NULL);
-                strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
-                p_dyfn->p_dyfndef = bufstr.p_str;
-                //printf(bufstr.p_str);
-                bufstr.p_str = NULL;
-
-                break;
-            }
         default:
             {
-                res = CXChildVisit_Continue;
+                if (strncmp(clang_getCString(cxstr), USCHSHELL_DYN_FUNCNAME, strlen(USCHSHELL_DYN_FUNCNAME)) == 0)
+                {
+                    res = CXChildVisit_Recurse;
+                }
+                //else
+                //{
+                //    res = CXChildVisit_Continue;
+                //}
+#if 0
+                else
+                {
+                    res = CXChildVisit_Continue;
+                }
+#endif // 0
                 break;
             }
     }
@@ -1521,8 +1453,8 @@ static enum CXChildVisitResult clang_preparseVisitor(
     p_fnstr = NULL;
 end:
     clang_disposeString(cxstr);
-    clang_disposeString(cxid);
-    clang_disposeString(cxretkindstr);
+    //clang_disposeString(cxid);
+    //clang_disposeString(cxretkindstr);
     (void)status;
     free(bufstr.p_str);
     free(p_fnstr);
@@ -1530,18 +1462,86 @@ end:
     return res;
 }
 
+int ends_with_identifier(char *p_line)
+{
+    size_t i = 0;
+    size_t len = 0;
+    int has_identifier = 0;
+    len = strlen(p_line);
+    if (len == 0)
+        return 0;
+    i = len - 1;
+    do 
+    {
+        if (isdigit(p_line[i]) == 0)
+        {
+            if (isalpha(p_line[i]) == 0)
+            {
+                break;
+            }
+            else
+            {
+                has_identifier = 1;
+                break;
+            }
+        }
+        i--;
+    } while(i != 0);
+    return has_identifier;
+}
+
+size_t identifier_pos(char *p_line)
+{
+    size_t i = 0;
+    size_t len = 0;
+    int has_identifier = 0;
+    len = strlen(p_line);
+    if (len == 0)
+        return 0;
+    i = len - 1;
+    
+    do
+    {
+        if (isdigit(p_line[i]) == 0)
+        {
+            if (isalpha(p_line[i]) == 0)
+            {
+                i++;
+                break;
+            }
+            else
+            {
+                has_identifier = 1;
+            }
+        }
+        i--;
+    }while(i != 0);
+
+    if (has_identifier)
+    {
+        return i;
+    }
+    else
+    {
+        return len;
+    }
+}
 int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state)
 {
-    (void)p_context;
-    (void)p_line;
     (void)p_state;
 
     int status = 0;
-    char *p_preparsefile = NULL;
     bufstr_t bufstr = {0};
     CXTranslationUnit p_tu = NULL;
     CXIndex p_idx = NULL;
     unsigned int visitorstatus = 0;
+    char preparse_filename[] = "preparse.c";
+    char *p_parsefile_fullname = NULL;
+    FILE *p_parsefile = NULL;
+
+    ENDOK_IF(!ends_with_identifier(p_line));
+
+    printf("\nidentifier: \"%s\"\n", &p_line[identifier_pos(p_line)]);
 
     bufstr.p_str = calloc(1,1024);
     FAIL_IF(bufstr.p_str == NULL);
@@ -1551,21 +1551,32 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_st
     bufstradd(&bufstr, "#include \"includes.h\"\n");
     bufstradd(&bufstr, "#include \"definitions.h\"\n");
     bufstradd(&bufstr, "#include \"trampolines.h\"\n");
-    bufstradd(&bufstr, "int dyn_func()\n");
+    bufstradd(&bufstr, "int ");
+    bufstradd(&bufstr, USCHSHELL_DYN_FUNCNAME);
+    bufstradd(&bufstr, "()\n");
     bufstradd(&bufstr, "{\n");
     bufstradd(&bufstr, "\t");
     bufstradd(&bufstr, p_line);
     bufstradd(&bufstr, ";\n\treturn 0;\n");
     bufstradd(&bufstr, "}\n");
-    printf("x: %s\n", bufstr.p_str);
 
+    p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename), 1);
+    FAIL_IF(p_parsefile_fullname == NULL);
+    strcpy(p_parsefile_fullname, p_context->tmpdir);
+    p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
+    strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
+    p_parsefile = fopen(p_parsefile_fullname, "w");
+    FAIL_IF(p_parsefile == NULL);
+
+    FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
+    fclose(p_parsefile);
+    p_parsefile = NULL;
     p_idx = clang_createIndex(0, 0);
     FAIL_IF(p_idx == NULL);
-    p_tu = clang_parseTranslationUnit(p_idx, p_preparsefile, NULL, 0, NULL, 0, 0);
+    p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
     FAIL_IF(p_tu == NULL);
 
-    // TODO: first pass: catch missing syms
-    // TODO: second pass: create trampoline fns 
+    p_context->p_cur_id = &p_line[identifier_pos(p_line)];
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
             clang_preparseVisitor,
@@ -1573,6 +1584,9 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_st
     FAIL_IF(visitorstatus != 0);
     p_state = USCHSHELL_STATE_CPARSER;
 end:
+    free(p_parsefile_fullname);
+    if (p_parsefile != NULL)
+        fclose(p_parsefile);
     clang_disposeTranslationUnit(p_tu);
     clang_disposeIndex(p_idx);
 

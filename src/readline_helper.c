@@ -38,6 +38,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "uschshell.h"
+#include "usch_debug.h"
 
 static struct uschshell_t *p_global_context = NULL;
 int xgetch() {
@@ -67,10 +68,11 @@ int xgetch() {
     old.c_lflag |= ECHO;
     if (tcsetattr(0, TCSADRAIN, &old) < 0)
         perror ("tcsetattr ~ICANON");
-    //printf("hoho: %c\n", buf);
-    //uschshell_preparse
+
+    if (buf == ' ')
     {
         uschshell_state_t state;
+        printf("%s\n", rl_line_buffer);
         uschshell_preparse(p_global_context, rl_line_buffer, &state);
     }
     return (int)buf;
@@ -118,13 +120,21 @@ void execute_line(struct uschshell_t *p_context, char *p_input)
 {
     uschshell_eval(p_context, p_input);
 }
+#if 0
+static int handle_space(int a, int b)
+{
+    (void)a;
+    (void)b;
+    printf("a=%d, b=%d\n", a, b);
 
-void prompt(struct uschshell_t *p_context)
+    return 42;
+}
+#endif // 0
+int prompt(struct uschshell_t *p_context)
 {
     (void)p_context;
-//    char *p_line = NULL;
- //   char *p_s = NULL;
-
+    int status = 0;
+    char *p_line = NULL;
     setlocale(LC_CTYPE, "");
 
     initialize_readline();
@@ -133,28 +143,10 @@ void prompt(struct uschshell_t *p_context)
     rl_already_prompted = 0;
     rl_initialize();
     rl_set_prompt("/* usch */ ");
-    rl_redisplay();
+    //FAIL_IF(rl_bind_key(' ', (*handle_space)) != 0);
     for (;;)
     {
-#if 0
-        char c = 0;
-
-        //num = rl_read_key();
-        c = xgetch();
-        if (c) {
-            char str[2] = {0};
-            str[0] = c;
-            rl_insert_text(str);
-            rl_redisplay();
-            //printf("%x\n", str[0]);
-            //count++;
-            //if (count > 1024)
-            //    return;
-        }
-    }
-#endif // 0
-    char *p_line = NULL;
-    char *p_s = NULL;
+        char *p_s = NULL;
         p_line = readline ("/* usch */ ");
 
         if (!p_line)
@@ -179,10 +171,15 @@ void prompt(struct uschshell_t *p_context)
                 execute_line(p_context, p_expansion);
             }
             free(p_expansion);
+            p_expansion = NULL;
         }
 
         free(p_line);
+        p_line = NULL;
     }
+//end:
+    free(p_line);
+    return status;
 }
 
 int main(int argc, char** p_argv)
