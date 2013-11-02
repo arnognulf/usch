@@ -39,10 +39,11 @@
 #include <ctype.h>
 #include "uschshell.h"
 #include "usch_debug.h"
+static uschshell_state_t state = USCHSHELL_STATE_CPARSER;
 
 static struct uschshell_t *p_global_context = NULL;
-int xgetch() {
-#if 1
+static int xgetch() 
+{
     // http://zaemis.blogspot.se/2011/06/reading-unicode-utf-8-by-hand-in-c.html
     /* mask values for bit pattern of first byte in 
      * multi-byte UTF-8 sequences: 
@@ -71,66 +72,106 @@ int xgetch() {
 
     if (buf == ' ')
     {
-        uschshell_state_t state;
-        printf("%s\n", rl_line_buffer);
         uschshell_preparse(p_global_context, rl_line_buffer, &state);
+        if (state == USCHSHELL_STATE_CMDSTART)
+        {
+            char text[] = "(";
+            rl_insert_text(text);
+            state = USCHSHELL_STATE_CMDARG;
+            buf = '\"'; 
+        }
+        else if (state == USCHSHELL_STATE_CMDARG)
+        {
+            char text[] = "\", ";
+            rl_insert_text(text);
+            buf = '\"'; 
+        }
+    } 
+#if 0
+    else if (buf == '\n')
+    {
+        size_t len = 0;
+        size_t i = 0;
+        size_t quotes = 0;
+        size_t rparens = 0;
+        size_t lparens = 0;
+
+        //printf("\nline: %s\n", rl_line_buffer);
+        len = strlen(rl_line_buffer);
+
+        printf("\njline: %s\n", rl_line_buffer);
+        for (i = 0; i < len; i++)
+        {
+            if (rl_line_buffer[i] != '\"')
+                quotes++;
+            if (rl_line_buffer[i] == '(')
+                lparens++;
+            if (rl_line_buffer[i] == ')')
+                rparens++;
+        }
+        uschshell_preparse(p_global_context, rl_line_buffer, &state);
+        if (state == USCHSHELL_STATE_CMDSTART)
+        {
+            if (rparens == 0 && lparens == 0)
+            {
+                printf("\nxline: %s\n", rl_line_buffer);
+                rl_insert_text("()");
+            }
+        }
+        else
+        {
+            if ((quotes % 2) == 1)
+            {
+                printf("\nyline: %s\n", rl_line_buffer);
+                rl_insert_text("\"");
+            }
+
+            if (lparens != rparens)
+            {
+                printf("\nzline: %s\n", rl_line_buffer);
+                rl_insert_text(")");
+            }
+        }
     }
-    return (int)buf;
-#else // 0
 #endif // 0
-    //return 'x';
-}
-void *xfoo(){
-    uschshell_state_t state;
-    uschshell_preparse(p_global_context, rl_line_buffer, &state);
-    printf("Current buffer:\n%s\n", rl_line_buffer);
-    return NULL;
+    rl_redisplay();
+    return (int)buf;
 }
 
 static void initialize_readline()
 {
-   /* Allow conditional parsing of the ~/.inputrc file. */
    rl_readline_name = "usch_test";
-   rl_pre_input_hook = (Function*)(*xfoo); 
    rl_getc_function = (*xgetch);
-
-   /* Tell the completer that we want a crack first. */
-   //rl_attempted_completion_function = fileman_completion;
 }
 
-char *stripwhite(char *string)
+static char* stripwhite(char *string)
 {
-   char *s, *t;
+   char *p_s, *p_t;
 
-   for (s = string; isspace(*s); s++)
-      ;
+   for (p_s = string; isspace(*p_s); p_s++)
+   {
+      *p_s = '\0';
+   }
 
-   if (*s == 0)
-      return s;
+   if (*p_s == 0)
+      return p_s;
 
-   t = s + strlen(s) - 1;
-   while (t > s && isspace(*t))
-      t--;
-   *++t = '\0';
+   p_t = p_s + strlen(p_s) - 1;
+   while (p_t > p_s && isspace(*p_t))
+   {
+       *p_t = '\0';
+       p_t--;
+   }
+   //*++p_t = '\0';
 
-   return s;
+   return p_s;
 }
 
-void execute_line(struct uschshell_t *p_context, char *p_input)
+static void execute_line(struct uschshell_t *p_context, char *p_input)
 {
     uschshell_eval(p_context, p_input);
 }
-#if 0
-static int handle_space(int a, int b)
-{
-    (void)a;
-    (void)b;
-    printf("a=%d, b=%d\n", a, b);
-
-    return 42;
-}
-#endif // 0
-int prompt(struct uschshell_t *p_context)
+static int prompt(struct uschshell_t *p_context)
 {
     (void)p_context;
     int status = 0;
@@ -143,18 +184,13 @@ int prompt(struct uschshell_t *p_context)
     rl_already_prompted = 0;
     rl_initialize();
     rl_set_prompt("/* usch */ ");
-    //FAIL_IF(rl_bind_key(' ', (*handle_space)) != 0);
     for (;;)
     {
         char *p_s = NULL;
+        state = USCHSHELL_STATE_CPARSER;
         p_line = readline ("/* usch */ ");
 
-        if (!p_line)
-            break;
-
-        /* Remove leading and trailing whitespace from the line.
-         *          Then, if there is anything left, add it to the history list
-         *                   and execute it. */
+        FAIL_IF(p_line == NULL);
         p_s = stripwhite(p_line);
 
         if (*p_s) {
@@ -177,7 +213,7 @@ int prompt(struct uschshell_t *p_context)
         free(p_line);
         p_line = NULL;
     }
-//end:
+end:
     free(p_line);
     return status;
 }

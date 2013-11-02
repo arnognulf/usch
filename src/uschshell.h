@@ -49,6 +49,7 @@ int uschshell_include(struct uschshell_t *p_context, char *p_header);
 
 typedef enum {
 USCHSHELL_STATE_CPARSER,
+USCHSHELL_STATE_CMDSTART,
 USCHSHELL_STATE_CMDARG,
 } uschshell_state_t;
 
