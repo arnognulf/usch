@@ -1050,7 +1050,9 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, p_pre_assign);
         bufstradd(&stmt_c, ";\n");
 
-        bufstradd(&stmt_c, "int dyn_func(struct uschshell_t *p_context)\n{\n");
+        bufstradd(&stmt_c, "int \n");
+        bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
+        bufstradd(&stmt_c, "(struct uschshell_t *p_context)\n{\n");
         bufstradd(&stmt_c, "\tuschshell_define(p_context, sizeof(");
         bufstradd(&stmt_c, get_symname(p_pre_assign));
         bufstradd(&stmt_c, "), \"");
@@ -1090,7 +1092,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     fclose(p_stmt_c);
     p_stmt_c = NULL;
-    //usch_cmd("cat", p_tempfile);
+    usch_cmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
     FAIL_IF(p_tempdylib == NULL);
