@@ -35,6 +35,8 @@
 #include "usch.h"
 #include "usch_debug.h"
 #include "bufstr.h"
+#include "parserutils.h"
+
 #define MAX(a,b) \
     ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
@@ -448,9 +450,6 @@ void uschshell_destroy(uschshell_t *p_context)
         HASH_ITER(hh, p_dyfns, p_dyfn, p_tmpdyfn) {
             HASH_DEL(p_dyfns, p_dyfn);
         }
-
-
-
         // TODO: free uschshell_lib_t
 
     }
@@ -1346,7 +1345,6 @@ static enum CXChildVisitResult clang_visitor(
                 FAIL_IF(p_dyfn == NULL);
                 strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
                 p_dyfn->p_dyfndef = bufstr.p_str;
-                //printf(bufstr.p_str);
                 bufstr.p_str = NULL;
 
                 break;
@@ -1385,8 +1383,6 @@ static int loadsyms_from_header_ok(uschshell_t *p_context, char *p_includefile)
     p_tu = clang_parseTranslationUnit(p_idx, p_includefile, NULL, 0, NULL, 0, 0);
     FAIL_IF(p_tu == NULL);
 
-    // TODO: first pass: catch missing syms
-    // TODO: second pass: create trampoline fns 
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
             clang_visitor,
@@ -1470,14 +1466,11 @@ static enum CXChildVisitResult clang_preparseVisitor(
     int status = 0;
     char *p_fnstr = NULL;
     uschshell_dyfn_t *p_dyfn = NULL;
-    //CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr = {NULL, 0};
-    //CXString cxid = {NULL, 0}; 
     preparse_userdata_t *p_userdata = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
-    //printf("%s\n", clang_getCString(cxstr));
     p_userdata = (preparse_userdata_t*)p_client_data;
     FAIL_IF(p_userdata == NULL);
     switch (cursor.kind) 
@@ -1486,8 +1479,8 @@ static enum CXChildVisitResult clang_preparseVisitor(
             {
                 if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
                 {
+                    //printf("\nfound::: %s\n", p_userdata->p_cur_id);
                     p_userdata->found_cur_id = 1;
-                    //printf("sym: %s\n", clang_getCString(cxstr));
                 }
                 res = CXChildVisit_Recurse;
 
@@ -1495,6 +1488,7 @@ static enum CXChildVisitResult clang_preparseVisitor(
             }
         default:
             {
+                //printf("\nfound::: %s\n",clang_getCString(cxstr));
                 res = CXChildVisit_Recurse;
                 break;
             }
@@ -1510,7 +1504,7 @@ end:
     return res;
 }
 
-int ends_with_identifier(char *p_line)
+static int ends_with_identifier(char *p_line)
 {
     size_t i = 0;
     size_t len = 0;
@@ -1538,43 +1532,7 @@ int ends_with_identifier(char *p_line)
     return has_identifier;
 }
 
-size_t identifier_pos(char *p_line)
-{
-    size_t i = 0;
-    size_t len = 0;
-    int has_identifier = 0;
-    len = strlen(p_line);
-    if (len == 0)
-        return 0;
-    i = len - 1;
-    
-    do
-    {
-        if (isdigit(p_line[i]) == 0)
-        {
-            if (isalpha(p_line[i]) == 0)
-            {
-                i++;
-                break;
-            }
-            else
-            {
-                has_identifier = 1;
-            }
-        }
-        i--;
-    }while(i != 0);
-
-    if (has_identifier)
-    {
-        return i;
-    }
-    else
-    {
-        return len;
-    }
-}
-void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_definition)
+static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_definition)
 {
     p_bufstr->p_str[0] = '\0';
     bufstradd(p_bufstr, "struct uschshell_t;\n");
@@ -1645,7 +1603,38 @@ static int uschshell_iscmd(char *p_cmd)
     }
     return found;
 }
-int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state)
+
+static char* stripwhite(char *string)
+{
+   char *p_s, *p_t;
+
+   for (p_s = string; isspace(*p_s); p_s++)
+   {
+      *p_s = '\0';
+   }
+
+   if (*p_s == 0)
+      return p_s;
+
+   p_t = p_s + strlen(p_s) - 1;
+   while (p_t > p_s && isspace(*p_t))
+   {
+       *p_t = '\0';
+       p_t--;
+   }
+
+   return p_s;
+}
+
+#if 0
+static int parse(char *p_parsefilename, char *p_definition, uschshell_state_t *p_state)
+{
+    int status = 0;
+end:
+    return status;
+}
+#endif //0 
+int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
@@ -1657,8 +1646,17 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_st
     char preparse_filename[] = "preparse.c";
     char *p_parsefile_fullname = NULL;
     FILE *p_parsefile = NULL;
+    char *p_line_copy = NULL;
+    char *p_line = NULL;
 
-    ENDOK_IF(!ends_with_identifier(p_line));
+    p_line_copy = strdup(p_input);
+    FAIL_IF(p_line_copy == NULL);
+    p_line = stripwhite(p_line_copy);
+
+    if (!ends_with_identifier(p_line))
+    {
+        ENDOK_IF(1);
+    }
 
     bufstr.p_str = calloc(1,1024);
     FAIL_IF(bufstr.p_str == NULL);
@@ -1705,6 +1703,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_st
             FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
             fclose(p_parsefile);
             p_parsefile = NULL;
+
             p_idx = clang_createIndex(0, 0);
             FAIL_IF(p_idx == NULL);
             p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
@@ -1720,11 +1719,13 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_st
         }
     }
 end:
+    p_line = NULL;
     free(p_parsefile_fullname);
     if (p_parsefile != NULL)
         fclose(p_parsefile);
     clang_disposeTranslationUnit(p_tu);
     clang_disposeIndex(p_idx);
+    free(p_line_copy);
 
     free(bufstr.p_str);
     return status;

@@ -6,11 +6,11 @@ all: usch tests run_tests test_num_args
 test_num_args:
 	$(CC) -pedantic -Wall -Wextra -Werror -g3 test_num_args.c -o $@
 
-tests: tests.o uschshell.o pmcurses.o bufstr.o
-		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic tests.o pmcurses.o uschshell.o bufstr.o /usr/lib/llvm-3.4/lib/libclang.so.1 `pkg-config --libs --cflags libedit` -ldl -o $@
+tests: tests.o uschshell.o pmcurses.o bufstr.o parserutils.o
+		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic tests.o pmcurses.o uschshell.o bufstr.o parserutils.o /usr/lib/llvm-3.4/lib/libclang.so.1 `pkg-config --libs --cflags libedit` -ldl -o $@
 
-usch: pmcurses.o uschshell.o readline_helper.o bufstr.o
-		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic pmcurses.o uschshell.o readline_helper.o bufstr.o /usr/lib/llvm-3.4/lib/libclang.so.1 -ldl `pkg-config --libs --cflags libedit` -o $@
+usch: pmcurses.o uschshell.o readline_helper.o bufstr.o parserutils.o
+		   $(CC) -pedantic -Wall -Wextra -Werror -g3 -rdynamic pmcurses.o uschshell.o readline_helper.o bufstr.o parserutils.o /usr/lib/llvm-3.4/lib/libclang.so.1 -ldl `pkg-config --libs --cflags libedit` -o $@
 
 run_tests: tests
 	LD_LIBRARY_PATH=$(LLVM_DIR)/lib ./tests 

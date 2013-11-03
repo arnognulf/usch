@@ -77,6 +77,7 @@ static int xgetch()
         {
             char text[] = "(";
             rl_insert_text(text);
+            rl_redisplay();
             state = USCHSHELL_STATE_CMDARG;
             buf = '\"'; 
         }
@@ -84,57 +85,10 @@ static int xgetch()
         {
             char text[] = "\", ";
             rl_insert_text(text);
+            rl_redisplay();
             buf = '\"'; 
         }
     } 
-#if 0
-    else if (buf == '\n')
-    {
-        size_t len = 0;
-        size_t i = 0;
-        size_t quotes = 0;
-        size_t rparens = 0;
-        size_t lparens = 0;
-
-        //printf("\nline: %s\n", rl_line_buffer);
-        len = strlen(rl_line_buffer);
-
-        printf("\njline: %s\n", rl_line_buffer);
-        for (i = 0; i < len; i++)
-        {
-            if (rl_line_buffer[i] != '\"')
-                quotes++;
-            if (rl_line_buffer[i] == '(')
-                lparens++;
-            if (rl_line_buffer[i] == ')')
-                rparens++;
-        }
-        uschshell_preparse(p_global_context, rl_line_buffer, &state);
-        if (state == USCHSHELL_STATE_CMDSTART)
-        {
-            if (rparens == 0 && lparens == 0)
-            {
-                printf("\nxline: %s\n", rl_line_buffer);
-                rl_insert_text("()");
-            }
-        }
-        else
-        {
-            if ((quotes % 2) == 1)
-            {
-                printf("\nyline: %s\n", rl_line_buffer);
-                rl_insert_text("\"");
-            }
-
-            if (lparens != rparens)
-            {
-                printf("\nzline: %s\n", rl_line_buffer);
-                rl_insert_text(")");
-            }
-        }
-    }
-#endif // 0
-    rl_redisplay();
     return (int)buf;
 }
 

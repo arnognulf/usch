@@ -35,6 +35,7 @@
 #include "pmcurses.h"
 #include <editline/readline.h>
 #include <locale.h>
+#include "parserutils.h"
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -251,6 +252,33 @@ cleanup:
     }
     return p_message;
 }
+static char *test_uschshell_parse()
+{
+    char *p_message = NULL;
+    int error;
+    struct uschshell_t *p_context = NULL;
+    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+    error = uschshell_create(&p_context);
+    mu_assert("error != 0", error == 0);
+
+    error = uschshell_preparse(p_context, "ls", &state);
+    mu_assert("error != 0", error == 0);
+    mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
+cleanup:
+    return p_message;
+}
+
+static char *test_parserutils()
+{
+    char *p_message = NULL;
+
+    mu_assert("error identifier_pos(\"1 + id\")", identifier_pos("1 + id") == 4);
+    mu_assert("error identifier_pos(\"1 + id\")", identifier_pos("1 + 2f") == -1);
+cleanup:
+    return p_message;
+}
+
+
 static char *test_uthash1()
 {
     char *p_message = NULL;
@@ -278,185 +306,6 @@ cleanup:
     }
     return p_message;
 }
-#if 0
-void initialize_readline ()
-{
-   /* Allow conditional parsing of the ~/.inputrc file. */
-   rl_readline_name = "usch_test";
-
-   /* Tell the completer that we want a crack first. */
-   //rl_attempted_completion_function = fileman_completion;
-}
-
-
-static char *stripwhite(char *string)
-{
-   char *s, *t;
-
-   for (s = string; isspace(*s); s++)
-      ;
-
-   if (*s == 0)
-      return s;
-
-   t = s + strlen(s) - 1;
-   while (t > s && isspace(*t))
-      t--;
-   *++t = '\0';
-
-   return s;
-}
-
-static void execute_line(char *p_expansion)
-{
-    printf("%s\n", p_expansion);
-}
-#endif // 0
-
-#if 0
-static char *test_editline()
-{
-    char *p_message = NULL;
-    char *p_line = NULL;
-    char *p_s = NULL;
-
-    setlocale(LC_CTYPE, "");
-
-    initialize_readline();
-    stifle_history(7);
-
-   /* Loop reading and executing lines until the user quits. */
-   for ( ;; )
-   {
-      p_line = readline ("/* usch */ ");
-
-      if (!p_line)
-         break;
-
-      /* Remove leading and trailing whitespace from the line.
-         Then, if there is anything left, add it to the history list
-         and execute it. */
-      p_s = stripwhite(p_line);
-
-      if (*p_s) {
-
-         char* p_expansion = NULL;
-         int result;
-
-         result = history_expand(p_s, &p_expansion);
-
-         if (result < 0 || result == 2) {
-            fprintf(stderr, "%s\n", p_expansion);
-         } else {
-            add_history(p_expansion);
-            execute_line(p_expansion);
-         }
-         free(p_expansion);
-      }
-
-      free(p_line);
-   }
-
-    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
-
-cleanup:
-
-    return p_message;
-}
-static char *test_pmcurses()
-{
-    char *p_message = NULL;
-    int status = 0;
-    pmcurses_t *p_pmcurses = NULL;
-    char *p_str;
-    char *p_tok;
-    char *p_line = NULL;
-
-    p_line = calloc(256, 1);
-    mu_assert("error: calloc() == 0", p_line != 0);
-
-    status = pmcurses_create(&p_pmcurses);
-    mu_assert("error: pmcurses_create(&p_pmcurses) != 0", status == 0);
-    mu_assert("error: p_pmcurses == NULL", p_pmcurses != NULL);
-    status = pmcurses_insert(p_pmcurses, "a");
-    status = pmcurses_insert(p_pmcurses, "bb");
-    status = pmcurses_insert(p_pmcurses, "ccc");
-    mu_assert("error: pmcurses_insert(p_pmcurses) != 0", status == 0);
-    p_str = pmcurses_gettok(p_pmcurses, 0);
-    mu_assert("error: strcmp(p_str, \"a\") == 0", strcmp(p_str, "a") == 0);
-    p_str = pmcurses_gettok(p_pmcurses, 1);
-    mu_assert("error: pmcurses_gettok(p_pmcurses, 0) == NULL", p_str != NULL);
-    mu_assert("error: strcmp(p_str, \"bb\") == 0", strcmp(p_str, "bb") == 0);
-    p_str = pmcurses_gettok(p_pmcurses, 2);
-    mu_assert("error: strcmp(p_str, \"ccc\") == 0", strcmp(p_str, "ccc") == 0);
-    status = pmcurses_writeline(p_pmcurses, p_line);
-    mu_assert("error: strcmp(p_line, \"abbccc\") != 0", strcmp(p_line, "abbccc") == 0);
-    status = pmcurses_draw(p_pmcurses, 10, 10);
-    printf("\n");
-    mu_assert("error: pmcurses_draw(p_pmcurses, 10, 10) != 0", status == 0);
-    status = pmcurses_back(p_pmcurses);
-    status = pmcurses_insert(p_pmcurses, "dddd");
-    status = pmcurses_writeline(p_pmcurses, p_line);
-    status = pmcurses_draw(p_pmcurses, 10, 10);
-    printf("\n");
-    mu_assert("error: strcmp(p_line, \"abbddddccc\") != 0", strcmp(p_line, "abbddddccc") == 0);
-    pmcurses_back(p_pmcurses);
-    printf("\n");
-    status = pmcurses_draw(p_pmcurses, 10, 10);
-    p_tok = pmcurses_getcurtok(p_pmcurses);
-    printf("%s\n", p_tok);
-    mu_assert("error: strcmp(p_line, \"abbddddccc\") != 0", strcmp(p_tok, "dddd") == 0);
-
-cleanup:
-
-    free(p_line);
-    return p_message;
-}
-static char *test_input()
-{
-    char *p_message = NULL;
-    int status = 0;
-    pmcurses_t *p_pmcurses = NULL;
-    char *p_line = NULL;
-    char c = 0;
-    char buf[5] = {0};
-
-    p_line = calloc(256, 1);
-    mu_assert("error: calloc() == 0", p_line != 0);
-
-    status = pmcurses_create(&p_pmcurses);
-    mu_assert("error: pmcurses_create(&p_pmcurses) != 0", status == 0);
-    mu_assert("error: p_pmcurses == NULL", p_pmcurses != NULL);
-    while ((c = pmcurses_getch(buf)) != EOF)
-    {
-        switch (pmcurses_parsekey(buf))
-        {
-            case PMCURSES_PRINTABLE:
-                {
-                    pmcurses_insert(p_pmcurses, buf);
-                }
-                break;
-            case PMCURSES_BACK:
-                {
-                    pmcurses_back(p_pmcurses);
-                }
-                break;
-            case PMCURSES_FORWARD:
-                {
-                    pmcurses_forward(p_pmcurses);
-                }
-                break;
-            default:
-                break;
-        }
-        pmcurses_draw(p_pmcurses, 124, 28);
-    }
-cleanup:
-
-    free(p_line);
-    return p_message;
-}
-#endif // 0
 
 static char * all_tests()
 {
@@ -467,6 +316,8 @@ static char * all_tests()
     mu_run_test(test_uthash1);
     mu_run_test(test_uschshell_vars);
     mu_run_test(test_uschshell_dyld);
+    mu_run_test(test_parserutils);
+    mu_run_test(test_uschshell_parse);
     //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);
