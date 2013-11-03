@@ -261,10 +261,11 @@ static char *test_uschshell_parse()
     error = uschshell_create(&p_context);
     mu_assert("error != 0", error == 0);
 
-    (void)state;
-    //error = uschshell_preparse(p_context, "ls", &state);
-    //mu_assert("error != 0", error == 0);
-    //mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
+    //(void)state;
+    error = uschshell_preparse(p_context, "ls", &state);
+    printf("state: %d\n", (int)state);
+    mu_assert("error != 0", error == 0);
+    mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
 cleanup:
     uschshell_destroy(p_context);
     return p_message;
@@ -273,13 +274,21 @@ cleanup:
 static char *test_parserutils()
 {
     char *p_message = NULL;
+    char id[] = "1 + id";
+    char nonid[] = "1 + 2f";
+    char prespace[] = "   xyz";
+    char postspace[] = "xyz ";
+    char nospace[] = "ls";
+    mu_assert("error identifier_pos(\"1 + id\")", id[identifier_pos(id)] == 'i');
+    mu_assert("error identifier_pos(\"1 + 2f\")", nonid[identifier_pos(nonid)] == '\0');
+    mu_assert("error stripwhite()", strcmp(stripwhite(prespace), "xyz") == 0);
+    mu_assert("error stripwhite()", strcmp(stripwhite(postspace), "xyz") == 0);
+    mu_assert("error stripwhite()", strcmp(stripwhite(nospace), "ls") == 0);
+    mu_assert("error stripwhite()", stripwhite(postspace)[4] == '\0');
 
-    mu_assert("error identifier_pos(\"1 + id\")", identifier_pos("1 + id") == 4);
-    mu_assert("error identifier_pos(\"1 + id\")", identifier_pos("1 + 2f") == -1);
 cleanup:
     return p_message;
 }
-
 
 static char *test_uthash1()
 {

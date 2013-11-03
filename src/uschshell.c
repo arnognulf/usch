@@ -191,7 +191,6 @@ typedef struct uschshell_inc_t
 typedef struct uschshell_t 
 {
     uschshell_def_t *p_defs;
-    uschshell_cmd_t *p_cmds;
     uschshell_lib_t *p_libs;
     uschshell_sym_t *p_syms;
     uschshell_dyfn_t *p_dyfns;
@@ -359,7 +358,6 @@ int uschshell_create(uschshell_t **pp_context)
     int status = 0;
     uschshell_t *p_context = NULL;
     uschshell_def_t *p_def = NULL;
-    uschshell_cmd_t *p_cmd = NULL;
     uschshell_sym_t *p_sym = NULL;
     uschshell_dyfn_t *p_dyfn = NULL;
     uschshell_inc_t *p_inc = NULL;
@@ -376,9 +374,6 @@ int uschshell_create(uschshell_t **pp_context)
     p_def = calloc(sizeof(uschshell_def_t) + 1, 1);
     FAIL_IF(p_def == NULL);
 
-    p_cmd = calloc(sizeof(uschshell_cmd_t) + 1, 1);
-    FAIL_IF(p_cmd == NULL);
-
     p_sym = calloc(sizeof(uschshell_sym_t) + 1, 1);
     FAIL_IF(p_sym == NULL);
 
@@ -389,7 +384,6 @@ int uschshell_create(uschshell_t **pp_context)
     FAIL_IF(p_inc == NULL);
 
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
-    HASH_ADD_STR(p_context->p_cmds, cmdname, p_cmd);
     HASH_ADD_STR(p_context->p_syms, symname, p_sym);
     HASH_ADD_STR(p_context->p_dyfns, dyfnname, p_dyfn);
     HASH_ADD_STR(p_context->p_incs, incname, p_inc);
@@ -397,7 +391,6 @@ int uschshell_create(uschshell_t **pp_context)
 
     *pp_context = p_context;
     p_context = NULL;
-    p_cmd = NULL;
     p_def = NULL;
     p_sym = NULL;
     p_dyfn = NULL;
@@ -406,7 +399,6 @@ end:
     free(p_inc);
     free(p_dyfn);
     free(p_sym);
-    free(p_cmd);
     free(p_def);
     free(p_context);
     return status;
@@ -416,14 +408,6 @@ void uschshell_destroy(uschshell_t *p_context)
 
     if (p_context)
     {
-        uschshell_cmd_t *p_tmpcmd = NULL;
-        uschshell_cmd_t *p_cmd = NULL;
-        uschshell_cmd_t *p_cmds = p_context->p_cmds;
-
-        HASH_ITER(hh, p_cmds, p_cmd, p_tmpcmd) {
-            HASH_DEL(p_cmds, p_cmd);
-        }
-
         uschshell_sym_t *p_tmpsym = NULL;
         uschshell_sym_t *p_sym = NULL;
         uschshell_sym_t *p_syms = p_context->p_syms;
@@ -634,119 +618,6 @@ end:
     return status;
 }
 
-int uschshell_pathhash(uschshell_t *p_context)
-{
-    int status = 0;
-    char **pp_path = NULL;
-    int num_paths = 0;
-    int i;
-    DIR *p_dir = NULL;
-    uschshell_cmd_t *p_cmds = NULL;
-    uschshell_cmd_t *p_cmd = NULL;
-
-    if (p_context == NULL)
-        return -1;
-
-    p_cmds = p_context->p_cmds;
-    num_paths = usch_strsplit(getenv("PATH"), ":", &pp_path);
-    FAIL_IF(num_paths < 1);
-
-    for (i = 0; i < num_paths; i++)
-    {
-        struct dirent *p_ent;
-        if ((p_dir = opendir(pp_path[i])) != NULL)
-        {
-            while ((p_ent = readdir(p_dir)) != NULL)
-            {
-                uschshell_cmd_t *p_found_cmd = NULL;
-
-                if (strcmp(p_ent->d_name, "..") == 0)
-                    continue;
-                if (strcmp(p_ent->d_name, ".") == 0)
-                    continue;
-
-                HASH_FIND_STR(p_cmds, p_ent->d_name, p_found_cmd);
-                if (p_found_cmd)
-                    continue;
-                p_cmd = calloc(sizeof(uschshell_cmd_t) + strlen(p_ent->d_name) + 1, 1);
-                FAIL_IF(p_cmd == NULL);
-                strcpy(p_cmd->cmdname, p_ent->d_name);
-
-                HASH_ADD_STR(p_cmds, cmdname, p_cmd);
-            }
-        }
-    }
-end:
-    if (p_dir)
-        closedir(p_dir);
-    free(pp_path);
-    free(p_cmd);
-    return status;
-}
-static int is_reserved_word(char *p_item)
-{
-    size_t i;
-    char *p_keywords[] = { \
-            "printf", \
-            "open"};
-
-    for (i = 0; i < sizeof(p_keywords)/sizeof(p_keywords[0]); i++)
-    {
-        if (strncmp(p_item, p_keywords[i], strlen(p_keywords[i])) == 0)
-            return 1;
-    }
-    return 0;
-}
-static int is_c_keyword(char *p_item)
-{
-    size_t i;
-    char *p_keywords[] = { \
-            "auto", \
-            "break", \
-            "case", \
-            "char", \
-            "const", \
-            "continue", \
-            "default", \
-            "do", \
-            "double", \
-            "else" \
-            "enum", \
-            "extern", \
-            "float", \
-            "for", \
-            "goto", \
-            "if", \
-            "int", \
-            "long", \
-            "register", \
-            "return", \
-            "short", \
-            "signed", \
-            "sizeof", \
-            "static", \
-            "struct", \
-            "switch", \
-            "typedef", \
-            "union", \
-            "unsigned", \
-            "void", \
-            "volatile", \
-            "while", \
-            /* common compiler prefixes, but not actual c keywords: */ \
-            "_", \
-            "inline", \
-            "asm", \
-            "typeof"};
-
-    for (i = 0; i < sizeof(p_keywords)/sizeof(p_keywords[0]); i++)
-    {
-        if (strncmp(p_item, p_keywords[i], strlen(p_keywords[i])) == 0)
-            return 1;
-    }
-    return 0;
-}
-
 static void trim_end_space(char *p_input)
 {
     size_t i;
@@ -809,42 +680,6 @@ end:
     return status;
 }
 
-int uschshell_is_cmd(uschshell_t *p_context, char *p_item)
-{
-    uschshell_cmd_t *p_cmds = NULL;
-    uschshell_cmd_t *p_found_cmd = NULL;
-    int i = 0;
-
-    if (p_context == NULL || p_item == NULL)
-        return -1;
-    if (is_c_keyword(p_item))
-        return 0;
-    if (is_reserved_word(p_item))
-        return 0;
-    if (strncmp(p_item, "cd", 2) == 0)
-        return 1;
-    if (strncmp(p_item, "include", strlen("include")) == 0)
-        return 1;
-    if (strncmp(p_item, "lib", strlen("lib")) == 0)
-        return 1;
-
-
-
-    while (p_item[i] != '\0')
-    {
-        if (p_item[i] == ' ')
-            return 0;
-        if (p_item[i] == '(')
-            return 1;
-        i++;
-    }
-    p_cmds = p_context->p_cmds;
-    HASH_FIND_STR(p_cmds, p_item, p_found_cmd);
-    if (p_found_cmd)
-        return 1;
-    else
-        return 0;
-}
 static size_t count_stars(char *p_input)
 {
     size_t i = 0;
@@ -1015,9 +850,8 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     bufstradd(&stmt_c, "static struct uschshell_t *p_uschshell_context = NULL;\n");
     bufstradd(&stmt_c, "void uschshell_set_context(struct uschshell_t *p_context)\n{\np_uschshell_context = p_context;\t\n}\n");
 
-    if (uschshell_is_cmd(p_context, input.p_str))
+    if (iscmd(input.p_str))
     {
-
         if (strcmp(definition.p_symname, "include") == 0)
         {
             bufstradd(&stmt_c, "#define include");
@@ -1569,85 +1403,21 @@ void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_def
 
 // from netbsd
 //static 
-int uschshell_iscmd(char *p_cmd)
-{
-    struct stat sb;
-    char *p_item = NULL;
-    char *p_tmp = NULL;
-    char path[PATH_MAX] = {0};
-    char *std = NULL;
-    std = getenv("PATH");
-    int found = 0;
-
-    for (p_item = std;; *p_item++ = ':')
-    {
-        p_tmp = p_item;
-        if ((p_item = strchr(p_item, ':')) != NULL) {
-            *p_item = '\0';
-            if (p_tmp == p_item)
-            {
-                p_tmp = ".";
-            }
-        }
-        else
-            if (strlen(p_tmp) == 0)
-            {
-                p_tmp = ".";
-            }
-
-        (void)snprintf(path, sizeof(path), "%s/%s", p_tmp, p_cmd);
-        if (!stat(path, &sb))
-        {
-            //printf("XXX: found: %s\n", path);
-            found = 1;
-            break;
-        }
-        if (p_item == NULL)
-        {
-            break;
-        }
-    }
-    return found;
-}
-
-//static 
-char* stripwhite(char *string)
-{
-   char *p_s, *p_t;
-
-   for (p_s = string; isspace(*p_s); p_s++)
-   {
-      *p_s = '\0';
-   }
-
-   if (*p_s == 0)
-      return p_s;
-
-   p_t = p_s + strlen(p_s) - 1;
-   while (p_t > p_s && isspace(*p_t))
-   {
-       *p_t = '\0';
-       p_t--;
-   }
-
-   return p_s;
-}
-
-#if 0
-static int parse(char *p_parsefile_fullname, preparse_userdata_t *p_userdata, char *p_definition, int *p_resolved, uschshell_state_t *p_state)
+static int parse(char *p_parsefile_fullname, bufstr_t *p_filecontent, char *p_line, preparse_userdata_t *p_userdata, char *p_definition, uschshell_state_t *p_state)
 {
     int status = 0;
     CXTranslationUnit p_tu = NULL;
     CXIndex p_idx = NULL;
     unsigned int visitorstatus = 0;
+    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
 
     FILE *p_parsefile = NULL;
-    set_preparsefile_content(&bufstr, p_line, p_definition);
+    set_preparsefile_content(p_filecontent, p_line, p_definition);
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
     FAIL_IF(p_parsefile == NULL);
 
-    FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
+    FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));
     fclose(p_parsefile);
     p_parsefile = NULL;
     p_idx = clang_createIndex(0, 0);
@@ -1666,26 +1436,25 @@ static int parse(char *p_parsefile_fullname, preparse_userdata_t *p_userdata, ch
     p_tu = NULL;
     p_idx = NULL;
 
+    *p_state = state;
 
 end:
     if (p_parsefile)
         fclose(p_parsefile);
     return status;
 }
-#endif // 0
 
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
-#if 0
+#if 1
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
     int status = 0;
-    bufstr_t bufstr = {0};
+    bufstr_t filecontent = {0};
     char preparse_filename[] = "preparse.c";
     char *p_parsefile_fullname = NULL;
     char *p_line_copy = NULL;
     char *p_line = NULL;
-    int resolved = 0;
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
@@ -1696,25 +1465,31 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
         ENDOK_IF(1);
     }
 
-    bufstr.p_str = calloc(1,1024);
-    FAIL_IF(bufstr.p_str == NULL);
-    bufstr.len = 1024;
+    filecontent.p_str = calloc(1,1024);
+    FAIL_IF(filecontent.p_str == NULL);
+    filecontent.len = 1024;
 
     p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename), 1);
     FAIL_IF(p_parsefile_fullname == NULL);
     strcpy(p_parsefile_fullname, p_context->tmpdir);
     p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
     strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
+    printf("p_line: %s\n", p_line);
+    printf("p_line: %d\n", identifier_pos(p_line));
+    printf("p_line: %s\n", &p_line[identifier_pos(p_line)]);
     userdata.p_cur_id = &p_line[identifier_pos(p_line)];
     userdata.found_cur_id = 0;
 
-    parse(p_parsefile_fullname, &userdata, NULL, &resolved, &status);
+    FAIL_IF(parse(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL, &state));
 
     if (userdata.found_cur_id == 0)
     {
-        if (uschshell_iscmd(userdata.p_cur_id))
+        printf("found_cur_id\n");
+        if (iscmd(userdata.p_cur_id))
         {
-            parse(p_parsefile_fullname, &userdata, userdata.p_cur_id, &resolved, &status);
+
+            userdata.found_cur_id = 0;
+            FAIL_IF(parse(p_parsefile_fullname, &filecontent, p_line, &userdata, userdata.p_cur_id, &state));
             state = USCHSHELL_STATE_CMDSTART;
             *p_state = state;
         }
@@ -1724,7 +1499,7 @@ end:
     free(p_parsefile_fullname);
     free(p_line_copy);
 
-    free(bufstr.p_str);
+    free(filecontent.p_str);
     return status;
 #else
     (void)p_context;
