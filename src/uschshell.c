@@ -1456,7 +1456,8 @@ char *p_cur_id;
 int found_cur_id;
 } preparse_userdata_t;
 
-static enum CXChildVisitResult clang_preparseVisitor(
+//static 
+enum CXChildVisitResult clang_preparseVisitor(
         CXCursor cursor, 
         CXCursor parent, 
         CXClientData p_client_data)
@@ -1504,7 +1505,8 @@ end:
     return res;
 }
 
-static int ends_with_identifier(char *p_line)
+//static
+int ends_with_identifier(char *p_line)
 {
     size_t i = 0;
     size_t len = 0;
@@ -1532,7 +1534,8 @@ static int ends_with_identifier(char *p_line)
     return has_identifier;
 }
 
-static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_definition)
+//static
+void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_definition)
 {
     p_bufstr->p_str[0] = '\0';
     bufstradd(p_bufstr, "struct uschshell_t;\n");
@@ -1563,7 +1566,8 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_u
 }
 
 // from netbsd
-static int uschshell_iscmd(char *p_cmd)
+//static 
+int uschshell_iscmd(char *p_cmd)
 {
     struct stat sb;
     char *p_item = NULL;
@@ -1604,7 +1608,8 @@ static int uschshell_iscmd(char *p_cmd)
     return found;
 }
 
-static char* stripwhite(char *string)
+//static 
+char* stripwhite(char *string)
 {
    char *p_s, *p_t;
 
@@ -1627,27 +1632,58 @@ static char* stripwhite(char *string)
 }
 
 #if 0
-static int parse(char *p_parsefilename, char *p_definition, uschshell_state_t *p_state)
+static int parse(char *p_parsefile_fullname, preparse_userdata_t *p_userdata, char *p_definition, int *p_resolved, uschshell_state_t *p_state)
 {
     int status = 0;
+    CXTranslationUnit p_tu = NULL;
+    CXIndex p_idx = NULL;
+    unsigned int visitorstatus = 0;
+
+    FILE *p_parsefile = NULL;
+    set_preparsefile_content(&bufstr, p_line, p_definition);
+
+    p_parsefile = fopen(p_parsefile_fullname, "w");
+    FAIL_IF(p_parsefile == NULL);
+
+    FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
+    fclose(p_parsefile);
+    p_parsefile = NULL;
+    p_idx = clang_createIndex(0, 0);
+    FAIL_IF(p_idx == NULL);
+    p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
+    FAIL_IF(p_tu == NULL);
+
+    visitorstatus = clang_visitChildren(
+            clang_getTranslationUnitCursor(p_tu),
+            clang_preparseVisitor,
+            (void*)p_userdata);
+    FAIL_IF(visitorstatus != 0);
+    clang_disposeTranslationUnit(p_tu);
+    clang_disposeIndex(p_idx);
+
+    p_tu = NULL;
+    p_idx = NULL;
+
+
 end:
+    if (p_parsefile)
+        fclose(p_parsefile);
     return status;
 }
-#endif //0 
+#endif // 0
+
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
+#if 0
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
     int status = 0;
     bufstr_t bufstr = {0};
-    CXTranslationUnit p_tu = NULL;
-    CXIndex p_idx = NULL;
-    unsigned int visitorstatus = 0;
     char preparse_filename[] = "preparse.c";
     char *p_parsefile_fullname = NULL;
-    FILE *p_parsefile = NULL;
     char *p_line_copy = NULL;
     char *p_line = NULL;
+    int resolved = 0;
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
@@ -1661,59 +1697,22 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     bufstr.p_str = calloc(1,1024);
     FAIL_IF(bufstr.p_str == NULL);
     bufstr.len = 1024;
-    set_preparsefile_content(&bufstr, p_line, NULL);
 
     p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename), 1);
     FAIL_IF(p_parsefile_fullname == NULL);
     strcpy(p_parsefile_fullname, p_context->tmpdir);
     p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
     strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
-    p_parsefile = fopen(p_parsefile_fullname, "w");
-    FAIL_IF(p_parsefile == NULL);
-
-    FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
-    fclose(p_parsefile);
-    p_parsefile = NULL;
-    p_idx = clang_createIndex(0, 0);
-    FAIL_IF(p_idx == NULL);
-    p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
-    FAIL_IF(p_tu == NULL);
-
     userdata.p_cur_id = &p_line[identifier_pos(p_line)];
     userdata.found_cur_id = 0;
-    visitorstatus = clang_visitChildren(
-            clang_getTranslationUnitCursor(p_tu),
-            clang_preparseVisitor,
-            (void*)&userdata);
-    FAIL_IF(visitorstatus != 0);
-    clang_disposeTranslationUnit(p_tu);
-    clang_disposeIndex(p_idx);
 
-    p_tu = NULL;
-    p_idx = NULL;
+    parse(p_parsefile_fullname, &userdata, NULL, &resolved, &status);
 
     if (userdata.found_cur_id == 0)
     {
         if (uschshell_iscmd(userdata.p_cur_id))
         {
-            set_preparsefile_content(&bufstr, p_line, userdata.p_cur_id);
-            p_parsefile = fopen(p_parsefile_fullname, "w");
-            FAIL_IF(p_parsefile == NULL);
-
-            FAIL_IF(!fwrite_ok(bufstr.p_str, p_parsefile));
-            fclose(p_parsefile);
-            p_parsefile = NULL;
-
-            p_idx = clang_createIndex(0, 0);
-            FAIL_IF(p_idx == NULL);
-            p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
-            FAIL_IF(p_tu == NULL);
-
-            visitorstatus = clang_visitChildren(
-                    clang_getTranslationUnitCursor(p_tu),
-                    clang_preparseVisitor,
-                    (void*)&userdata);
-            FAIL_IF(userdata.found_cur_id == 0);
+            parse(p_parsefile_fullname, &userdata, userdata.p_cur_id, &resolved, &status);
             state = USCHSHELL_STATE_CMDSTART;
             *p_state = state;
         }
@@ -1721,13 +1720,15 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
 end:
     p_line = NULL;
     free(p_parsefile_fullname);
-    if (p_parsefile != NULL)
-        fclose(p_parsefile);
-    clang_disposeTranslationUnit(p_tu);
-    clang_disposeIndex(p_idx);
     free(p_line_copy);
 
     free(bufstr.p_str);
     return status;
+#else
+    (void)p_context;
+    (void)p_input;
+    *p_state = USCHSHELL_STATE_CPARSER;
+    return 0;
+#endif // 0
 }
 
