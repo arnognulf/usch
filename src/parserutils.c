@@ -19,6 +19,124 @@
 #include <unistd.h>
 #include "usch_debug.h"
 
+static size_t count_stars(char *p_input)
+{
+    size_t i = 0;
+    size_t len = strlen(p_input);
+    size_t num_stars = 0;
+
+    while (i < len)
+    {
+        if (p_input[i] == '*')
+        {
+            num_stars++;
+            i++;
+        }
+        i+=count_spaces(&p_input[i]);
+        i++;
+    }
+    return num_stars;
+}
+
+static size_t count_identifier(char *p_input)
+{
+    size_t i = 0;
+    if (isdigit(p_input[i]))
+        return 0;
+    while (p_input[i] != '\0' && isalnum(p_input[i]))
+        i++;
+    return i;
+}
+
+
+size_t get_type_len(char *p_defname)
+{
+    size_t i;
+    size_t last_type_pos = 0;
+    size_t deflen = strlen(p_defname);
+
+    for (i = 0; i < deflen; i++)
+    {
+        if (p_defname[i] == ' ')
+            last_type_pos = i;
+        if (p_defname[i] == '*')
+            last_type_pos = i;
+    }
+    return last_type_pos;
+}
+
+
+int count_spaces(char *p_input)
+{
+    size_t i = 0;
+    while (p_input[i] != '\0' && (p_input[i] == ' '  || p_input[i] == '\t'))
+    {
+        i++;
+    }
+    return i;
+}
+int has_trailing_open_parenthesis(char *p_line)
+{
+    int len = (int)strlen(p_line);
+    int i = len - 1;
+    int unclosed = 0;
+
+    while (p_line[i] != ')' && i >= 0)
+    {
+        if (p_line[i] == '(')
+        {
+            unclosed = 1;
+            break;
+        }
+        i--;
+    }
+    return unclosed;
+}
+int has_trailing_closed_parenthesis(char *p_line)
+{
+    int len = (int)strlen(p_line);
+    int i = len - 1;
+    int closed = 0;
+
+    while (p_line[i] != ')' && i >= 0)
+    {
+        i--;
+    }
+    while (i >= 0)
+    {
+        if (p_line[i] == '(')
+        {
+            closed = 1;
+            break;
+        }
+        i--;
+    }
+    return closed;
+}
+
+int is_definition(char *p_input)
+{
+    size_t i = 0;
+    size_t id1 = 0;
+    size_t stars = 0;
+    size_t id2 = 0;
+
+    i += count_spaces(p_input); 
+
+    id1 = count_identifier(&p_input[i]);
+    i += id1;
+    i += count_spaces(&p_input[i]); 
+    stars = count_stars(&p_input[i]);
+    i += stars;
+    i += count_spaces(&p_input[i]); 
+    id2 = count_identifier(&p_input[i]);
+
+    if (id1 > 0 && id2 > 0)
+        return 1;
+
+    return 0;
+}
+
 int get_identifiers(const char *p_line_in, int *p_count, char ***ppp_identifiers_out)
 {
     int status = 0;
@@ -38,6 +156,10 @@ int get_identifiers(const char *p_line_in, int *p_count, char ***ppp_identifiers
     {
         if (has_looped)
         {
+            if (num_identifiers == 0)
+            {
+                break;
+            }
             pp_identifiers = calloc((num_identifiers + 1)* sizeof(char*) + len * sizeof(char) + 1, 1);
             FAIL_IF(pp_identifiers == NULL);
             strcpy((char*)&pp_identifiers[num_identifiers+1], p_line_in);
@@ -210,10 +332,8 @@ int iscmd(char *p_cmd)
             }
 
         (void)snprintf(path, sizeof(path), "%s/%s", p_tmp, p_cmd);
-        //printf("ZZZ: trying: %s\n", path);
         if (!stat(path, &sb))
         {
-            //printf("XXX: found: %s\n", path);
             found = 1;
             break;
         }
@@ -225,4 +345,95 @@ int iscmd(char *p_cmd)
     return found;
 }
 
+
+char *get_symname(char *p_defname)
+{
+    char *p_tmp = p_defname;
+    char *p_symname = p_defname;
+    while (*p_tmp != '\0')
+    {
+        if (*p_tmp == ' ' || *p_tmp == '*')
+        {
+            p_symname = p_tmp;
+        }
+        p_tmp++;
+    }
+    return p_symname + 1;
+}
+
+int parse_line(char *p_input, usch_def_t *p_definition)
+{
+    //usch_def_t definition;
+    int status = 1;
+    size_t i = 0;
+    size_t length;
+    char *p_symname = NULL;
+
+    length = strlen(p_input);
+    p_symname = calloc(length, 1);
+
+    FAIL_IF(p_symname == NULL);
+
+    while (p_input[i] == ' ' || p_input[i] == '\t')
+        i++;
+
+
+
+    for (; i < length; i++)
+    {
+        char c = p_input[i];
+        switch (p_input[i])
+        {
+            case '\t':
+            case ' ':
+                {
+                    break;
+                }
+            case '(':
+                {
+
+                    break;
+                }
+            default:
+                {
+                    if (isalnum(c) != c)
+                    {
+                        p_symname[i] = c;
+                    }
+                    else
+                    {
+                        assert(0);
+                    }
+                    break;
+                }
+        }
+    }
+    p_definition->p_symname = p_symname;
+end:
+    return status;
+}
+
+int has_trailing_identifier(char *p_line, char **pp_identifiers)
+{
+    int i;
+    int fetch_id;
+    int trailing_identifier;
+    size_t len = strlen(p_line);
+    size_t identifier_len;
+
+    for (i = 0; pp_identifiers[i] != NULL; i++)
+        ;
+    fetch_id = i - 1;
+    identifier_len = strlen(pp_identifiers[fetch_id]);
+    if (strcmp(pp_identifiers[fetch_id], &p_line[len - identifier_len]) == 0)
+    {
+        trailing_identifier = 1;
+    }
+    else
+    {
+        trailing_identifier = 0;
+    }
+
+    return trailing_identifier;
+}
 

@@ -41,105 +41,10 @@
     ({ __typeof__ (a) _a = (a); \
      __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
-typedef struct
-{
-    char *p_symname;
-} usch_def_t;
+
 #include "uschshell.h"
 #include "../external/uthash/src/uthash.h"
 #define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
-
-static int count_spaces(char *p_input)
-{
-    size_t i = 0;
-    while (p_input[i] != '\0' && (p_input[i] == ' '  || p_input[i] == '\t'))
-    {
-        i++;
-    }
-    return i;
-}
-static size_t get_type_len(char *p_defname)
-{
-    size_t i;
-    size_t last_type_pos = 0;
-    size_t deflen = strlen(p_defname);
-
-    for (i = 0; i < deflen; i++)
-    {
-        if (p_defname[i] == ' ')
-            last_type_pos = i;
-        if (p_defname[i] == '*')
-            last_type_pos = i;
-    }
-    return last_type_pos;
-}
-
-static char *get_symname(char *p_defname)
-{
-    char *p_tmp = p_defname;
-    char *p_symname = p_defname;
-    while (*p_tmp != '\0')
-    {
-        if (*p_tmp == ' ' || *p_tmp == '*')
-        {
-            p_symname = p_tmp;
-        }
-        p_tmp++;
-    }
-    return p_symname + 1;
-}
-
-static int parse_line(char *p_input, usch_def_t *p_definition)
-{
-    //usch_def_t definition;
-    int status = 1;
-    size_t i = 0;
-    size_t length;
-    char *p_symname = NULL;
-
-    length = strlen(p_input);
-    p_symname = calloc(length, 1);
-
-    FAIL_IF(p_symname == NULL);
-
-    while (p_input[i] == ' ' || p_input[i] == '\t')
-        i++;
-
-
-
-    for (; i < length; i++)
-    {
-        char c = p_input[i];
-        switch (p_input[i])
-        {
-            case '\t':
-            case ' ':
-                {
-                    break;
-                }
-            case '(':
-                {
-
-                    break;
-                }
-            default:
-                {
-                    if (isalnum(c) != c)
-                    {
-                        p_symname[i] = c;
-                    }
-                    else
-                    {
-                        assert(0);
-                    }
-                    break;
-                }
-        }
-    }
-    p_definition->p_symname = p_symname;
-end:
-    return status;
-}
 
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
@@ -680,57 +585,6 @@ end:
     return status;
 }
 
-static size_t count_stars(char *p_input)
-{
-    size_t i = 0;
-    size_t len = strlen(p_input);
-    size_t num_stars = 0;
-
-    while (i < len)
-    {
-        if (p_input[i] == '*')
-        {
-            num_stars++;
-            i++;
-        }
-        i+=count_spaces(&p_input[i]);
-        i++;
-    }
-    return num_stars;
-}
-
-static size_t count_identifier(char *p_input)
-{
-    size_t i = 0;
-    if (isdigit(p_input[i]))
-        return 0;
-    while (p_input[i] != '\0' && isalnum(p_input[i]))
-        i++;
-    return i;
-}
-
-static int is_definition(char *p_input)
-{
-    size_t i = 0;
-    size_t id1 = 0;
-    size_t stars = 0;
-    size_t id2 = 0;
-
-    i += count_spaces(p_input); 
-
-    id1 = count_identifier(&p_input[i]);
-    i += id1;
-    i += count_spaces(&p_input[i]); 
-    stars = count_stars(&p_input[i]);
-    i += stars;
-    i += count_spaces(&p_input[i]); 
-    id2 = count_identifier(&p_input[i]);
-
-    if (id1 > 0 && id2 > 0)
-        return 1;
-
-    return 0;
-}
 int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 {
     int status = 0;
@@ -762,7 +616,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     char *p_pre_assign = NULL;
     char *p_post_assign = NULL;
     bufstr_t stmt_c = {0, 0};
-    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+    uschshell_state_t state;
 
     if (p_context == NULL || p_input_line == NULL)
         return -1;
@@ -1316,7 +1170,7 @@ enum CXChildVisitResult clang_preparseVisitor(
             {
                 if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
                 {
-                    //printf("\nfound::: %s\n", p_userdata->p_cur_id);
+                    //printf("found_cur_id = 1\n");
                     p_userdata->found_cur_id = 1;
                 }
                 res = CXChildVisit_Recurse;
@@ -1371,20 +1225,22 @@ int ends_with_identifier(char *p_line)
 }
 
 //static
-void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_definition)
+void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identifiers)
 {
+    int i;
     p_bufstr->p_str[0] = '\0';
     bufstradd(p_bufstr, "struct uschshell_t;\n");
     bufstradd(p_bufstr, "#include <usch.h>\n");
     bufstradd(p_bufstr, "#include \"includes.h\"\n");
     bufstradd(p_bufstr, "#include \"definitions.h\"\n");
     bufstradd(p_bufstr, "#include \"trampolines.h\"\n");
-    if (p_usch_definition != NULL)
+
+    for (i = 0; pp_identifiers[i] != NULL; i++)
     {
         // clang doesn't parse preprocessor #defines
         // define a function instead
         bufstradd(p_bufstr, "void ");
-        bufstradd(p_bufstr, p_usch_definition);
+        bufstradd(p_bufstr, pp_identifiers[i]);
         bufstradd(p_bufstr, "(...) {};\n");
     }
     bufstradd(p_bufstr, "int ");
@@ -1393,26 +1249,34 @@ void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char *p_usch_def
     bufstradd(p_bufstr, "{\n");
     bufstradd(p_bufstr, "\t");
     bufstradd(p_bufstr, p_line);
-    if (p_usch_definition != NULL)
+    if (has_trailing_identifier(p_line, pp_identifiers))
     {
         bufstradd(p_bufstr, "()");
+    }
+    else if (has_trailing_open_parenthesis(p_line))
+    {
+        bufstradd(p_bufstr, ")");
     }
     bufstradd(p_bufstr, ";\n\treturn 0;\n");
     bufstradd(p_bufstr, "}\n");
 }
 
-// from netbsd
-//static 
-static int parse(char *p_parsefile_fullname, bufstr_t *p_filecontent, char *p_line, preparse_userdata_t *p_userdata, char *p_definition, uschshell_state_t *p_state)
+static int resolve_identifier(char *p_parsefile_fullname,
+                 bufstr_t *p_filecontent,
+                 char *p_line,
+                 preparse_userdata_t *p_userdata,
+                 char **pp_definitions)
 {
     int status = 0;
     CXTranslationUnit p_tu = NULL;
     CXIndex p_idx = NULL;
     unsigned int visitorstatus = 0;
-    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
 
     FILE *p_parsefile = NULL;
-    set_preparsefile_content(p_filecontent, p_line, p_definition);
+    if (pp_definitions != NULL)
+    {
+        set_preparsefile_content(p_filecontent, p_line, pp_definitions);
+    }
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
     FAIL_IF(p_parsefile == NULL);
@@ -1436,19 +1300,15 @@ static int parse(char *p_parsefile_fullname, bufstr_t *p_filecontent, char *p_li
     p_tu = NULL;
     p_idx = NULL;
 
-    *p_state = state;
-
 end:
     if (p_parsefile)
         fclose(p_parsefile);
     return status;
 }
 
-
-// find identifiers in string
-// resolve identifiers
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
+    int i;
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
     int status = 0;
@@ -1457,17 +1317,17 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     char *p_parsefile_fullname = NULL;
     char *p_line_copy = NULL;
     char *p_line = NULL;
+    int num_identifiers = 0;
+    char **pp_identifiers = NULL;
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
     p_line = stripwhite(p_line_copy);
+    
+    status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
+    FAIL_IF(status != 0 || num_identifiers == 0);
 
-    if (!ends_with_identifier(p_line))
-    {
-        ENDOK_IF(1);
-    }
-
-    filecontent.p_str = calloc(1,1024);
+    filecontent.p_str = calloc(1, 1024);
     FAIL_IF(filecontent.p_str == NULL);
     filecontent.len = 1024;
 
@@ -1476,27 +1336,56 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     strcpy(p_parsefile_fullname, p_context->tmpdir);
     p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
     strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
-    printf("p_line: %s\n", p_line);
-    printf("p_line: %d\n", identifier_pos(p_line));
-    printf("p_line: %s\n", &p_line[identifier_pos(p_line)]);
-    userdata.p_cur_id = &p_line[identifier_pos(p_line)];
-    userdata.found_cur_id = 0;
-
-    FAIL_IF(parse(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL, &state));
-
-    if (userdata.found_cur_id == 0)
+    
+    for (i = 0; pp_identifiers[i] != NULL; i++)
     {
-        printf("found_cur_id\n");
-        if (iscmd(userdata.p_cur_id))
-        {
+        state = USCHSHELL_STATE_CPARSER;
 
-            userdata.found_cur_id = 0;
-            FAIL_IF(parse(p_parsefile_fullname, &filecontent, p_line, &userdata, userdata.p_cur_id, &state));
-            state = USCHSHELL_STATE_CMDSTART;
-            *p_state = state;
+        userdata.p_cur_id = pp_identifiers[i];
+        userdata.found_cur_id = 0;
+
+        FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL));
+
+        // identifier is not defined
+        if (userdata.found_cur_id == 0)
+        {
+            if (iscmd(userdata.p_cur_id))
+            {
+                // the identifier is available as a system command
+                // try to define the identifier as a function
+
+                userdata.found_cur_id = 0;
+                FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
+                // TODO: if last identifer is a system command, we probably are in some parameter unless...
+                if (pp_identifiers[i+1] == NULL)
+                {
+                    if (has_trailing_closed_parenthesis(p_line))
+                    {
+                        state = USCHSHELL_STATE_CPARSER;
+                    }
+                    else if (has_trailing_open_parenthesis(p_line))
+                    {
+                        state = USCHSHELL_STATE_CMDARG;
+                    } 
+                    else
+                    {
+                        state = USCHSHELL_STATE_CMDSTART;
+                    }
+                    break;
+                }
+            }
+            else
+            {
+                // the identifier could not be resolved, nor is it a system command
+                state = USCHSHELL_STATE_ERROR;
+                break;
+            }
         }
+        state = USCHSHELL_STATE_CPARSER;
     }
+    *p_state = state;
 end:
+    free(pp_identifiers);
     p_line = NULL;
     free(p_parsefile_fullname);
     free(p_line_copy);

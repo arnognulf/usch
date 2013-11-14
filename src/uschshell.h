@@ -48,9 +48,10 @@ int uschshell_lib(struct uschshell_t *p_context, char *p_dynlib);
 int uschshell_include(struct uschshell_t *p_context, char *p_header);
 
 typedef enum {
-USCHSHELL_STATE_CPARSER = 0,
-USCHSHELL_STATE_CMDSTART = 1,
-USCHSHELL_STATE_CMDARG = 2,
+USCHSHELL_STATE_ERROR = 0,
+USCHSHELL_STATE_CPARSER = 1,
+USCHSHELL_STATE_CMDSTART = 2,
+USCHSHELL_STATE_CMDARG = 3,
 } uschshell_state_t;
 
 int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state);

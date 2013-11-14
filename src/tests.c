@@ -257,11 +257,12 @@ static char *test_uschshell_parse()
     int status;
     char *p_message = NULL;
     int error;
+    struct uschshell_t *p_context = NULL;
+    error = uschshell_create(&p_context);
+    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+#if 0
     int num_ids = 0;
     char **pp_ids = NULL;
-    struct uschshell_t *p_context = NULL;
-    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
-    error = uschshell_create(&p_context);
     mu_assert("error != 0", error == 0);
 
     get_identifiers("a_1", &num_ids, &pp_ids);
@@ -301,10 +302,20 @@ static char *test_uschshell_parse()
     free(pp_ids);
     pp_ids = NULL;
     //(void)state;
+    (void)error;
+    (void)state;
+    mu_assert("!has_trailing_open_parenthesis(\"foo(\")", has_trailing_open_parenthesis("foo("));
+    mu_assert("!has_trailing_closed_parenthesis(\"foo()\")", has_trailing_closed_parenthesis("foo()"));
+#endif // 0
+#if 0
+#endif // 0
+
     error = uschshell_preparse(p_context, "ls", &state);
-    printf("state: %d\n", (int)state);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
+    error = uschshell_preparse(p_context, "ls()", &state);
+    mu_assert("error != 0", error == 0);
+    mu_assert("uschshell_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
 cleanup:
     (void)status;
     uschshell_destroy(p_context);
