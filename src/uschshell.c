@@ -1306,8 +1306,11 @@ end:
     return status;
 }
 
+//int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
+    char ***ppp_cmds = NULL;
+    
     int i;
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
@@ -1319,6 +1322,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     char *p_line = NULL;
     int num_identifiers = 0;
     char **pp_identifiers = NULL;
+    char **pp_cmds = NULL;
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
@@ -1326,6 +1330,10 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     
     status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
     FAIL_IF(status != 0 || num_identifiers == 0);
+
+    // TODO: memcpy nul'ed line to end of this array and update pointers to strings if found
+    //pp_cmds = calloc(num_identifiers * sizeof(char*), 1);
+    //FAIL_IF(pp_cmds == NULL);
 
     filecontent.p_str = calloc(1, 1024);
     FAIL_IF(filecontent.p_str == NULL);
@@ -1357,6 +1365,8 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
                 userdata.found_cur_id = 0;
                 FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
                 // TODO: if last identifer is a system command, we probably are in some parameter unless...
+                // 
+                // ... there is a nested command (ARGH!)
                 if (pp_identifiers[i+1] == NULL)
                 {
                     if (has_trailing_closed_parenthesis(p_line))
@@ -1384,11 +1394,14 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
         state = USCHSHELL_STATE_CPARSER;
     }
     *p_state = state;
+    *ppp_cmds = pp_cmds;
+    pp_cmds = NULL;
 end:
     free(pp_identifiers);
     p_line = NULL;
     free(p_parsefile_fullname);
     free(p_line_copy);
+    free(pp_cmds);
 
     free(filecontent.p_str);
     return status;
