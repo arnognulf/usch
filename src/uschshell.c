@@ -1444,9 +1444,11 @@ end:
     return status;
 }
 
+
+// find identifiers in string
+// resolve identifiers
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
 {
-#if 1
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
     int status = 0;
@@ -1501,11 +1503,5 @@ end:
 
     free(filecontent.p_str);
     return status;
-#else
-    (void)p_context;
-    (void)p_input;
-    *p_state = USCHSHELL_STATE_CPARSER;
-    return 0;
-#endif // 0
 }
 

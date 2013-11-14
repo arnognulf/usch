@@ -254,19 +254,59 @@ cleanup:
 }
 static char *test_uschshell_parse()
 {
+    int status;
     char *p_message = NULL;
     int error;
+    int num_ids = 0;
+    char **pp_ids = NULL;
     struct uschshell_t *p_context = NULL;
     uschshell_state_t state = USCHSHELL_STATE_CPARSER;
     error = uschshell_create(&p_context);
     mu_assert("error != 0", error == 0);
 
+    get_identifiers("a_1", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 1", num_ids == 1);
+    mu_assert("strcmp(..) != a_1", strcmp(pp_ids[0], "a_1") == 0);
+    free(pp_ids);
+    pp_ids = NULL;
+    num_ids = get_identifiers("2f", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 0", num_ids == 0);
+    pp_ids = NULL;
+    status = get_identifiers(" = bc()", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 1", num_ids == 1);
+    mu_assert("strcmp(..) != bc", strcmp(pp_ids[0], "bc") == 0);
+    get_identifiers("c3->fa", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 1", num_ids == 1);
+    mu_assert("strcmp(..) = c3", strcmp(pp_ids[0], "c3") == 0);
+    status = get_identifiers("g.h", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 1", num_ids == 1);
+    mu_assert("strcmp(..) = g", strcmp(pp_ids[0], "g") == 0);
+    free(pp_ids);
+    status = get_identifiers("\"test\"", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 0", num_ids == 0);
+    free(pp_ids);
+    pp_ids = NULL;
+    status = get_identifiers("\'x\'", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 0", num_ids == 0);
+    free(pp_ids);
+    pp_ids = NULL;
+
+    status = get_identifiers("a1 2f = bc(); c3->f4 g.h", &num_ids, &pp_ids);
+    mu_assert("get_identifiers(..) != 4", num_ids == 4);
+    mu_assert("strcmp(..) = a1", strcmp(pp_ids[0], "a1") == 0);
+    mu_assert("strcmp(..) = bc", strcmp(pp_ids[1], "bc") == 0);
+    mu_assert("strcmp(..) = c3", strcmp(pp_ids[2], "c3") == 0);
+    mu_assert("strcmp(..) = g", strcmp(pp_ids[3], "g") == 0);
+    mu_assert("strcmp(..) = NULL", pp_ids[4] == NULL);
+    free(pp_ids);
+    pp_ids = NULL;
     //(void)state;
     error = uschshell_preparse(p_context, "ls", &state);
     printf("state: %d\n", (int)state);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
 cleanup:
+    (void)status;
     uschshell_destroy(p_context);
     return p_message;
 }
