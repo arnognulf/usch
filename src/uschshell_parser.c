@@ -566,7 +566,19 @@ end:
         fclose(p_parsefile);
     return status;
 }
-
+static int is_builtin_cmd(char *p_str)
+{
+    int is_builtin = 0;
+    if (strncmp(p_str, "lib", strlen(p_str)) == 0)
+    {
+        is_builtin = 1;
+    }
+    if (strncmp(p_str, "define", strlen(p_str)) == 0)
+    {
+        is_builtin = 1;
+    }
+    return is_builtin;
+}
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
 {
     int i;
@@ -619,7 +631,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
         // identifier is not defined
         if (userdata.found_cur_id == 0)
         {
-            if (iscmd(userdata.p_cur_id))
+            if (iscmd(userdata.p_cur_id) || is_builtin_cmd(userdata.p_cur_id))
             {
                 // the identifier is available as a system command
                 // try to define the identifier as a function
