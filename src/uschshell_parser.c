@@ -1,7 +1,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "parserutils.h"
+#include "uschshell_parser.h"
 #include <stdio.h>
 #include <dirent.h>
 #include <ctype.h>
@@ -18,6 +18,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include "usch_debug.h"
+#include "bufstr.h"
+#include "uschshell_types.h"
+#include "clang-c/Index.h"
+#include "strutils.h"
+#include "uschshell.h"
 
 static size_t count_stars(char *p_input)
 {
@@ -48,22 +53,6 @@ static size_t count_identifier(char *p_input)
     return i;
 }
 
-
-size_t get_type_len(char *p_defname)
-{
-    size_t i;
-    size_t last_type_pos = 0;
-    size_t deflen = strlen(p_defname);
-
-    for (i = 0; i < deflen; i++)
-    {
-        if (p_defname[i] == ' ')
-            last_type_pos = i;
-        if (p_defname[i] == '*')
-            last_type_pos = i;
-    }
-    return last_type_pos;
-}
 
 
 int count_spaces(char *p_input)
@@ -346,21 +335,6 @@ int iscmd(char *p_cmd)
 }
 
 
-char *get_symname(char *p_defname)
-{
-    char *p_tmp = p_defname;
-    char *p_symname = p_defname;
-    while (*p_tmp != '\0')
-    {
-        if (*p_tmp == ' ' || *p_tmp == '*')
-        {
-            p_symname = p_tmp;
-        }
-        p_tmp++;
-    }
-    return p_symname + 1;
-}
-
 int parse_line(char *p_input, usch_def_t *p_definition)
 {
     //usch_def_t definition;
@@ -435,5 +409,273 @@ int has_trailing_identifier(char *p_line, char **pp_identifiers)
     }
 
     return trailing_identifier;
+}
+
+//static 
+enum CXChildVisitResult clang_preparseVisitor(
+        CXCursor cursor, 
+        CXCursor parent, 
+        CXClientData p_client_data)
+{
+    (void)parent;
+    bufstr_t bufstr = {NULL, 0};
+    int status = 0;
+    char *p_fnstr = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    enum CXChildVisitResult res = CXChildVisit_Recurse;
+    CXString cxstr = {NULL, 0};
+    preparse_userdata_t *p_userdata = NULL;
+
+    cxstr = clang_getCursorSpelling(cursor);
+    p_userdata = (preparse_userdata_t*)p_client_data;
+    FAIL_IF(p_userdata == NULL);
+    switch (cursor.kind) 
+    {
+        case CXCursor_FunctionDecl:
+            {
+                if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
+                {
+                    //printf("found_cur_id = 1\n");
+                    p_userdata->found_cur_id = 1;
+                }
+                res = CXChildVisit_Recurse;
+
+                break;
+            }
+        default:
+            {
+                //printf("\nfound::: %s\n",clang_getCString(cxstr));
+                res = CXChildVisit_Recurse;
+                break;
+            }
+    }
+    free(p_fnstr);
+    p_fnstr = NULL;
+end:
+    clang_disposeString(cxstr);
+    (void)status;
+    free(bufstr.p_str);
+    free(p_fnstr);
+    free(p_dyfn);
+    return res;
+}
+
+//static
+int ends_with_identifier(char *p_line)
+{
+    size_t i = 0;
+    size_t len = 0;
+    int has_identifier = 0;
+    len = strlen(p_line);
+    if (len == 0)
+        return 0;
+    i = len - 1;
+    do 
+    {
+        if (isdigit(p_line[i]) == 0)
+        {
+            if (isalpha(p_line[i]) == 0)
+            {
+                break;
+            }
+            else
+            {
+                has_identifier = 1;
+                break;
+            }
+        }
+        i--;
+    } while(i != 0);
+    return has_identifier;
+}
+
+//static
+void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identifiers)
+{
+    int i;
+    p_bufstr->p_str[0] = '\0';
+    bufstradd(p_bufstr, "struct uschshell_t;\n");
+    bufstradd(p_bufstr, "#include <usch.h>\n");
+    bufstradd(p_bufstr, "#include \"includes.h\"\n");
+    bufstradd(p_bufstr, "#include \"definitions.h\"\n");
+    bufstradd(p_bufstr, "#include \"trampolines.h\"\n");
+
+    for (i = 0; pp_identifiers[i] != NULL; i++)
+    {
+        // clang doesn't parse preprocessor #defines
+        // define a function instead
+        bufstradd(p_bufstr, "void ");
+        bufstradd(p_bufstr, pp_identifiers[i]);
+        bufstradd(p_bufstr, "(...) {};\n");
+    }
+    bufstradd(p_bufstr, "int ");
+    bufstradd(p_bufstr, USCHSHELL_DYN_FUNCNAME);
+    bufstradd(p_bufstr, "()\n");
+    bufstradd(p_bufstr, "{\n");
+    bufstradd(p_bufstr, "\t");
+    bufstradd(p_bufstr, p_line);
+    if (has_trailing_identifier(p_line, pp_identifiers))
+    {
+        bufstradd(p_bufstr, "()");
+    }
+    else if (has_trailing_open_parenthesis(p_line))
+    {
+        bufstradd(p_bufstr, ")");
+    }
+    bufstradd(p_bufstr, ";\n\treturn 0;\n");
+    bufstradd(p_bufstr, "}\n");
+}
+
+// static
+int resolve_identifier(char *p_parsefile_fullname,
+                 bufstr_t *p_filecontent,
+                 char *p_line,
+                 preparse_userdata_t *p_userdata,
+                 char **pp_definitions)
+{
+    int status = 0;
+    CXTranslationUnit p_tu = NULL;
+    CXIndex p_idx = NULL;
+    unsigned int visitorstatus = 0;
+
+    FILE *p_parsefile = NULL;
+    if (pp_definitions != NULL)
+    {
+        set_preparsefile_content(p_filecontent, p_line, pp_definitions);
+    }
+
+    p_parsefile = fopen(p_parsefile_fullname, "w");
+    FAIL_IF(p_parsefile == NULL);
+
+    FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));
+    fclose(p_parsefile);
+    p_parsefile = NULL;
+    p_idx = clang_createIndex(0, 0);
+    FAIL_IF(p_idx == NULL);
+    p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
+    FAIL_IF(p_tu == NULL);
+
+    visitorstatus = clang_visitChildren(
+            clang_getTranslationUnitCursor(p_tu),
+            clang_preparseVisitor,
+            (void*)p_userdata);
+    FAIL_IF(visitorstatus != 0);
+    clang_disposeTranslationUnit(p_tu);
+    clang_disposeIndex(p_idx);
+
+    p_tu = NULL;
+    p_idx = NULL;
+
+end:
+    if (p_parsefile)
+        fclose(p_parsefile);
+    return status;
+}
+
+int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
+{
+    int i;
+    preparse_userdata_t userdata = {0};
+    uschshell_state_t state;
+    int status = 0;
+    bufstr_t filecontent = {0};
+    char preparse_filename[] = "preparse.c";
+    char *p_parsefile_fullname = NULL;
+    char *p_line_copy = NULL;
+    char *p_line = NULL;
+    int num_identifiers = 0;
+    char **pp_identifiers = NULL;
+    char **pp_cmds = NULL;
+
+    p_line_copy = strdup(p_input);
+    FAIL_IF(p_line_copy == NULL);
+    p_line = stripwhite(p_line_copy);
+    
+    status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
+    FAIL_IF(status != 0 || num_identifiers == 0);
+
+    pp_cmds = calloc((num_identifiers + 1)* sizeof(char*) + (strlen(p_line) + 1) * sizeof(char), 1);
+    FAIL_IF(pp_cmds == NULL);
+    memcpy((char*)&pp_cmds[num_identifiers + 1], p_line, strlen(p_line));
+    // NULL terminate vector before it's content
+    pp_cmds[num_identifiers + 1] = NULL;
+
+    filecontent.p_str = calloc(1, 1024);
+    FAIL_IF(filecontent.p_str == NULL);
+    filecontent.len = 1024;
+
+    p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename), 1);
+    FAIL_IF(p_parsefile_fullname == NULL);
+    strcpy(p_parsefile_fullname, p_context->tmpdir);
+    p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
+    strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
+    
+    for (i = 0; pp_identifiers[i] != NULL; i++)
+    {
+        state = USCHSHELL_STATE_CPARSER;
+
+        userdata.p_cur_id = pp_identifiers[i];
+        userdata.found_cur_id = 0;
+
+        FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL));
+
+        // identifier is not defined
+        if (userdata.found_cur_id == 0)
+        {
+            if (iscmd(userdata.p_cur_id))
+            {
+                // the identifier is available as a system command
+                // try to define the identifier as a function
+
+                userdata.found_cur_id = 0;
+                FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
+
+                // unknown error
+                if (userdata.found_cur_id == 0)
+                {
+                        state = USCHSHELL_STATE_ERROR;
+                        break;
+                }
+                // TODO: if last identifer is a system command, we probably are in some parameter unless...
+                // 
+                // ... there is a nested command (ARGH!)
+                else if (pp_identifiers[i+1] == NULL)
+                {
+                    if (has_trailing_closed_parenthesis(p_line))
+                    {
+                        state = USCHSHELL_STATE_CPARSER;
+                    }
+                    else if (has_trailing_open_parenthesis(p_line))
+                    {
+                        state = USCHSHELL_STATE_CMDARG;
+                    } 
+                    else
+                    {
+                        state = USCHSHELL_STATE_CMDSTART;
+                    }
+                    break;
+                }
+            }
+            else
+            {
+                // the identifier could not be resolved, nor is it a system command
+                state = USCHSHELL_STATE_ERROR;
+                break;
+            }
+        }
+        state = USCHSHELL_STATE_CPARSER;
+    }
+    *p_state = state;
+    *ppp_cmds = pp_cmds;
+    pp_cmds = NULL;
+end:
+    free(pp_identifiers);
+    p_line = NULL;
+    free(p_parsefile_fullname);
+    free(p_line_copy);
+    free(pp_cmds);
+
+    free(filecontent.p_str);
+    return status;
 }
 

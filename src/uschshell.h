@@ -28,6 +28,7 @@ extern "C" {
 #if DUMMY_VIM_FIX_NEEDED
 }
 #endif // DUMMY_VIM_FIX_NEEDED
+#include <stdlib.h>
 
 struct uschshell_t;
 int uschshell_create(struct uschshell_t **p_context);
