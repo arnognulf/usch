@@ -379,6 +379,7 @@ end:
 
 int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 {
+    int i = 0;
     int status = 0;
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
@@ -443,11 +444,10 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     }
     if (state == USCHSHELL_STATE_CMDARG)
     {
-        size_t i = 0;
         size_t quotes = 0;
         size_t rparens = 0;
         size_t lparens = 0;
-        for (i = 0; i < input.len; i++)
+        for (i = 0; i < (int)input.len; i++)
         {
             if (input.p_str[i] != '\"')
                 quotes++;
@@ -496,6 +496,15 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     bufstradd(&stmt_c, "static struct uschshell_t *p_uschshell_context = NULL;\n");
     bufstradd(&stmt_c, "void uschshell_set_context(struct uschshell_t *p_context)\n{\np_uschshell_context = p_context;\t\n}\n");
+
+    for (i = 0; pp_cmds[i] != NULL; i++)
+    {
+        bufstradd(&stmt_c, "#define ");
+        bufstradd(&stmt_c, definition.p_symname);
+        bufstradd(&stmt_c, "(...) usch_cmd(\"");
+        bufstradd(&stmt_c, definition.p_symname);
+        bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+    }
 
     if (iscmd(input.p_str))
     {

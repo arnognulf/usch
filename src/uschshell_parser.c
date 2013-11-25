@@ -126,20 +126,18 @@ int is_definition(char *p_input)
     return 0;
 }
 
-int get_identifiers(const char *p_line_in, int *p_count, char ***ppp_identifiers_out)
+int get_identifiers(char *p_line_in, int *p_count, char ***ppp_identifiers_out)
 {
     int status = 0;
     char **pp_identifiers = NULL;
     int num_identifiers = 0;
     int i = 0;
-    char *p_line = NULL;
     int len = (int)strlen(p_line_in);
-    char last = '\0';
+    char prevchar = '\0';
     int parsed_identifier = 0;
     int has_looped = 0;
 
-    p_line = strdup(p_line_in);
-    FAIL_IF(p_line == NULL);
+    char *p_line = p_line_in;
 
     while (pp_identifiers == NULL)
     {
@@ -154,18 +152,17 @@ int get_identifiers(const char *p_line_in, int *p_count, char ***ppp_identifiers
             strcpy((char*)&pp_identifiers[num_identifiers+1], p_line_in);
             // simplify array iteration by null termination
             pp_identifiers[num_identifiers] = NULL;
-            free(p_line);
             p_line = (char*)&pp_identifiers[num_identifiers+1];
             i = 0;
-            last = '\0';
+            prevchar = '\0';
             num_identifiers = 0;
         }
         while (i < len)
         {
             if (i > 0)
-                last = p_line[i-1];
+                prevchar = p_line[i-1];
 
-            if (isalpha(p_line[i]) && !isdigit(last))
+            if (isalpha(p_line[i]) && !isdigit(prevchar))
             {
                 if (pp_identifiers != NULL)
                 {
@@ -235,10 +232,8 @@ int get_identifiers(const char *p_line_in, int *p_count, char ***ppp_identifiers
             p_line[i] = '\0';
     }
     *ppp_identifiers_out = pp_identifiers;
-    p_line = NULL;
     *p_count = num_identifiers;
 end:
-    free(p_line);
     return status;
 }
 int identifier_pos(char *p_line)
@@ -586,6 +581,8 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     int num_identifiers = 0;
     char **pp_identifiers = NULL;
     char **pp_cmds = NULL;
+    char *p_cmds = NULL;
+    int cmdidx = 0;
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
@@ -636,11 +633,20 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
                         state = USCHSHELL_STATE_ERROR;
                         break;
                 }
-                // TODO: if last identifer is a system command, we probably are in some parameter unless...
+                // TODO: if prevchar identifer is a system command, we probably are in some parameter unless...
                 // 
                 // ... there is a nested command (ARGH!)
                 else if (pp_identifiers[i+1] == NULL)
                 {
+                    if (pp_cmds[0] == NULL)
+                    {
+                        p_cmds = (char*)&pp_cmds[num_identifiers + 2];
+                    }
+                    strcpy(p_cmds, pp_identifiers[i]);
+                    pp_cmds[cmdidx] = p_cmds;
+                    p_cmds += strlen(pp_identifiers[i]) + 1;
+                    cmdidx++;
+
                     if (has_trailing_closed_parenthesis(p_line))
                     {
                         state = USCHSHELL_STATE_CPARSER;
@@ -669,6 +675,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     *ppp_cmds = pp_cmds;
     pp_cmds = NULL;
 end:
+    p_cmds = NULL;
     free(pp_identifiers);
     p_line = NULL;
     free(p_parsefile_fullname);
