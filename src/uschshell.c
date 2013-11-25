@@ -597,6 +597,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     int (*uschshell_load_vars)(uschshell_t*);
     char *p_error = NULL;
     char **pp_path = NULL;
+    char **pp_cmds = NULL;
     size_t filename_length;
     size_t dylib_length;
     bufstr_t input;
@@ -643,7 +644,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
-    FAIL_IF(uschshell_preparse(p_context, input.p_str, &state));
+    FAIL_IF(uschshell_preparse(p_context, input.p_str, &state, &pp_cmds));
     if (state == USCHSHELL_STATE_CMDSTART)
     {
         bufstradd(&input, "()");
@@ -828,6 +829,7 @@ end:
     free(p_fullpath_uschrc_h);
     free(stmt_c.p_str);
     free(input.p_str);
+    free(pp_cmds);
 
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);
@@ -1306,11 +1308,8 @@ end:
     return status;
 }
 
-//int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
-int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state)
+int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
 {
-    char ***ppp_cmds = NULL;
-    
     int i;
     preparse_userdata_t userdata = {0};
     uschshell_state_t state;
@@ -1331,9 +1330,11 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
     FAIL_IF(status != 0 || num_identifiers == 0);
 
-    // TODO: memcpy nul'ed line to end of this array and update pointers to strings if found
-    //pp_cmds = calloc(num_identifiers * sizeof(char*), 1);
-    //FAIL_IF(pp_cmds == NULL);
+    pp_cmds = calloc((num_identifiers + 1)* sizeof(char*) + (strlen(p_line) + 1) * sizeof(char), 1);
+    FAIL_IF(pp_cmds == NULL);
+    memcpy((char*)&pp_cmds[num_identifiers + 1], p_line, strlen(p_line));
+    // NULL terminate vector before it's content
+    pp_cmds[num_identifiers + 1] = NULL;
 
     filecontent.p_str = calloc(1, 1024);
     FAIL_IF(filecontent.p_str == NULL);
@@ -1364,10 +1365,17 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
 
                 userdata.found_cur_id = 0;
                 FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
+
+                // unknown error
+                if (userdata.found_cur_id == 0)
+                {
+                        state = USCHSHELL_STATE_ERROR;
+                        break;
+                }
                 // TODO: if last identifer is a system command, we probably are in some parameter unless...
                 // 
                 // ... there is a nested command (ARGH!)
-                if (pp_identifiers[i+1] == NULL)
+                else if (pp_identifiers[i+1] == NULL)
                 {
                     if (has_trailing_closed_parenthesis(p_line))
                     {

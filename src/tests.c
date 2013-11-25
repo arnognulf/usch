@@ -260,6 +260,7 @@ static char *test_uschshell_parse()
     struct uschshell_t *p_context = NULL;
     error = uschshell_create(&p_context);
     uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+    char **pp_cmds = NULL;
 #if 0
     int num_ids = 0;
     char **pp_ids = NULL;
@@ -310,10 +311,10 @@ static char *test_uschshell_parse()
 #if 0
 #endif // 0
 
-    error = uschshell_preparse(p_context, "ls", &state);
+    error = uschshell_preparse(p_context, "ls", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
-    error = uschshell_preparse(p_context, "ls()", &state);
+    error = uschshell_preparse(p_context, "ls()", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
 cleanup:

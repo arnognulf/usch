@@ -54,8 +54,7 @@ USCHSHELL_STATE_CMDSTART = 2,
 USCHSHELL_STATE_CMDARG = 3,
 } uschshell_state_t;
 
-int uschshell_preparse(struct uschshell_t *p_context, char *p_line, uschshell_state_t *p_state);
-
+int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds);
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED
