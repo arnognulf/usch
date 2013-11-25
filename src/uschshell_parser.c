@@ -539,11 +539,11 @@ end:
 static int is_builtin_cmd(char *p_str)
 {
     int is_builtin = 0;
-    if (strncmp(p_str, "lib", strlen(p_str)) == 0)
+    if (strncmp(p_str, "lib", strlen("lib")) == 0 && strlen("lib") == strlen(p_str))
     {
         is_builtin = 1;
     }
-    if (strncmp(p_str, "define", strlen(p_str)) == 0)
+    if (strncmp(p_str, "define", strlen("define")) == 0 && strlen("define") == strlen(p_str))
     {
         is_builtin = 1;
     }
@@ -565,6 +565,8 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     char **pp_cmds = NULL;
     char *p_cmds = NULL;
     int cmdidx = 0;
+
+    fprintf(stderr, "uschshell_preparse() p_input=\"%s\"\n", p_input);
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);

@@ -74,8 +74,10 @@ static int xgetch()
 
     if (buf == ' ')
     {
+        fprintf(stderr, "xgetch() 1: state=%d rl_line_buffer=%s", (int)state, rl_line_buffer);
         FAIL_IF(uschshell_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
         free(pp_cmds);
+        fprintf(stderr, "xgetch() 2: state=%d rl_line_buffer=%s", (int)state, rl_line_buffer);
         if (state == USCHSHELL_STATE_CMDSTART)
         {
             char text[] = "(";
