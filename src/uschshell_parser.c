@@ -232,8 +232,10 @@ int get_identifiers(char *p_line_in, int *p_count, char ***ppp_identifiers_out)
             p_line[i] = '\0';
     }
     *ppp_identifiers_out = pp_identifiers;
+    pp_identifiers = NULL;
     *p_count = num_identifiers;
 end:
+    free(pp_identifiers);
     return status;
 }
 int identifier_pos(char *p_line)
@@ -288,8 +290,8 @@ char* stripwhite(char *string)
    return p_s;
 }
 
-//static 
-int iscmd(char *p_cmd)
+ 
+static int is_system_cmd(char *p_cmd)
 {
     struct stat sb;
     char *p_item = NULL;
@@ -631,7 +633,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
         // identifier is not defined
         if (userdata.found_cur_id == 0)
         {
-            if (iscmd(userdata.p_cur_id) || is_builtin_cmd(userdata.p_cur_id))
+            if (is_system_cmd(userdata.p_cur_id) || is_builtin_cmd(userdata.p_cur_id))
             {
                 // the identifier is available as a system command
                 // try to define the identifier as a function
@@ -652,7 +654,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
                 {
                     if (pp_cmds[0] == NULL)
                     {
-                        p_cmds = (char*)&pp_cmds[num_identifiers + 2];
+                        p_cmds = (char*)&pp_cmds[num_identifiers + 1];
                     }
                     strcpy(p_cmds, pp_identifiers[i]);
                     pp_cmds[cmdidx] = p_cmds;

@@ -7,7 +7,6 @@ typedef struct
 } usch_def_t;
 
 int get_identifiers(char *p_line, int *p_count, char ***ppp_identifiers_out);
-int iscmd(char *p_cmd);
 int identifier_pos(char *p_line);
 char* stripwhite(char *p_line);
 size_t get_type_len(char *p_defname);

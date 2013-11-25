@@ -315,6 +315,7 @@ end:
     return status;
 }
 
+#if 0
 static void trim_end_space(char *p_input)
 {
     size_t i;
@@ -329,6 +330,8 @@ static void trim_end_space(char *p_input)
     }
 }
 
+#endif // 0
+#if 0
 static int pre_assign(char *p_input, char **pp_pre_assign)
 {
     int status = 0;
@@ -376,6 +379,7 @@ end:
     free(p_post_assign);
     return status;
 }
+#endif // 0
 
 int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 {
@@ -506,6 +510,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
     }
 
+#if 0
     if (iscmd(input.p_str))
     {
         if (strcmp(definition.p_symname, "include") == 0)
@@ -569,6 +574,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, "\treturn 0;\n}\n");
     }
     else /* as is */   
+#endif // 0
     {
         bufstradd(&stmt_c, "int ");
         bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
