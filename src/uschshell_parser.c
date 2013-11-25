@@ -492,6 +492,15 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
     bufstradd(p_bufstr, "}\n");
 }
 
+
+#if 0
+int uschshell_parent_identifier(char *p_str)
+{
+    int recurse_pos = 0;
+    int parent_pos = 0;
+        recurse_pos = find_parent('\0', &p_str[i], &parent_pos);
+}
+#endif // 0
 static int resolve_identifier(char *p_parsefile_fullname,
                  bufstr_t *p_filecontent,
                  char *p_line,
