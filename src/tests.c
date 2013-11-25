@@ -35,7 +35,7 @@
 #include "pmcurses.h"
 #include <editline/readline.h>
 #include <locale.h>
-#include "parserutils.h"
+#include "uschshell_parser.h"
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -323,6 +323,27 @@ cleanup:
     return p_message;
 }
 
+static char *test_uschshell_finalize()
+{
+    int status;
+    char *p_message = NULL;
+    int error;
+    struct uschshell_t *p_context = NULL;
+    error = uschshell_create(&p_context);
+    char *p_finalized = NULL;
+
+    error = uschshell_finalize("foo(((", &p_finalized);
+    mu_assert("error != 0", error == 0);
+    mu_assert("uschshell_finalized(p_context, \"foo(((\") != \"foo((()))\"", strcmp("foo((()))", p_finalized) == 0);
+    free(p_finalized);p_finalized = NULL;
+    (void)status;
+cleanup:
+    free(p_finalized);
+    uschshell_destroy(p_context);
+    return p_message;
+}
+
+
 static char *test_parserutils()
 {
     char *p_message = NULL;
@@ -381,6 +402,7 @@ static char * all_tests()
     mu_run_test(test_uschshell_dyld);
     mu_run_test(test_parserutils);
     mu_run_test(test_uschshell_parse);
+    mu_run_test(test_uschshell_finalize);
     //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);

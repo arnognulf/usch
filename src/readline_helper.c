@@ -44,6 +44,7 @@ static uschshell_state_t state = USCHSHELL_STATE_CPARSER;
 static struct uschshell_t *p_global_context = NULL;
 static int xgetch() 
 {
+    int status = 0;
     // http://zaemis.blogspot.se/2011/06/reading-unicode-utf-8-by-hand-in-c.html
     /* mask values for bit pattern of first byte in 
      * multi-byte UTF-8 sequences: 
@@ -53,6 +54,7 @@ static int xgetch()
     //static unsigned short mask[] = {192, 224, 240};
     struct termios old;
     char buf = '0';
+    char **pp_cmds = NULL;
     if (tcgetattr(0, &old) < 0)
         perror("tcsetattr()");
     old.c_lflag &= ~ICANON;
@@ -72,13 +74,13 @@ static int xgetch()
 
     if (buf == ' ')
     {
-        uschshell_preparse(p_global_context, rl_line_buffer, &state);
+        FAIL_IF(uschshell_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
+        free(pp_cmds);
         if (state == USCHSHELL_STATE_CMDSTART)
         {
             char text[] = "(";
             rl_insert_text(text);
             rl_redisplay();
-            state = USCHSHELL_STATE_CMDARG;
             buf = '\"'; 
         }
         else if (state == USCHSHELL_STATE_CMDARG)
@@ -89,6 +91,8 @@ static int xgetch()
             buf = '\"'; 
         }
     } 
+end:
+    (void)status;
     return (int)buf;
 }
 

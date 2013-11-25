@@ -81,7 +81,7 @@ int has_trailing_open_parenthesis(char *p_line)
     }
     return unclosed;
 }
-int has_trailing_closed_parenthesis(char *p_line)
+static int has_trailing_closed_parenthesis(char *p_line)
 {
     int len = (int)strlen(p_line);
     int i = len - 1;
@@ -384,7 +384,7 @@ end:
     return status;
 }
 
-int has_trailing_identifier(char *p_line, char **pp_identifiers)
+static int has_trailing_identifier(char *p_line, char **pp_identifiers)
 {
     int i;
     int fetch_id;
@@ -408,8 +408,7 @@ int has_trailing_identifier(char *p_line, char **pp_identifiers)
     return trailing_identifier;
 }
 
-//static 
-enum CXChildVisitResult clang_preparseVisitor(
+static enum CXChildVisitResult clang_preparseVisitor(
         CXCursor cursor, 
         CXCursor parent, 
         CXClientData p_client_data)
@@ -457,37 +456,7 @@ end:
     return res;
 }
 
-//static
-int ends_with_identifier(char *p_line)
-{
-    size_t i = 0;
-    size_t len = 0;
-    int has_identifier = 0;
-    len = strlen(p_line);
-    if (len == 0)
-        return 0;
-    i = len - 1;
-    do 
-    {
-        if (isdigit(p_line[i]) == 0)
-        {
-            if (isalpha(p_line[i]) == 0)
-            {
-                break;
-            }
-            else
-            {
-                has_identifier = 1;
-                break;
-            }
-        }
-        i--;
-    } while(i != 0);
-    return has_identifier;
-}
-
-//static
-void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identifiers)
+static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identifiers)
 {
     int i;
     p_bufstr->p_str[0] = '\0';
@@ -523,8 +492,7 @@ void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identi
     bufstradd(p_bufstr, "}\n");
 }
 
-// static
-int resolve_identifier(char *p_parsefile_fullname,
+static int resolve_identifier(char *p_parsefile_fullname,
                  bufstr_t *p_filecontent,
                  char *p_line,
                  preparse_userdata_t *p_userdata,
@@ -584,10 +552,10 @@ static int is_builtin_cmd(char *p_str)
 int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
 {
     int i;
-    preparse_userdata_t userdata = {0};
+    preparse_userdata_t userdata;
     uschshell_state_t state;
     int status = 0;
-    bufstr_t filecontent = {0};
+    bufstr_t filecontent = {0,0};
     char preparse_filename[] = "preparse.c";
     char *p_parsefile_fullname = NULL;
     char *p_line_copy = NULL;
@@ -697,6 +665,91 @@ end:
     free(pp_cmds);
 
     free(filecontent.p_str);
+    return status;
+}
+size_t find_matching(char end, char *p_incomplete)
+{
+    size_t i = 1;
+    int found = 0;
+    int escaped = 0;
+
+    while (p_incomplete[i] != '\0')
+    {
+        if (p_incomplete[i] == '\\')
+        {
+            escaped = !escaped;
+            i++;
+            continue;
+        }
+        if (escaped)
+        {
+            i++;
+            continue;
+        }
+
+        if (p_incomplete[i] == end)
+        {
+            found = 1;
+            break;
+        }
+
+        switch (p_incomplete[i])
+        {
+            case '{':
+                {
+                    i += find_matching('}', &p_incomplete[i]);
+                    break;
+                }
+            case '(':
+                {
+                    i += find_matching(')', &p_incomplete[i]);
+                    break;
+                }
+            case '[':
+                {
+                    i += find_matching(']', &p_incomplete[i]);
+                    break;
+                }
+            case '"':
+                {
+                    i += find_matching('"', &p_incomplete[i]);
+                    break;
+                }
+            case '\'':
+                {
+                    i += find_matching('\'', &p_incomplete[i]);
+                    break;
+                }
+            default:
+                {
+                    break;
+                }
+        }
+        i++;
+    }
+    if (!found)
+    {
+        p_incomplete[i] = end;
+        p_incomplete[i+1] = '\0';
+    }
+    return i;
+}
+int uschshell_finalize(char *p_unfinalized, char **pp_finalized)
+{
+    int status = 0;
+    size_t i = 0;
+    char *p_finalized = NULL;
+
+    p_finalized = calloc(strlen(p_unfinalized) * 2, 1);
+    FAIL_IF(p_finalized == NULL);
+    memcpy(p_finalized, p_unfinalized, strlen(p_unfinalized));
+
+    find_matching('\0', &p_finalized[i]);
+
+    *pp_finalized = p_finalized;
+    p_finalized = NULL;
+end:
+    free(p_finalized);
     return status;
 }
 

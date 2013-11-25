@@ -286,3 +286,27 @@ end:
         fclose(p_includefile);
     return status;
 }
+void* uschshell_getdyfnhandle(uschshell_t *p_context, const char *p_id)
+{
+    int status = 0;
+    uschshell_dyfn_t *p_dyfns = NULL;
+    uschshell_dyfn_t *p_dyfn = NULL;
+    void *p_handle = NULL;
+
+    if (p_context == NULL || p_id == NULL)
+        return NULL;
+
+    FAIL_IF(p_context->p_dyfns == NULL);
+    p_dyfns = p_context->p_dyfns;
+
+    HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
+
+    p_handle = p_dyfn->p_handle;
+end:
+    (void)status;
+    return p_handle;
+}
+
+
+
+
