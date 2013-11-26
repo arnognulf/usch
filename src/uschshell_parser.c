@@ -43,6 +43,28 @@ static size_t count_stars(char *p_input)
     return num_stars;
 }
 
+//static 
+int equal_identifiers(const char *p_id1, const char *p_id2)
+{
+    int equal_and_valid = 1;
+    int i = 0;
+
+    if (!isalpha(p_id1[i]) || !isalpha(p_id2))
+    {
+        equal_and_valid = 0;
+        goto end;
+    }
+
+    while (isalnum(p_id1[i]) && isalnum(p_id2[i]))
+    {
+        if (p_id1[i] != p_id2[i])
+            equal_and_valid = 0;
+        i++;
+    }
+end:
+    return equal_and_valid;
+}
+
 static size_t count_identifier(char *p_input)
 {
     size_t i = 0;
@@ -491,16 +513,45 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
     bufstradd(p_bufstr, ";\n\treturn 0;\n");
     bufstradd(p_bufstr, "}\n");
 }
-
-
 #if 0
-int uschshell_parent_identifier(char *p_str)
+static int recurse_protector = 0;
+
+size_t find_parent_identifier(char *p_str, char **pp_parent)
 {
-    int recurse_pos = 0;
-    int parent_pos = 0;
-        recurse_pos = find_parent('\0', &p_str[i], &parent_pos);
+    size_t i = 0;
+
+    while (p_str[i] != '\0')
+    {
+        if (isalpha(p_str[i]))
+        {
+            while (isalnum(p_str[i]))
+            {
+                i++;
+            }
+        }
+        switch (p_str[i])
+        {
+            case '(':
+            case '[':
+            case '"':
+            case '\'':
+
+        }
+        i++;
+    }
+    return i;
 }
 #endif // 0
+
+char* uschshell_parent_identifier(char *p_str)
+{
+    char* p_parent = NULL;
+
+    (void)p_str;
+
+    //find_parent_identifier(p_str, &p_parent);
+    return p_parent;
+}
 static int resolve_identifier(char *p_parsefile_fullname,
                  bufstr_t *p_filecontent,
                  char *p_line,
@@ -680,6 +731,7 @@ end:
 }
 size_t find_matching(char end, char *p_incomplete)
 {
+    // TODO: why 1?
     size_t i = 1;
     int found = 0;
     int escaped = 0;
@@ -763,4 +815,5 @@ end:
     free(p_finalized);
     return status;
 }
+
 

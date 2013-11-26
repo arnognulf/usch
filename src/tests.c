@@ -343,6 +343,26 @@ cleanup:
     return p_message;
 }
 
+static char *test_uschshell_parent()
+{
+#if 0
+    char *p_message = NULL;
+    char* p_parent = NULL;
+
+    p_parent = uschshell_parent_identifier("foo(bar(), baz(), ");
+    printf("XXX: %s\n", p_parent);
+    mu_assert("parent_pos != 0", strncmp(p_parent, "foo", strlen("foo")) == 0);
+    p_parent = uschshell_parent_identifier("foo(bar(baz()");
+    printf("XXX: %s\n", p_parent);
+    mu_assert("parent_pos != 5", strncmp(p_parent, "bar", strlen("bar")) == 0);
+
+cleanup:
+    return p_message;
+#endif // 0
+    return NULL;
+}
+
+
 
 static char *test_parserutils()
 {
@@ -403,6 +423,7 @@ static char * all_tests()
     mu_run_test(test_parserutils);
     mu_run_test(test_uschshell_parse);
     mu_run_test(test_uschshell_finalize);
+    mu_run_test(test_uschshell_parent);
     //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);
