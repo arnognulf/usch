@@ -129,6 +129,28 @@ error:
  *   @param  ...
  *   @return Description of the return value
  *   */
+/*
+ * typedef struct usch_stash_t
+ * {
+ *       usch_stash_t *p_next; 
+ *       int error;
+ *       char data[]; 
+ * }
+ *
+ * const char* usch_strexp(usch_stash_t *p_stash, char *p_pattern, __VA_ARGS)
+ * {
+ * static char *p_str = NULL;
+ * static char **pp_str = NULL;
+ * pp_str = &p_str;
+ *
+ * 
+ * }
+ * const static http://stackoverflow.com/questions/453696/is-returning-a-pointer-to-a-static-local-variable-safe
+ * 
+ * for (char *p_i = strexp(&s, "*.txt); p_i[i] != NULL; i++)
+ * {
+ * }
+ *
 #if 0
 static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char *p_str, ...)
 {
