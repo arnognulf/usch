@@ -19,7 +19,7 @@ static enum CXChildVisitResult clang_visitor(
     bufstr_t bufstr = {NULL, 0};
     int status = 0;
     char *p_fnstr = NULL;
-    uschshell_dyfn_t *p_dyfn = NULL;
+    //uschshell_dyfn_t *p_dyfn = NULL;
     CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr = {NULL, 0};
@@ -120,10 +120,10 @@ static enum CXChildVisitResult clang_visitor(
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n}\n");
-                p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
-                FAIL_IF(p_dyfn == NULL);
-                strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
-                p_dyfn->p_dyfndef = bufstr.p_str;
+                //p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
+                //FAIL_IF(p_dyfn == NULL);
+                //strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
+                //p_dyfn->p_dyfndef = bufstr.p_str;
                 bufstr.p_str = NULL;
 
                 break;
@@ -134,7 +134,7 @@ static enum CXChildVisitResult clang_visitor(
                 break;
             }
     }
-    p_dyfn = NULL;
+    //p_dyfn = NULL;
     free(p_fnstr);
     p_fnstr = NULL;
 end:
@@ -144,7 +144,7 @@ end:
     (void)status;
     free(bufstr.p_str);
     free(p_fnstr);
-    free(p_dyfn);
+    //free(p_dyfn);
     return res;
 }
 

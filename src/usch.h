@@ -47,26 +47,18 @@ extern "C" {
 #define USCH_ARGC(...) USCH_ARGC_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5,4,3,2,1)
 #define USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
 
-struct usch_stash_item
+struct usch_stash_mem
 {
-    struct usch_stash_item *p_item;
+    struct usch_stash_mem *p_next;
+    size_t size;
     char str[];
 };
 
 typedef struct
 {
-    struct usch_stash_item *p_item;
+    struct usch_stash_mem *p_next;
 } usch_stash_t;
     
-static inline char* usch_strout_impl(usch_stash_t *p_memstash, size_t num_args, char *p_name, ...)
-{
-    (void)p_memstash;
-    (void)num_args;
-    (void)p_name;
-
-    return NULL;
-}
-
 /**
  * <A short one line description>
  *  
@@ -325,9 +317,16 @@ struct usch_glob_list_t
  *   @param  ...
  *   @return Description of the return value
  *   */
-
-static inline int usch_cmd_arr(size_t num_args, char **pp_orig_argv)
+static inline int usch_cmd_arr(struct usch_stash_mem **pp_in, 
+                               struct usch_stash_mem **pp_out,
+                               struct usch_stash_mem **pp_err,
+                               size_t num_args,
+                               char **pp_orig_argv)
 {
+    (void)pp_in;
+    (void)pp_err;
+    struct usch_stash_mem *p_out = NULL;
+    int pipefd[2] = {0, 0};
 	size_t i, j;
 	struct usch_glob_list_t *p_glob_list = NULL;
 	struct usch_glob_list_t *p_current_glob_item = NULL;
@@ -339,6 +338,11 @@ static inline int usch_cmd_arr(size_t num_args, char **pp_orig_argv)
 
 	pid_t w;
 	int child_status = -1;
+
+    if (pp_out != NULL)
+    {
+        pipe(pipefd);
+    }
 
 	for (i = 0; i < num_args; i++)
 	{
@@ -404,118 +408,251 @@ static inline int usch_cmd_arr(size_t num_args, char **pp_orig_argv)
 		}
 		if(child_pid == 0)
 		{
+            if (pp_out != NULL)
+            {
+                close(pipefd[0]); // close reading end in the child
+                dup2(pipefd[1], 1); // send stdout to the pipe
+                close(pipefd[1]); // this descriptor is no longer needed
+            }
 
-			i = 0;
-			while (pp_argv[i] != NULL)
-			{
-				i++;
-			}
+            int execv_status = execvp(pp_argv[0], pp_argv);
+            fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
 
-			int execv_status = execvp(pp_argv[0], pp_argv);
-			fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
+            _exit(execv_status);
+        }
+        else
+        {
+            if (pp_out != NULL)
+            {
+                size_t i = 0;
+                size_t read_size = 1024;
+                p_out = malloc(read_size + sizeof(struct usch_stash_mem));
+                if (p_out == NULL)
+                    goto end;
+                p_out->p_next = NULL;
+                p_out->size = read_size;
 
-			_exit(execv_status);
-		}
-		else
-		{
-			do
-			{
-				w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
-				if (w == -1)
-				{
-					perror("waitpid");
-					exit(EXIT_FAILURE);
-				}
+                close(pipefd[1]);  // close the write end of the pipe in the parent
 
-				if (WIFEXITED(child_status)) 
-				{
-					status = WEXITSTATUS(child_status);
-				}
-				else if (WIFSIGNALED(child_status))
-				{
-					printf("killed by signal %d\n", WTERMSIG(child_status));
-				}
-				else if (WIFSTOPPED(child_status))
-				{
-					printf("stopped by signal %d\n", WSTOPSIG(child_status));
-				}
-				else if (WIFCONTINUED(child_status))
-				{
-					printf("continued\n");
-				}
-			} while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
-		}
-	}
+                while (read(pipefd[0], &p_out->str[i], 1) != 0)
+                {
+                    i++;
+                    if (i >= read_size)
+                    {
+                        read_size *= 2;
+                        p_out = realloc(p_out, read_size + sizeof(struct usch_stash_mem));
+                        if (p_out == NULL)
+                            goto end;
+                        p_out->size = read_size;
+                    }
+                }
+            }
+            else
+                do
+                {
+
+                    {
+                        w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
+                        if (w == -1)
+                        {
+                            perror("waitpid");
+                            exit(EXIT_FAILURE);
+                        }
+
+                        if (WIFEXITED(child_status)) 
+                        {
+                            status = WEXITSTATUS(child_status);
+                        }
+                        else if (WIFSIGNALED(child_status))
+                        {
+                            printf("killed by signal %d\n", WTERMSIG(child_status));
+                        }
+                        else if (WIFSTOPPED(child_status))
+                        {
+                            printf("stopped by signal %d\n", WSTOPSIG(child_status));
+                        }
+                        else if (WIFCONTINUED(child_status))
+                        {
+                            printf("continued\n");
+                        }
+                    }
+                } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+        }
+    }
+    if (pp_out != NULL)
+    {
+        *pp_out = p_out;
+    }
 end:
-	if (p_glob_list)
-	{
-		p_current_glob_item = p_glob_list;
-		while (p_current_glob_item != NULL)
-		{
-			struct usch_glob_list_t *p_free_glob_item = p_current_glob_item;
+    if (p_glob_list)
+    {
+        p_current_glob_item = p_glob_list;
+        while (p_current_glob_item != NULL)
+        {
+            struct usch_glob_list_t *p_free_glob_item = p_current_glob_item;
 
-			p_current_glob_item = p_current_glob_item->p_next;
+            p_current_glob_item = p_current_glob_item->p_next;
 
-			globfree(&p_free_glob_item->glob_data);
-			free(p_free_glob_item);
-		}
-	}
-
+            globfree(&p_free_glob_item->glob_data);
+            free(p_free_glob_item);
+        }
+    }
+    free(pp_argv);
 
     return status;
 }
 
 static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {
-	va_list p_ap;
-	size_t i;
-	char **pp_orig_argv = NULL;
-	int status = 0;
-	char *p_actual_format = NULL;
+    va_list p_ap;
+    size_t i;
+    char **pp_orig_argv = NULL;
+    int status = 0;
+    char *p_actual_format = NULL;
 
-	if (p_name == NULL)
-	{
-		return -1;
-	}
+    if (p_name == NULL)
+    {
+        return -1;
+    }
 
-	pp_orig_argv = calloc(num_args + 1, sizeof(char*));
-	if (pp_orig_argv == NULL)
-	{
-		status = -1;
-		goto end;
-	}
+    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
+    if (pp_orig_argv == NULL)
+    {
+        status = -1;
+        goto end;
+    }
 
-	p_actual_format = calloc(num_args*2, sizeof(char));
+    p_actual_format = calloc(num_args*2, sizeof(char));
 
-	for (i = 0; i < num_args * 2; i += 2)
-	{
-		p_actual_format[i + 0] = '%';
-		p_actual_format[i + 1] = 's';
-	}
-	p_name = p_actual_format;
+    for (i = 0; i < num_args * 2; i += 2)
+    {
+        p_actual_format[i + 0] = '%';
+        p_actual_format[i + 1] = 's';
+    }
+    p_name = p_actual_format;
 
-	va_start(p_ap, p_name);
+    va_start(p_ap, p_name);
 
-	for (i = 0; i < num_args; i++)
-	{
-		pp_orig_argv[i] = va_arg(p_ap, char *);
-	}
+    for (i = 0; i < num_args; i++)
+    {
+        pp_orig_argv[i] = va_arg(p_ap, char *);
+    }
 
 
-    status = usch_cmd_arr(num_args, pp_orig_argv);
+    status = usch_cmd_arr(NULL, NULL, NULL, num_args, pp_orig_argv);
 
 end:
-	if (num_args > 1)
-	{
-		va_end(p_ap);
-	}
+    if (num_args > 1)
+    {
+        va_end(p_ap);
+    }
 
-	fflush(stdout);
-	free(pp_orig_argv);
-	free(p_actual_format);
+    fflush(stdout);
+    free(pp_orig_argv);
+    free(p_actual_format);
 
-	return status;
+    return status;
 }
+static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
+{
+    int status = 0;
+
+    if (p_memstash == NULL || p_memblob == NULL)
+        return -1;
+
+    p_memblob->p_next = p_memstash->p_next;
+    p_memstash->p_next = p_memblob;
+
+    return status;
+}
+static inline void usch_stashfree(usch_stash_t *p_memstash)
+{
+    struct usch_stash_mem *p_current = NULL;
+    if (p_memstash == NULL)
+        return;
+    if (p_memstash->p_next == NULL)
+        return;
+
+    p_current = p_memstash->p_next;
+
+    while (p_current != NULL)
+    {
+        struct usch_stash_mem *p_prev = p_current;
+        p_current = p_current->p_next;
+        free(p_prev);
+    }
+    p_memstash->p_next = NULL;
+}
+
+static inline char* usch_strout_impl(usch_stash_t *p_memstash, size_t num_args, char *p_name, ...)
+{
+    (void)p_memstash;
+    (void)num_args;
+    (void)p_name;
+
+
+    char *p_strout = NULL;
+    va_list p_ap;
+    size_t i;
+    char **pp_orig_argv = NULL;
+    char *p_actual_format = NULL;
+    struct usch_stash_mem *p_out = NULL;
+    static char emptystr[1];
+
+    emptystr[0] = '\0';
+
+    p_strout = emptystr;
+
+
+    if (p_name == NULL)
+    {
+        goto end;
+    }
+
+    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
+    if (pp_orig_argv == NULL)
+    {
+        goto end;
+    }
+
+    p_actual_format = calloc(num_args*2, sizeof(char));
+
+    for (i = 0; i < num_args * 2; i += 2)
+    {
+        p_actual_format[i + 0] = '%';
+        p_actual_format[i + 1] = 's';
+    }
+    p_name = p_actual_format;
+
+    va_start(p_ap, p_name);
+
+    for (i = 0; i < num_args; i++)
+    {
+        pp_orig_argv[i] = va_arg(p_ap, char *);
+    }
+    (void)usch_cmd_arr(NULL, &p_out, NULL, num_args, pp_orig_argv);
+    if (usch_stash(p_memstash, p_out) != 0)
+    {
+        printf("stash failed, ohnoes!\n");
+        goto end;
+    }
+
+    p_strout = p_out->str;
+    p_out = NULL;
+end:
+    if (num_args > 1)
+    {
+        va_end(p_ap);
+    }
+
+    fflush(stdout);
+    free(pp_orig_argv);
+    free(p_actual_format);
+    free(p_out);
+
+    return p_strout;
+}
+
 #define USCH_STROUT_ARGS(p_memstash, ...) usch_strout_impl((p_memstash), USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define usch_strout(p_memstash, cmd, ...) USCH_STROUT_ARGS((p_memstash), (cmd), ##__VA_ARGS__)
 

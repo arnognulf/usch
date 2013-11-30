@@ -693,7 +693,9 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
                     if (pp_cmds[0] == NULL)
                     {
                         p_cmds = (char*)&pp_cmds[num_identifiers + 1];
+                        FAIL_IF(p_cmds == NULL);
                     }
+                    FAIL_IF(pp_identifiers[i] == NULL);
                     strcpy(p_cmds, pp_identifiers[i]);
                     pp_cmds[cmdidx] = p_cmds;
                     p_cmds += strlen(pp_identifiers[i]) + 1;

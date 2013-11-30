@@ -132,9 +132,10 @@ static char *test_usch_strout()
     usch_stash_t s = {NULL};
 
     p_str = usch_strout(&s, "echo", "foo");
+    printf("%s\n", p_str);
     mu_assert("error: usch_strout(\"echo\", \"foo\") != 0", p_str != NULL);
-    mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo"));
-    return NULL;
+    mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
+    usch_stashfree(&s);
 cleanup:
     return p_message;
 }
@@ -328,9 +329,11 @@ static char *test_uschshell_parse()
     error = uschshell_preparse(p_context, "ls", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
+    free(pp_cmds);
     error = uschshell_preparse(p_context, "ls()", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
     mu_assert("uschshell_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
+    free(pp_cmds);
 cleanup:
     (void)status;
     uschshell_destroy(p_context);
