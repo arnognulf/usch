@@ -634,7 +634,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     char *p_cmds = NULL;
     int cmdidx = 0;
 
-    fprintf(stderr, "uschshell_preparse() p_input=\"%s\"\n", p_input);
+    //fprintf(stderr, "uschshell_preparse() p_input=\"%s\"\n", p_input);
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
