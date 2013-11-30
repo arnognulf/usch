@@ -125,6 +125,20 @@ static char *test_usch_chdir()
 cleanup:
     return p_message;
 }
+static char *test_usch_strout()
+{
+    char *p_message = NULL;
+    char *p_str = NULL;
+    usch_stash_t s = {NULL};
+
+    p_str = usch_strout(&s, "echo", "foo");
+    mu_assert("error: usch_strout(\"echo\", \"foo\") != 0", p_str != NULL);
+    mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo"));
+    return NULL;
+cleanup:
+    return p_message;
+}
+
 static char *test_uschshell_vars()
 {
     char *p_message = NULL;
@@ -424,6 +438,7 @@ static char * all_tests()
     mu_run_test(test_uschshell_parse);
     mu_run_test(test_uschshell_finalize);
     mu_run_test(test_uschshell_parent);
+    mu_run_test(test_usch_strout);
     //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);
