@@ -57,7 +57,7 @@ extern "C" {
  *   @param  ...
  *   @return Description of the return value
  *   */
-static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
+static inline int usch_strsplit(const char* p_in, char* p_delims, char*** ppp_out)
 {
     char** pp_out = NULL;
     char* p_out = NULL;
@@ -151,182 +151,12 @@ error:
  * {
  * }
  *
-#if 0
-static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char *p_str, ...)
-{
-    va_list p_ap;
-    size_t i;
-    //char *s = NULL;
-    char *p_actual_format = NULL;
-    char **pp_argv = NULL;
-    //pid_t child_pid;
-    //int child_status;
-
-    if (p_str == NULL)
-    {
-        return -1;
-    }
-
-    pp_argv = calloc(num_args + 2, sizeof(char*));
-    pp_argv[0] = p_str;
-
-    p_actual_format = calloc(num_args*2, sizeof(char));
-
-    for (i = 0; i < num_args * 2; i += 2)
-    {
-        p_actual_format[i + 0] = '%';
-        p_actual_format[i + 1] = 's';
-    }
-    p_str = p_actual_format;
-
-    va_start(p_ap, p_str);
-    for (i = 0; i < num_args; i++)
-    {
-        pp_argv[i + 1] = va_arg(p_ap, char *);
-    }
-
-    va_end(p_ap);
-
-    free(pp_argv);
-
-    return 0;
-    return -1;
-}
-#endif // 0
-
-#if 0
-/**
- * <A short one line description>
- *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
- *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
- *   */
-
-static inline int usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
-{
-    int status = 0;
-    size_t i;
-    char *p_dest = NULL;
-    char **pp_path = NULL;
-    char **pp_relarray = NULL;
-    size_t num_items = 0;
-    char *p_item = NULL;
-    char *p_item_copy = NULL;
-    size_t item_length = strlen(p_search_item);
-
-    if (p_search_item[0] == '/' || p_search_item[0] == '.')
-    {
-        int basename_index = -1;
-        pp_relarray = (char**)calloc(1, sizeof(char*));
-        if (pp_relarray == NULL)
-        {
-            status = -1;
-            goto end;
-        }
-        p_item_copy = calloc(strlen(p_search_item), 1);
-        if (p_item_copy == NULL)
-        {
-            status = -1;
-            goto end;
-        }
-
-        for (i = 0; i < item_length; i++)
-        {
-            if (p_item_copy[i] == '/')
-            {
-                basename_index = i;
-            }
-        }
-        if (basename_index < 0)
-        {
-            status = -1;
-            goto end;
-        }
-        p_item_copy[basename_index] = '\0';
-
-        pp_relarray[0] = p_item_copy;
-        pp_path = pp_relarray;
-        num_items = 1;
-        p_item = &p_item_copy[basename_index + 1];
-    }
-    else
-    {
-        p_item = p_search_item;
-        pp_path = pp_cached_path;
-        num_items = path_items;
-    }
-
-    for (i = 0; i < num_items; i++)
-    {
-        size_t dir_length = strlen(pp_path[i]);
-        char new_path[dir_length + 1 + item_length + 1];
-        struct stat sb;
-
-        memcpy(new_path, pp_path[i], dir_length);
-        new_path[dir_length] = '/';
-        memcpy(&new_path[dir_length + 1], p_item, item_length);
-        new_path[dir_length + 1 + item_length] = '\0';
-        if (stat(new_path, &sb) == -1)
-            continue;
-
-        status = 1;
-        // TODO: discard if not executable
-        //printf("%s %lo\n", new_path, sb.st_mode);
-        p_dest = (char*)malloc(dir_length + 1 + item_length + 1);
-        if (p_dest == NULL)
-        {
-            status = -1;
-            goto end;
-        }
-        memcpy(p_dest, new_path, dir_length + item_length + 1);
-        *pp_dest = p_dest;
-        p_dest = NULL;
-        goto end;
-    }
-end:
-    free(pp_relarray);
-    free(p_item_copy);
-    free(p_dest);
-
-    return status;
-}
-static inline int usch_whereis(char* p_item, char** pp_dest)
-{
-    char **pp_path = NULL;
-    int status = 0;
-    int num_items = 0;
-    num_items = usch_strsplit(getenv("PATH"), ":", &pp_path);
-    if (num_items < 1)
-    {
-        status = -1;
-        goto end;
-    }
-    status = usch_cached_whereis(pp_path, num_items, p_item, pp_dest);
-end:
-    free(pp_path);
-    return status;
-}
-#endif // 0
+ */
 struct usch_glob_list_t
 {
     struct usch_glob_list_t *p_next;
     glob_t glob_data;
 } usch_glob_list_t;
-
-/**
- * <A short one line description>
- *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
- *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
- *   */
 
 static inline int usch_cmd_impl(size_t num_args, char *p_name, ...)
 {

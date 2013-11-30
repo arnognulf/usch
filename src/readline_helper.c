@@ -74,10 +74,10 @@ static int xgetch()
 
     if (buf == ' ')
     {
-        fprintf(stderr, "xgetch() 1: state=%d rl_line_buffer=%s", (int)state, rl_line_buffer);
+        fprintf(stderr, "\nxgetch() 1: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
         FAIL_IF(uschshell_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
         free(pp_cmds);
-        fprintf(stderr, "xgetch() 2: state=%d rl_line_buffer=%s", (int)state, rl_line_buffer);
+        fprintf(stderr, "\nxgetch() 2: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
         if (state == USCHSHELL_STATE_CMDSTART)
         {
             char text[] = "(";
@@ -142,13 +142,16 @@ static int prompt(struct uschshell_t *p_context)
     stifle_history(7);
 
     rl_already_prompted = 0;
-    rl_initialize();
-    rl_set_prompt("/* usch */ ");
     for (;;)
     {
+        //size_t clear_len = 0;
         char *p_s = NULL;
         state = USCHSHELL_STATE_CPARSER;
+        rl_initialize();
+        rl_set_prompt("/* usch */ ");
         p_line = readline ("/* usch */ ");
+        //clear_len = strlen(p_line);
+        //memset(rl_line_buffer, clear_len, '\0');
 
         FAIL_IF(p_line == NULL);
         p_s = stripwhite(p_line);

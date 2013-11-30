@@ -303,7 +303,7 @@ char* stripwhite(char *string)
       return p_s;
 
    p_t = p_s + strlen(p_s) - 1;
-   while (p_t > p_s && isspace(*p_t))
+   while (p_t > p_s && (isspace(*p_t) || *p_t == '\n' || *p_t == '\r' || *p_t == '\t'))
    {
        *p_t = '\0';
        p_t--;

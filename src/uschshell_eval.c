@@ -500,7 +500,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     fclose(p_stmt_c);
     p_stmt_c = NULL;
-    usch_cmd("cat", p_tempfile);
+//    usch_cmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
     FAIL_IF(p_tempdylib == NULL);
