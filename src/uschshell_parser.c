@@ -482,6 +482,9 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
 {
     int i;
     p_bufstr->p_str[0] = '\0';
+    bufstradd(p_bufstr, "#ifndef USCHSHELL_PARSER\n");
+    bufstradd(p_bufstr, "#define USCHSHELL_PARSER\n");
+    bufstradd(p_bufstr, "#endif // USCHSHELL_PARSER\n");
     bufstradd(p_bufstr, "struct uschshell_t;\n");
     bufstradd(p_bufstr, "#include <usch.h>\n");
     bufstradd(p_bufstr, "#include \"includes.h\"\n");
@@ -603,6 +606,11 @@ static int is_builtin_cmd(char *p_str)
     {
         is_builtin = 1;
     }
+    if (strncmp(p_str, "cd", strlen("cd")) == 0 && strlen("cd") == strlen(p_str))
+    {
+        is_builtin = 1;
+    }
+
     if (strncmp(p_str, "define", strlen("define")) == 0 && strlen("define") == strlen(p_str))
     {
         is_builtin = 1;

@@ -415,11 +415,26 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     for (i = 0; pp_cmds[i] != NULL; i++)
     {
-        bufstradd(&stmt_c, "#define ");
-        bufstradd(&stmt_c, definition.p_symname);
-        bufstradd(&stmt_c, "(...) usch_cmd(\"");
-        bufstradd(&stmt_c, definition.p_symname);
-        bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+        if (strcmp(pp_cmds[i], "cd") == 0)
+        {
+            ;
+        }
+        else if (strcmp(pp_cmds[i], "lib") == 0)
+        {
+            ;
+        }
+        else if (strcmp(pp_cmds[i], "header") == 0)
+        {
+            ;
+        }
+        else
+        {
+            bufstradd(&stmt_c, "#define ");
+            bufstradd(&stmt_c, definition.p_symname);
+            bufstradd(&stmt_c, "(...) usch_cmd(\"");
+            bufstradd(&stmt_c, definition.p_symname);
+            bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+        }
     }
 
 #if 0
