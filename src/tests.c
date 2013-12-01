@@ -132,7 +132,6 @@ static char *test_usch_strout()
     usch_stash_t s = {NULL};
 
     p_str = usch_strout(&s, "echo", "foo");
-    printf("%s\n", p_str);
     mu_assert("error: usch_strout(\"echo\", \"foo\") != 0", p_str != NULL);
     mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
     usch_stashfree(&s);

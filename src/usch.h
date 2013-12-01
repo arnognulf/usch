@@ -446,6 +446,7 @@ static inline int usch_cmd_arr(struct usch_stash_mem **pp_in,
                         p_out->size = read_size;
                     }
                 }
+                p_out->str[i] = '\0';
             }
             else
                 do

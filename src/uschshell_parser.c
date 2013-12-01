@@ -319,11 +319,14 @@ static int is_system_cmd(char *p_cmd)
     char *p_item = NULL;
     char *p_tmp = NULL;
     char path[PATH_MAX] = {0};
-    char *std = NULL;
-    std = getenv("PATH");
+    char *p_std = NULL;
+
+    int status = 0;
+    p_std = strdup(getenv("PATH"));
+    FAIL_IF(p_std == NULL);
     int found = 0;
 
-    for (p_item = std;; *p_item++ = ':')
+    for (p_item = p_std;; *p_item++ = ':')
     {
         p_tmp = p_item;
         if ((p_item = strchr(p_item, ':')) != NULL) {
@@ -350,6 +353,10 @@ static int is_system_cmd(char *p_cmd)
             break;
         }
     }
+end:
+    free(p_std);
+    if (status != 0)
+        found = 0;
     return found;
 }
 
@@ -634,6 +641,8 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
     char *p_cmds = NULL;
     int cmdidx = 0;
 
+    //fprintf(stderr, "\nPATH: %s\n", getenv("PATH"));
+
     //fprintf(stderr, "uschshell_preparse() p_input=\"%s\"\n", p_input);
 
     p_line_copy = strdup(p_input);
@@ -737,6 +746,7 @@ end:
     free(pp_cmds);
 
     free(filecontent.p_str);
+    //fprintf(stderr, "\nPATH: %s\n", getenv("PATH"));
     return status;
 }
 size_t find_matching(char end, char *p_incomplete)
