@@ -1,13 +1,13 @@
 #include <dlfcn.h>
 #include <stdio.h>
-#include "uschshell.h"
-#include "uschshell_types.h"
+#include "crepl.h"
+#include "crepl_types.h"
 #include "usch_debug.h"
 #include "clang-c/Index.h"
 #include "bufstr.h"
 #include "strutils.h"
 
-static int has_symbol(struct uschshell_t *p_context, const char* p_sym);
+static int has_symbol(struct crepl_t *p_context, const char* p_sym);
 
 static enum CXChildVisitResult clang_visitor(
         CXCursor cursor, 
@@ -15,19 +15,19 @@ static enum CXChildVisitResult clang_visitor(
         CXClientData p_client_data)
 {
     (void)parent;
-    uschshell_dyfn_t *p_dyfns = NULL;
+    crepl_dyfn_t *p_dyfns = NULL;
     bufstr_t bufstr = {NULL, 0};
     int status = 0;
     char *p_fnstr = NULL;
-    //uschshell_dyfn_t *p_dyfn = NULL;
+    //crepl_dyfn_t *p_dyfn = NULL;
     CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr = {NULL, 0};
     CXString cxid = {NULL, 0}; 
-    uschshell_t *p_context = NULL;
+    crepl_t *p_context = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
-    p_context = (uschshell_t*)p_client_data;
+    p_context = (crepl_t*)p_client_data;
     FAIL_IF(p_context == NULL);
     p_dyfns = p_context->p_dyfns;
     (void)p_dyfns;
@@ -101,7 +101,7 @@ static enum CXChildVisitResult clang_visitor(
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n");
-                bufstradd(&bufstr, "\thandle = uschshell_getdyfnhandle(p_uschshell_context, \"");
+                bufstradd(&bufstr, "\thandle = crepl_getdyfnhandle(p_crepl_context, \"");
                 bufstradd(&bufstr, clang_getCString(cxid));
                 bufstradd(&bufstr, "\");\n");
                 bufstradd(&bufstr, "\treturn handle(");
@@ -120,7 +120,7 @@ static enum CXChildVisitResult clang_visitor(
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n}\n");
-                //p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(uschshell_dyfn_t), 1);
+                //p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(crepl_dyfn_t), 1);
                 //FAIL_IF(p_dyfn == NULL);
                 //strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
                 //p_dyfn->p_dyfndef = bufstr.p_str;
@@ -148,14 +148,14 @@ end:
     return res;
 }
 
-static int has_symbol(struct uschshell_t *p_context, const char* p_sym) 
+static int has_symbol(struct crepl_t *p_context, const char* p_sym) 
 {
     int status = 0;
     int symbol_found = 0;
     void *p_handle = NULL;
     char *p_error = NULL;
     int (*dyn_func)();
-    uschshell_lib_t *p_lib = NULL;
+    crepl_lib_t *p_lib = NULL;
 
     p_lib = p_context->p_libs;
     
@@ -178,15 +178,15 @@ end:
     return symbol_found;
 }
 
-int uschshell_lib(struct uschshell_t *p_context, char *p_libname)
+int crepl_lib(struct crepl_t *p_context, char *p_libname)
 {
     int status = 0;
-    uschshell_lib_t *p_lib = NULL;
-    uschshell_lib_t *p_current_lib = NULL;
+    crepl_lib_t *p_lib = NULL;
+    crepl_lib_t *p_current_lib = NULL;
 
     FAIL_IF(p_context == NULL || p_libname == NULL);
     
-    p_lib = calloc(sizeof(uschshell_lib_t) + strlen(p_libname), 1);
+    p_lib = calloc(sizeof(crepl_lib_t) + strlen(p_libname), 1);
     FAIL_IF(p_lib == NULL);
 
     strcpy(p_lib->libname, p_libname);
@@ -213,7 +213,7 @@ end:
     return status;
 }
 
-static int loadsyms_from_header_ok(uschshell_t *p_context, char *p_includefile)
+static int loadsyms_from_header_ok(crepl_t *p_context, char *p_includefile)
 {
     int status = 0;
     CXTranslationUnit p_tu = NULL;
@@ -237,15 +237,15 @@ end:
     return status;
 }
 
-int uschshell_include(struct uschshell_t *p_context, char *p_header)
+int crepl_include(struct crepl_t *p_context, char *p_header)
 {
     int status = 0;
     char *p_tmpheader = NULL;
     char tmp_h[] = "tmp.h";
     FILE *p_includefile = NULL;
     char *p_tmpdir = NULL;
-    uschshell_inc_t *p_inc = NULL;
-    uschshell_inc_t *p_incs = NULL;
+    crepl_inc_t *p_inc = NULL;
+    crepl_inc_t *p_incs = NULL;
 
     FAIL_IF(p_context == NULL || p_header == NULL);
 
@@ -276,7 +276,7 @@ int uschshell_include(struct uschshell_t *p_context, char *p_header)
     p_includefile = NULL;
     FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
 
-    p_inc = calloc(strlen(p_header) + 1 + sizeof(uschshell_inc_t), 1);
+    p_inc = calloc(strlen(p_header) + 1 + sizeof(crepl_inc_t), 1);
     FAIL_IF(p_inc == NULL);
     strcpy(p_inc->incname, p_header);
     HASH_ADD_STR(p_incs, incname, p_inc);
@@ -286,11 +286,11 @@ end:
         fclose(p_includefile);
     return status;
 }
-void* uschshell_getdyfnhandle(uschshell_t *p_context, const char *p_id)
+void* crepl_getdyfnhandle(crepl_t *p_context, const char *p_id)
 {
     int status = 0;
-    uschshell_dyfn_t *p_dyfns = NULL;
-    uschshell_dyfn_t *p_dyfn = NULL;
+    crepl_dyfn_t *p_dyfns = NULL;
+    crepl_dyfn_t *p_dyfn = NULL;
     void *p_handle = NULL;
 
     if (p_context == NULL || p_id == NULL)

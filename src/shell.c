@@ -3,7 +3,7 @@
 #include <malloc.h>
 
 #include "pmcurses.h"
-#include "uschshell.h"
+#include "crepl.h"
 #include "usch_debug.h"
 
 #define INPUT_BUFFER_MAX 32676
@@ -32,7 +32,7 @@ int main(void)
     char prompt[] = "/* usch */ ";
     int c;
     USCH_FN_STATE fn_state = USCH_FN_START;
-    struct uschshell_t *p_context = NULL;
+    struct crepl_t *p_context = NULL;
     char *p_history_input[INPUT_HISTORY_BUFFERS] = {0};
     int history_index;
     char buf[PMCURSES_GETCH_BUFSZ] = {0};
@@ -49,8 +49,8 @@ int main(void)
     printf("%s", prompt);
     fflush(stdout);
     
-    FAIL_IF(uschshell_create(&p_context) != 0);
-    FAIL_IF(uschshell_pathhash(p_context) != 0);
+    FAIL_IF(crepl_create(&p_context) != 0);
+    FAIL_IF(crepl_pathhash(p_context) != 0);
 
     while ((c = pmcurses_getch(buf)) != EOF && c != CONTROL('d'))
     {
@@ -130,7 +130,7 @@ int main(void)
                 }
             case KEY_SPACE:
                 {
-                    if (uschshell_is_cmd(p_context, p_input))
+                    if (crepl_is_cmd(p_context, p_input))
                     {
                         switch (fn_state)
                         {
@@ -188,7 +188,7 @@ int main(void)
                 }
             case KEY_NEWLINE:
                 {
-                    if (uschshell_is_cmd(p_context, p_input))
+                    if (crepl_is_cmd(p_context, p_input))
                     {
 
                         switch (fn_state)
@@ -244,7 +244,7 @@ int main(void)
                     p_input[input_index++] = '\0';
                     if (strlen(p_input) > 0)
                     {
-                        status = uschshell_eval(p_context, p_input);
+                        status = crepl_eval(p_context, p_input);
                     }
                     p_input[0] = '\0';
                     input_index = 0;
@@ -276,7 +276,7 @@ end:
     {
         free(p_history_input[history_index]);
     }
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     free(p_input);
     return 0;
 }

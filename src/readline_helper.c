@@ -37,11 +37,11 @@
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
-#include "uschshell.h"
+#include "crepl.h"
 #include "usch_debug.h"
-static uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+static crepl_state_t state = USCHSHELL_STATE_CPARSER;
 
-static struct uschshell_t *p_global_context = NULL;
+static struct crepl_t *p_global_context = NULL;
 static int xgetch() 
 {
     int status = 0;
@@ -75,7 +75,7 @@ static int xgetch()
     if (buf == ' ')
     {
         //fprintf(stderr, "\nxgetch() 1: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
-        FAIL_IF(uschshell_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
+        FAIL_IF(crepl_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
         free(pp_cmds);
         //fprintf(stderr, "\nxgetch() 2: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
         if (state == USCHSHELL_STATE_CMDSTART)
@@ -127,11 +127,11 @@ static char* stripwhite(char *string)
    return p_s;
 }
 
-static void execute_line(struct uschshell_t *p_context, char *p_input)
+static void execute_line(struct crepl_t *p_context, char *p_input)
 {
-    uschshell_eval(p_context, p_input);
+    crepl_eval(p_context, p_input);
 }
-static int prompt(struct uschshell_t *p_context)
+static int prompt(struct crepl_t *p_context)
 {
     (void)p_context;
     int status = 0;
@@ -186,10 +186,10 @@ int main(int argc, char** p_argv)
 
     (void)p_argv;
     (void)argc;
-    struct uschshell_t *p_uschshell = NULL;
-    uschshell_create(&p_uschshell);
-    p_global_context = p_uschshell;
-    prompt(p_uschshell);
-    uschshell_destroy(p_uschshell);
+    struct crepl_t *p_crepl = NULL;
+    crepl_create(&p_crepl);
+    p_global_context = p_crepl;
+    prompt(p_crepl);
+    crepl_destroy(p_crepl);
 }
 

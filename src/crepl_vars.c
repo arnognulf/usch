@@ -1,22 +1,22 @@
 #include <stdio.h>
 
-#include "uschshell.h"
-#include "uschshell_types.h"
+#include "crepl.h"
+#include "crepl_types.h"
 #include "usch_debug.h"
 
-int uschshell_define(uschshell_t *p_context, size_t var_size, char *p_defname)
+int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
 {
     int status = 0;
     if (p_context == NULL || p_defname == NULL)
         return -1;
-    uschshell_def_t *p_defs = p_context->p_defs;
-    uschshell_def_t *p_def = NULL;
+    crepl_def_t *p_defs = p_context->p_defs;
+    crepl_def_t *p_def = NULL;
     void *p_alloc_data = NULL;
     HASH_FIND_STR(p_defs, p_defname, p_def);
 
     FAIL_IF(p_def != NULL);
 
-    p_def = calloc(sizeof(uschshell_def_t) + strlen(p_defname) + 1, 1);
+    p_def = calloc(sizeof(crepl_def_t) + strlen(p_defname) + 1, 1);
     FAIL_IF(p_def == NULL);
 
     if (var_size > USCHSHELL_DEFINE_SIZE)
@@ -36,12 +36,12 @@ end:
     free(p_def);
     return status;
 }
-void uschshell_undef(uschshell_t *p_context, char *p_defname)
+void crepl_undef(crepl_t *p_context, char *p_defname)
 {
     if (p_context == NULL || p_defname == NULL)
         return;
-    uschshell_def_t *p_def = NULL;
-    uschshell_def_t *p_defs = p_context->p_defs;
+    crepl_def_t *p_def = NULL;
+    crepl_def_t *p_defs = p_context->p_defs;
     HASH_FIND_STR(p_defs, p_defname, p_def);
     if (p_def != NULL)
     {
@@ -53,13 +53,13 @@ void uschshell_undef(uschshell_t *p_context, char *p_defname)
     }
     return;
 }
-int uschshell_load(uschshell_t *p_context, char *p_defname, void *p_data)
+int crepl_load(crepl_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
     if (p_context == NULL || p_defname == NULL)
         return -1;
-    uschshell_def_t *p_def = NULL;
-    uschshell_def_t *p_defs = p_context->p_defs;
+    crepl_def_t *p_def = NULL;
+    crepl_def_t *p_defs = p_context->p_defs;
     HASH_FIND_STR(p_defs, p_defname, p_def);
     if (p_def != NULL)
     {
@@ -124,15 +124,15 @@ static void print_updated_variables(char *p_defname, void *p_data)
 
 }
 
-int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
+int crepl_store(crepl_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
     uint8_t tmp[USCHSHELL_DEFINE_SIZE] = {0};
     int is_updated = 0;
     if (p_context == NULL || p_defname == NULL)
         return -1;
-    uschshell_def_t *p_def = NULL;
-    uschshell_def_t *p_defs = p_context->p_defs;
+    crepl_def_t *p_def = NULL;
+    crepl_def_t *p_defs = p_context->p_defs;
     HASH_FIND_STR(p_defs, p_defname, p_def);
     
     if (p_def != NULL)
@@ -160,19 +160,19 @@ int uschshell_store(uschshell_t *p_context, char *p_defname, void *p_data)
     return status;
 }
 
-int uschshell_define_fn(struct uschshell_t *p_context, char *p_fndefname, char *p_body)
+int crepl_define_fn(struct crepl_t *p_context, char *p_fndefname, char *p_body)
 {
     int status = 0;
     if (p_context == NULL || p_fndefname == NULL || p_body == NULL)
         return -1;
-    uschshell_def_t *p_defs = p_context->p_defs;
-    uschshell_def_t *p_def = NULL;
+    crepl_def_t *p_defs = p_context->p_defs;
+    crepl_def_t *p_def = NULL;
     void *p_body_data = NULL;
     HASH_FIND_STR(p_defs, p_fndefname, p_def);
 
     FAIL_IF(p_def != NULL);
 
-    p_def = calloc(sizeof(uschshell_def_t) + strlen(p_fndefname) + 1, 1);
+    p_def = calloc(sizeof(crepl_def_t) + strlen(p_fndefname) + 1, 1);
     FAIL_IF(p_def == NULL);
 
     p_body_data = calloc(strlen(p_body) + 1, 1);

@@ -69,7 +69,7 @@ typedef struct
  *   @param  ...
  *   @return Description of the return value
  *   */
-static inline int usch_strsplit(char* p_in, char* p_delims, char*** ppp_out)
+static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***ppp_out)
 {
     char** pp_out = NULL;
     char* p_out = NULL;

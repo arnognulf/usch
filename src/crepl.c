@@ -34,8 +34,8 @@
 #include "usch.h"
 #include "usch_debug.h"
 #include "bufstr.h"
-#include "uschshell_parser.h"
-#include "uschshell_types.h"
+#include "crepl_parser.h"
+#include "crepl_types.h"
 #include "strutils.h"
 
 #define MAX(a,b) \
@@ -43,37 +43,37 @@
      __typeof__ (b) _b = (b); \
      _a > _b ? _a : _b; })
 
-#include "uschshell.h"
+#include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
-int uschshell_create(uschshell_t **pp_context)
+int crepl_create(crepl_t **pp_context)
 {
     int status = 0;
-    uschshell_t *p_context = NULL;
-    uschshell_def_t *p_def = NULL;
-    uschshell_sym_t *p_sym = NULL;
-    uschshell_dyfn_t *p_dyfn = NULL;
-    uschshell_inc_t *p_inc = NULL;
+    crepl_t *p_context = NULL;
+    crepl_def_t *p_def = NULL;
+    crepl_sym_t *p_sym = NULL;
+    crepl_dyfn_t *p_dyfn = NULL;
+    crepl_inc_t *p_inc = NULL;
     char dir_template[] = "/tmp/usch-XXXXXX";
     char *p_tempdir = NULL;
 
-    p_context = calloc(sizeof(uschshell_t) + strlen(dir_template) + 1, 1);
+    p_context = calloc(sizeof(crepl_t) + strlen(dir_template) + 1, 1);
     FAIL_IF(p_context == NULL);
 
     p_tempdir = mkdtemp(dir_template);
     FAIL_IF(p_tempdir == NULL);
     strcpy(p_context->tmpdir, dir_template);
 
-    p_def = calloc(sizeof(uschshell_def_t) + 1, 1);
+    p_def = calloc(sizeof(crepl_def_t) + 1, 1);
     FAIL_IF(p_def == NULL);
 
-    p_sym = calloc(sizeof(uschshell_sym_t) + 1, 1);
+    p_sym = calloc(sizeof(crepl_sym_t) + 1, 1);
     FAIL_IF(p_sym == NULL);
 
-    p_dyfn = calloc(sizeof(uschshell_dyfn_t) + 1, 1);
+    p_dyfn = calloc(sizeof(crepl_dyfn_t) + 1, 1);
     FAIL_IF(p_dyfn == NULL);
 
-    p_inc = calloc(sizeof(uschshell_inc_t) + 1, 1);
+    p_inc = calloc(sizeof(crepl_inc_t) + 1, 1);
     FAIL_IF(p_inc == NULL);
 
     HASH_ADD_STR(p_context->p_defs, defname, p_def);
@@ -96,22 +96,22 @@ end:
     free(p_context);
     return status;
 }
-void uschshell_destroy(uschshell_t *p_context)
+void crepl_destroy(crepl_t *p_context)
 {
 
     if (p_context)
     {
-        uschshell_sym_t *p_tmpsym = NULL;
-        uschshell_sym_t *p_sym = NULL;
-        uschshell_sym_t *p_syms = p_context->p_syms;
+        crepl_sym_t *p_tmpsym = NULL;
+        crepl_sym_t *p_sym = NULL;
+        crepl_sym_t *p_syms = p_context->p_syms;
 
         HASH_ITER(hh, p_syms, p_sym, p_tmpsym) {
             HASH_DEL(p_syms, p_sym);
         }
 
-        uschshell_def_t *p_tmpdef = NULL;
-        uschshell_def_t *p_def = NULL;
-        uschshell_def_t *p_defs = p_context->p_defs;
+        crepl_def_t *p_tmpdef = NULL;
+        crepl_def_t *p_def = NULL;
+        crepl_def_t *p_defs = p_context->p_defs;
 
         HASH_ITER(hh, p_defs, p_def, p_tmpdef) {
             free(p_def->p_body_data);
@@ -120,14 +120,14 @@ void uschshell_destroy(uschshell_t *p_context)
             HASH_DEL(p_defs, p_def);
         }
 
-        uschshell_dyfn_t *p_tmpdyfn = NULL;
-        uschshell_dyfn_t *p_dyfn = NULL;
-        uschshell_dyfn_t *p_dyfns = p_context->p_dyfns;
+        crepl_dyfn_t *p_tmpdyfn = NULL;
+        crepl_dyfn_t *p_dyfn = NULL;
+        crepl_dyfn_t *p_dyfns = p_context->p_dyfns;
 
         HASH_ITER(hh, p_dyfns, p_dyfn, p_tmpdyfn) {
             HASH_DEL(p_dyfns, p_dyfn);
         }
-        // TODO: free uschshell_lib_t
+        // TODO: free crepl_lib_t
 
     }
     free(p_context);

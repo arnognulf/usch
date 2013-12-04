@@ -30,12 +30,12 @@
 #include "../external/uthash/src/uthash.h"
 
 #include "usch.h"
-#include "uschshell.h"
+#include "crepl.h"
 #include "usch_debug.h"
 #include "pmcurses.h"
 #include <editline/readline.h>
 #include <locale.h>
-#include "uschshell_parser.h"
+#include "crepl_parser.h"
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -139,7 +139,7 @@ cleanup:
     return p_message;
 }
 
-static char *test_uschshell_vars()
+static char *test_crepl_vars()
 {
     char *p_message = NULL;
     int error;
@@ -150,86 +150,86 @@ static char *test_uschshell_vars()
     char right_str[] = "right";
     char wrong_str[] = "wrong";
     char *p_str = NULL;
-    struct uschshell_t *p_context = NULL;
+    struct crepl_t *p_context = NULL;
 
-    error = uschshell_create(&p_context);
-    mu_assert("error: uschshell_create(&p_context) != 0", error == 0);
-    error = uschshell_define(p_context, sizeof(int_test), "int int_test");
-    mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
-    uschshell_undef(p_context, "int int_test");
-    error = uschshell_load(p_context, "int int_test", (void*)&int_test);
-    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
+    error = crepl_create(&p_context);
+    mu_assert("error: crepl_create(&p_context) != 0", error == 0);
+    error = crepl_define(p_context, sizeof(int_test), "int int_test");
+    mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
+    crepl_undef(p_context, "int int_test");
+    error = crepl_load(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: crepl_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
 
-    error = uschshell_define(p_context, sizeof(int_test), "int int_test");
-    mu_assert("error: uschshell_define(p_context, sizeof(int_test) != 0", error == 0);
+    error = crepl_define(p_context, sizeof(int_test), "int int_test");
+    mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
 
     int_test = 42;
-    error = uschshell_store(p_context, "int int_test", (void*)&int_test);
-    mu_assert("error: uschshell_store(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
+    error = crepl_store(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: crepl_store(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
 
     int_test = 994;
 
-    error = uschshell_load(p_context, "int int_test", (void*)&int_test);
-    mu_assert("error: uschshell_load(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
+    error = crepl_load(p_context, "int int_test", (void*)&int_test);
+    mu_assert("error: crepl_load(p_context, \"int int_test\", (void*)&int_test) != 0", error == 0);
     mu_assert("error: int_test != 42", int_test == 42);
 
     float_test = 3.14f;
-    uschshell_define(p_context, sizeof(float_test), "float float_test");
-    uschshell_store(p_context, "float float_test", (void*)&float_test);
+    crepl_define(p_context, sizeof(float_test), "float float_test");
+    crepl_store(p_context, "float float_test", (void*)&float_test);
     float_test = 994.0f;
-    uschshell_load(p_context, "float float_test", (void*)&float_test);
+    crepl_load(p_context, "float float_test", (void*)&float_test);
     mu_assert("error: float_test != 3.14", float_test == 3.14f);
 
     p_str = right_str;
-    uschshell_define(p_context, sizeof(p_str), "char *p_str");
-    uschshell_store(p_context, "char *p_str", (void*)&p_str);
+    crepl_define(p_context, sizeof(p_str), "char *p_str");
+    crepl_store(p_context, "char *p_str", (void*)&p_str);
     p_str = wrong_str;
-    uschshell_load(p_context, "char *p_str", (void*)&p_str);
+    crepl_load(p_context, "char *p_str", (void*)&p_str);
     mu_assert("error: p_str != right_str", strcmp(p_str, right_str) == 0);
 
     double_test = 3.14;
-    uschshell_define(p_context, sizeof(double_test), "double double_test");
-    uschshell_store(p_context, "double double_test", (void*)&double_test);
+    crepl_define(p_context, sizeof(double_test), "double double_test");
+    crepl_store(p_context, "double double_test", (void*)&double_test);
     double_test = 994.0f;
-    uschshell_load(p_context, "double double_test", (void*)&double_test);
+    crepl_load(p_context, "double double_test", (void*)&double_test);
     mu_assert("error: double_test != 3.14", double_test == 3.14);
 
     char_test = 'a';
-    uschshell_define(p_context, sizeof(char_test), "char char_test");
-    uschshell_store(p_context, "char char_test", (void*)&char_test);
+    crepl_define(p_context, sizeof(char_test), "char char_test");
+    crepl_store(p_context, "char char_test", (void*)&char_test);
     char_test = 'f';
-    uschshell_load(p_context, "char char_test", (void*)&char_test);
+    crepl_load(p_context, "char char_test", (void*)&char_test);
     mu_assert("error: char_test != 3.14", char_test == 'a');
 
 
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return NULL;
 cleanup:
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return p_message;
 }
-static char *test_uschshell_dyld()
+static char *test_crepl_dyld()
 {
     char *p_message = NULL;
     int error = 0;
-    struct uschshell_t *p_context = NULL;
+    struct crepl_t *p_context = NULL;
 
-    error = uschshell_create(&p_context);
-    mu_assert("error: uschshell_create(&p_context) != 0", error == 0);
+    error = crepl_create(&p_context);
+    mu_assert("error: crepl_create(&p_context) != 0", error == 0);
 #ifdef __x86_64__
-    error = uschshell_lib(p_context, "/usr/lib/x86_64-linux-gnu/libm.so"); // "m"
+    error = crepl_lib(p_context, "/usr/lib/x86_64-linux-gnu/libm.so"); // "m"
 #else
-    error = uschshell_lib(p_context, "/usr/lib/i386-linux-gnu/libm.so");
+    error = crepl_lib(p_context, "/usr/lib/i386-linux-gnu/libm.so");
 #endif // 0
-    mu_assert("error: uschshell_lib() != 0", error == 0);
-    error = uschshell_include(p_context, "<math.h>");
-    //error = uschshell_include(p_context, "<xmmintrin.h>");
-    mu_assert("error: uschshell_include(p_context, \"<math.h>\") != 0", error == 0);
+    mu_assert("error: crepl_lib() != 0", error == 0);
+    error = crepl_include(p_context, "<math.h>");
+    //error = crepl_include(p_context, "<xmmintrin.h>");
+    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
 
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return NULL;
 cleanup:
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return p_message;
 }
 
@@ -266,14 +266,14 @@ cleanup:
     }
     return p_message;
 }
-static char *test_uschshell_parse()
+static char *test_crepl_parse()
 {
     int status;
     char *p_message = NULL;
     int error;
-    struct uschshell_t *p_context = NULL;
-    error = uschshell_create(&p_context);
-    uschshell_state_t state = USCHSHELL_STATE_CPARSER;
+    struct crepl_t *p_context = NULL;
+    error = crepl_create(&p_context);
+    crepl_state_t state = USCHSHELL_STATE_CPARSER;
     char **pp_cmds = NULL;
 #if 0
     int num_ids = 0;
@@ -325,50 +325,50 @@ static char *test_uschshell_parse()
 #if 0
 #endif // 0
 
-    error = uschshell_preparse(p_context, "ls", &state, &pp_cmds);
+    error = crepl_preparse(p_context, "ls", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
-    mu_assert("uschshell_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
+    mu_assert("crepl_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
     free(pp_cmds);
-    error = uschshell_preparse(p_context, "ls()", &state, &pp_cmds);
+    error = crepl_preparse(p_context, "ls()", &state, &pp_cmds);
     mu_assert("error != 0", error == 0);
-    mu_assert("uschshell_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
+    mu_assert("crepl_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
     free(pp_cmds);
 cleanup:
     (void)status;
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return p_message;
 }
 
-static char *test_uschshell_finalize()
+static char *test_crepl_finalize()
 {
     int status;
     char *p_message = NULL;
     int error;
-    struct uschshell_t *p_context = NULL;
-    error = uschshell_create(&p_context);
+    struct crepl_t *p_context = NULL;
+    error = crepl_create(&p_context);
     char *p_finalized = NULL;
 
-    error = uschshell_finalize("foo(((", &p_finalized);
+    error = crepl_finalize("foo(((", &p_finalized);
     mu_assert("error != 0", error == 0);
-    mu_assert("uschshell_finalized(p_context, \"foo(((\") != \"foo((()))\"", strcmp("foo((()))", p_finalized) == 0);
+    mu_assert("crepl_finalized(p_context, \"foo(((\") != \"foo((()))\"", strcmp("foo((()))", p_finalized) == 0);
     free(p_finalized);p_finalized = NULL;
     (void)status;
 cleanup:
     free(p_finalized);
-    uschshell_destroy(p_context);
+    crepl_destroy(p_context);
     return p_message;
 }
 
-static char *test_uschshell_parent()
+static char *test_crepl_parent()
 {
 #if 0
     char *p_message = NULL;
     char* p_parent = NULL;
 
-    p_parent = uschshell_parent_identifier("foo(bar(), baz(), ");
+    p_parent = crepl_parent_identifier("foo(bar(), baz(), ");
     printf("XXX: %s\n", p_parent);
     mu_assert("parent_pos != 0", strncmp(p_parent, "foo", strlen("foo")) == 0);
-    p_parent = uschshell_parent_identifier("foo(bar(baz()");
+    p_parent = crepl_parent_identifier("foo(bar(baz()");
     printf("XXX: %s\n", p_parent);
     mu_assert("parent_pos != 5", strncmp(p_parent, "bar", strlen("bar")) == 0);
 
@@ -434,12 +434,12 @@ static char * all_tests()
     mu_run_test(test_usch_chdir);
     mu_run_test(test_uthash);
     mu_run_test(test_uthash1);
-    mu_run_test(test_uschshell_vars);
-    mu_run_test(test_uschshell_dyld);
+    mu_run_test(test_crepl_vars);
+    mu_run_test(test_crepl_dyld);
     mu_run_test(test_parserutils);
-    mu_run_test(test_uschshell_parse);
-    mu_run_test(test_uschshell_finalize);
-    mu_run_test(test_uschshell_parent);
+    mu_run_test(test_crepl_parse);
+    mu_run_test(test_crepl_finalize);
+    mu_run_test(test_crepl_parent);
     mu_run_test(test_usch_strout);
     //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);

@@ -34,18 +34,18 @@
 #include "usch.h"
 #include "usch_debug.h"
 #include "bufstr.h"
-#include "uschshell_parser.h"
-#include "uschshell_types.h"
+#include "crepl_parser.h"
+#include "crepl_types.h"
 #include "strutils.h"
 
 
-#include "uschshell.h"
+#include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
 
 #define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
 
-// TODO: DUPE of uschshell_vars.c
+// TODO: DUPE of crepl_vars.c
 // this function is a naive parser and should probably not be used anyway
 static char *get_symname(char *p_defname)
 {
@@ -64,7 +64,7 @@ static char *get_symname(char *p_defname)
 
 
 
-static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
+static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
 {
     int status = 0;
     char definitions_h_filename[] = "definitions.h";
@@ -72,9 +72,9 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
     size_t tempdir_len;
     char *p_definitionsfile = NULL;
     FILE *p_definitions_h = NULL;
-    uschshell_def_t *p_defs = NULL;
-    uschshell_def_t *p_def = NULL;
-    uschshell_def_t *p_tmp = NULL;
+    crepl_def_t *p_defs = NULL;
+    crepl_def_t *p_def = NULL;
+    crepl_def_t *p_tmp = NULL;
 
     p_defs = p_context->p_defs;
     tempdir_len = strlen(p_tempdir);
@@ -97,12 +97,12 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
             FAIL_IF(!fwrite_ok(";\n", p_definitions_h));
         }
     }
-    FAIL_IF(!fwrite_ok("\nvoid uschshell_load_vars(struct uschshell_t *p_context)\n{\n", p_definitions_h));
+    FAIL_IF(!fwrite_ok("\nvoid crepl_load_vars(struct crepl_t *p_context)\n{\n", p_definitions_h));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("\tuschshell_load(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok("\tcrepl_load(p_context, \"", p_definitions_h));
             FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
             FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
             FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
@@ -112,12 +112,12 @@ static int write_definitions_h(uschshell_t *p_context, char *p_tempdir)
 
     FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
 
-    FAIL_IF(!fwrite_ok("\nvoid uschshell_store_vars(struct uschshell_t *p_context)\n{\n", p_definitions_h));
+    FAIL_IF(!fwrite_ok("\nvoid crepl_store_vars(struct crepl_t *p_context)\n{\n", p_definitions_h));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("\tuschshell_store(p_context, \"", p_definitions_h));
+            FAIL_IF(!fwrite_ok("\tcrepl_store(p_context, \"", p_definitions_h));
             FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
             FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
             FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
@@ -135,7 +135,7 @@ end:
     return status;
 }
 
-static int write_includes_h(uschshell_t *p_context, char *p_tempdir)
+static int write_includes_h(crepl_t *p_context, char *p_tempdir)
 {
     int status = 0;
     char includes_h_filename[] = "includes.h";
@@ -143,9 +143,9 @@ static int write_includes_h(uschshell_t *p_context, char *p_tempdir)
     size_t tempdir_len;
     char *p_includesfile = NULL;
     FILE *p_includes_h = NULL;
-    uschshell_inc_t *p_incs = NULL;
-    uschshell_inc_t *p_inc = NULL;
-    uschshell_inc_t *p_tmp = NULL;
+    crepl_inc_t *p_incs = NULL;
+    crepl_inc_t *p_inc = NULL;
+    crepl_inc_t *p_tmp = NULL;
 
     p_incs = p_context->p_incs;
     tempdir_len = strlen(p_tempdir);
@@ -186,7 +186,7 @@ end:
 }
 
 
-static int write_trampolines_h(uschshell_t *p_context, char *p_tempdir)
+static int write_trampolines_h(crepl_t *p_context, char *p_tempdir)
 {
     int status = 0;
     char trampolines_h_filename[] = "trampolines.h";
@@ -194,9 +194,9 @@ static int write_trampolines_h(uschshell_t *p_context, char *p_tempdir)
     size_t tempdir_len;
     char *p_trampolinesfile = NULL;
     FILE *p_trampolines_h = NULL;
-    uschshell_dyfn_t *p_dyfns = NULL;
-    uschshell_dyfn_t *p_dyfn = NULL;
-    uschshell_dyfn_t *p_tmp = NULL;
+    crepl_dyfn_t *p_dyfns = NULL;
+    crepl_dyfn_t *p_dyfn = NULL;
+    crepl_dyfn_t *p_tmp = NULL;
 
     p_dyfns = p_context->p_dyfns;
     tempdir_len = strlen(p_tempdir);
@@ -293,17 +293,17 @@ end:
 #endif // 0
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
-int uschshell_eval(uschshell_t *p_context, char *p_input_line)
+int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
     int i = 0;
     int status = 0;
     usch_def_t definition = {0};
     FILE *p_stmt_c = NULL;
     void *p_handle = NULL;
-    int (*dyn_func)(uschshell_t*);
-    int (*set_context)(uschshell_t*);
-    int (*uschshell_store_vars)(uschshell_t*);
-    int (*uschshell_load_vars)(uschshell_t*);
+    int (*dyn_func)(crepl_t*);
+    int (*set_context)(crepl_t*);
+    int (*crepl_store_vars)(crepl_t*);
+    int (*crepl_load_vars)(crepl_t*);
     char *p_error = NULL;
     char **pp_path = NULL;
     char **pp_cmds = NULL;
@@ -326,13 +326,13 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     char *p_pre_assign = NULL;
     char *p_post_assign = NULL;
     bufstr_t stmt_c = {0, 0};
-    uschshell_state_t state;
+    crepl_state_t state;
 
     if (p_context == NULL || p_input_line == NULL)
         return -1;
 
     input.p_str = NULL;
-    FAIL_IF(uschshell_finalize(p_input_line, &input.p_str));
+    FAIL_IF(crepl_finalize(p_input_line, &input.p_str));
     FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
 
@@ -353,7 +353,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
-    FAIL_IF(uschshell_preparse(p_context, input.p_str, &state, &pp_cmds));
+    FAIL_IF(crepl_preparse(p_context, input.p_str, &state, &pp_cmds));
     if (state == USCHSHELL_STATE_CMDSTART)
     {
         bufstradd(&input, "()");
@@ -392,7 +392,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     FAIL_IF(parse_line(input.p_str, &definition) < 1);
 
-    bufstradd(&stmt_c, "struct uschshell_t;\n");
+    bufstradd(&stmt_c, "struct crepl_t;\n");
     bufstradd(&stmt_c, "#include <usch.h>\n");
     bufstradd(&stmt_c, "#include \"includes.h\"\n");
     bufstradd(&stmt_c, "#include \"definitions.h\"\n");
@@ -410,8 +410,8 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, "/.uschrc.h\"\n");
     }
 
-    bufstradd(&stmt_c, "static struct uschshell_t *p_uschshell_context = NULL;\n");
-    bufstradd(&stmt_c, "void uschshell_set_context(struct uschshell_t *p_context)\n{\np_uschshell_context = p_context;\t\n}\n");
+    bufstradd(&stmt_c, "static struct crepl_t *p_crepl_context = NULL;\n");
+    bufstradd(&stmt_c, "void crepl_set_context(struct crepl_t *p_context)\n{\np_crepl_context = p_context;\t\n}\n");
 
     for (i = 0; pp_cmds[i] != NULL; i++)
     {
@@ -443,11 +443,11 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         if (strcmp(definition.p_symname, "include") == 0)
         {
             bufstradd(&stmt_c, "#define include");
-            bufstradd(&stmt_c, "(header) uschshell_include(p_uschshell_context, (header))\n");
+            bufstradd(&stmt_c, "(header) crepl_include(p_crepl_context, (header))\n");
         }
         else if (strcmp(definition.p_symname, "lib") == 0){
             bufstradd(&stmt_c, "#define lib");
-            bufstradd(&stmt_c, "(libname) uschshell_lib(p_uschshell_context, (libname))\n");
+            bufstradd(&stmt_c, "(libname) crepl_lib(p_crepl_context, (libname))\n");
 
         }
         else if (strcmp(definition.p_symname, "cd") != 0)
@@ -461,7 +461,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, "int ");
 
         bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct uschshell_t *p_context)\n{\n\t");
+        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
         bufstradd(&stmt_c, input.p_str);
 
         bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
@@ -474,8 +474,8 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
         bufstradd(&stmt_c, "int \n");
         bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct uschshell_t *p_context)\n{\n");
-        bufstradd(&stmt_c, "\tuschshell_define(p_context, sizeof(");
+        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n");
+        bufstradd(&stmt_c, "\tcrepl_define(p_context, sizeof(");
         bufstradd(&stmt_c, get_symname(p_pre_assign));
         bufstradd(&stmt_c, "), \"");
         bufstradd(&stmt_c, p_pre_assign);
@@ -490,7 +490,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
             bufstradd(&stmt_c, p_post_assign);
             bufstradd(&stmt_c, ";\n");
 
-            bufstradd(&stmt_c, "\tuschshell_store(p_context, \"");
+            bufstradd(&stmt_c, "\tcrepl_store(p_context, \"");
             bufstradd(&stmt_c, p_pre_assign);
             bufstradd(&stmt_c, "\", (void*)&");
             bufstradd(&stmt_c, get_symname(p_pre_assign));
@@ -505,7 +505,7 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     {
         bufstradd(&stmt_c, "int ");
         bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct uschshell_t *p_context)\n{\n\t");
+        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
         bufstradd(&stmt_c, input.p_str);
 
         bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
@@ -534,12 +534,12 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
 
     dlerror();
 
-    *(void **) (&uschshell_load_vars) = dlsym(p_handle, "uschshell_load_vars");
+    *(void **) (&crepl_load_vars) = dlsym(p_handle, "crepl_load_vars");
 
     FAIL_IF((p_error = dlerror()) != NULL);
-    (*uschshell_load_vars)(p_context);
+    (*crepl_load_vars)(p_context);
 
-    *(void **) (&set_context) = dlsym(p_handle, "uschshell_set_context");
+    *(void **) (&set_context) = dlsym(p_handle, "crepl_set_context");
     FAIL_IF((p_error = dlerror()) != NULL);
     (*set_context)(p_context);
 
@@ -547,9 +547,9 @@ int uschshell_eval(uschshell_t *p_context, char *p_input_line)
     FAIL_IF((p_error = dlerror()) != NULL);
     (*dyn_func)(p_context);
 
-    *(void **) (&uschshell_store_vars) = dlsym(p_handle, "uschshell_store_vars");
+    *(void **) (&crepl_store_vars) = dlsym(p_handle, "crepl_store_vars");
     FAIL_IF((p_error = dlerror()) != NULL);
-    (*uschshell_store_vars)(p_context);
+    (*crepl_store_vars)(p_context);
 
 
 end:

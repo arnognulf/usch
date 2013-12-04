@@ -1,15 +1,13 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
-#include "uschshell_parser.h"
+#include "crepl_parser.h"
 #include <stdio.h>
 #include <dirent.h>
-#include <ctype.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <dlfcn.h>
-#include <ctype.h>
 #include <assert.h>
 #include <dirent.h>
 #include <limits.h>
@@ -19,10 +17,10 @@
 #include <unistd.h>
 #include "usch_debug.h"
 #include "bufstr.h"
-#include "uschshell_types.h"
+#include "crepl_types.h"
 #include "clang-c/Index.h"
 #include "strutils.h"
-#include "uschshell.h"
+#include "crepl.h"
 
 static size_t count_stars(char *p_input)
 {
@@ -446,12 +444,14 @@ static enum CXChildVisitResult clang_preparseVisitor(
     bufstr_t bufstr = {NULL, 0};
     int status = 0;
     char *p_fnstr = NULL;
-    uschshell_dyfn_t *p_dyfn = NULL;
+    crepl_dyfn_t *p_dyfn = NULL;
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr = {NULL, 0};
+    CXString cxparstr = {NULL, 0};
     preparse_userdata_t *p_userdata = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
+    cxparstr = clang_getCursorSpelling(parent);
     p_userdata = (preparse_userdata_t*)p_client_data;
     FAIL_IF(p_userdata == NULL);
     switch (cursor.kind) 
@@ -467,6 +467,14 @@ static enum CXChildVisitResult clang_preparseVisitor(
 
                 break;
             }
+#if 0
+        case CXCursor_VarDecl:
+            {
+                printf("%s %s\n", clang_getCString(cxparstr), clang_getCString(cxstr));
+                break;
+            }
+
+#endif // 0
         default:
             {
                 //printf("\nfound::: %s\n",clang_getCString(cxstr));
@@ -478,6 +486,7 @@ static enum CXChildVisitResult clang_preparseVisitor(
     p_fnstr = NULL;
 end:
     clang_disposeString(cxstr);
+    clang_disposeString(cxparstr);
     (void)status;
     free(bufstr.p_str);
     free(p_fnstr);
@@ -492,7 +501,7 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
     bufstradd(p_bufstr, "#ifndef USCHSHELL_PARSER\n");
     bufstradd(p_bufstr, "#define USCHSHELL_PARSER\n");
     bufstradd(p_bufstr, "#endif // USCHSHELL_PARSER\n");
-    bufstradd(p_bufstr, "struct uschshell_t;\n");
+    bufstradd(p_bufstr, "struct crepl_t;\n");
     bufstradd(p_bufstr, "#include <usch.h>\n");
     bufstradd(p_bufstr, "#include \"includes.h\"\n");
     bufstradd(p_bufstr, "#include \"definitions.h\"\n");
@@ -553,7 +562,7 @@ size_t find_parent_identifier(char *p_str, char **pp_parent)
 }
 #endif // 0
 
-char* uschshell_parent_identifier(char *p_str)
+char* crepl_parent_identifier(char *p_str)
 {
     char* p_parent = NULL;
 
@@ -624,11 +633,11 @@ static int is_builtin_cmd(char *p_str)
     }
     return is_builtin;
 }
-int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds)
+int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state, char ***ppp_cmds)
 {
     int i;
     preparse_userdata_t userdata;
-    uschshell_state_t state;
+    crepl_state_t state;
     int status = 0;
     bufstr_t filecontent = {0,0};
     char preparse_filename[] = "preparse.c";
@@ -643,7 +652,7 @@ int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_s
 
     //fprintf(stderr, "\nPATH: %s\n", getenv("PATH"));
 
-    //fprintf(stderr, "uschshell_preparse() p_input=\"%s\"\n", p_input);
+    //fprintf(stderr, "crepl_preparse() p_input=\"%s\"\n", p_input);
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
@@ -817,7 +826,7 @@ size_t find_matching(char end, char *p_incomplete)
     }
     return i;
 }
-int uschshell_finalize(char *p_unfinalized, char **pp_finalized)
+int crepl_finalize(char *p_unfinalized, char **pp_finalized)
 {
     int status = 0;
     size_t i = 0;

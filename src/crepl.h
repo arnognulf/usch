@@ -30,33 +30,33 @@ extern "C" {
 #endif // DUMMY_VIM_FIX_NEEDED
 #include <stdlib.h>
 
-struct uschshell_t;
-int uschshell_create(struct uschshell_t **p_context);
-int uschshell_eval(struct uschshell_t *p_context, char *p_input);
-void uschshell_destroy(struct uschshell_t *p_context);
+struct crepl_t;
+int crepl_create(struct crepl_t **p_context);
+int crepl_eval(struct crepl_t *p_context, char *p_input);
+void crepl_destroy(struct crepl_t *p_context);
 
-int uschshell_define(struct uschshell_t *p_context, size_t var_size, char *p_defname);
-void uschshell_undef(struct uschshell_t *p_context, char *p_defname);
-int uschshell_load(struct uschshell_t *p_context, char *p_defname, void *p_data);
-int uschshell_store(struct uschshell_t *p_context, char *p_defname, void *p_data);
+int crepl_define(struct crepl_t *p_context, size_t var_size, char *p_defname);
+void crepl_undef(struct crepl_t *p_context, char *p_defname);
+int crepl_load(struct crepl_t *p_context, char *p_defname, void *p_data);
+int crepl_store(struct crepl_t *p_context, char *p_defname, void *p_data);
 
-int uschshell_define_fn(struct uschshell_t *p_context, char *p_fndefname, char *p_body);
-int uschshell_undef_fn(struct uschshell_t *p_context, char *p_fndefname);
+int crepl_define_fn(struct crepl_t *p_context, char *p_fndefname, char *p_body);
+int crepl_undef_fn(struct crepl_t *p_context, char *p_fndefname);
 
-int uschshell_pathhash(struct uschshell_t *p_context);
-int uschshell_is_cmd(struct uschshell_t *p_context, char *p_item);
-int uschshell_lib(struct uschshell_t *p_context, char *p_dynlib);
-int uschshell_include(struct uschshell_t *p_context, char *p_header);
+int crepl_pathhash(struct crepl_t *p_context);
+int crepl_is_cmd(struct crepl_t *p_context, char *p_item);
+int crepl_lib(struct crepl_t *p_context, char *p_dynlib);
+int crepl_include(struct crepl_t *p_context, char *p_header);
 
 typedef enum {
 USCHSHELL_STATE_ERROR = 0,
 USCHSHELL_STATE_CPARSER = 1,
 USCHSHELL_STATE_CMDSTART = 2,
 USCHSHELL_STATE_CMDARG = 3,
-} uschshell_state_t;
+} crepl_state_t;
 
-int uschshell_finalize(char *p_unfinalized, char **pp_finalized);
-int uschshell_preparse(struct uschshell_t *p_context, char *p_input, uschshell_state_t *p_state, char ***ppp_cmds);
+int crepl_finalize(char *p_unfinalized, char **pp_finalized);
+int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state, char ***ppp_cmds);
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED

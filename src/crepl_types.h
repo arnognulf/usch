@@ -3,7 +3,7 @@
 
 #define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
 #define USCHSHELL_DEFINE_SIZE 8
-typedef struct uschshell_def_t
+typedef struct crepl_def_t
 {
     UT_hash_handle hh;
     size_t size;
@@ -11,51 +11,51 @@ typedef struct uschshell_def_t
     void *p_alloc_data;
     uint8_t data[USCHSHELL_DEFINE_SIZE];
     char defname[];
-} uschshell_def_t;
+} crepl_def_t;
 
-typedef struct uschshell_cmd_t
+typedef struct crepl_cmd_t
 {
     UT_hash_handle hh;
     char cmdname[];
-} uschshell_cmd_t;
+} crepl_cmd_t;
 
-typedef struct uschshell_lib_t
+typedef struct crepl_lib_t
 {
-    struct uschshell_lib_t *p_next;
+    struct crepl_lib_t *p_next;
     void *p_handle;
     char libname[];
-} uschshell_lib_t;
+} crepl_lib_t;
 
-typedef struct uschshell_sym_t
+typedef struct crepl_sym_t
 {
     UT_hash_handle hh;
     void *p_handle;
     char symname[];
-} uschshell_sym_t;
+} crepl_sym_t;
 
-typedef struct uschshell_dyfn_t
+typedef struct crepl_dyfn_t
 {
     UT_hash_handle hh;
     void *p_handle;
     char *p_dyfndef;
     char dyfnname[];
-} uschshell_dyfn_t;
+} crepl_dyfn_t;
 
-typedef struct uschshell_inc_t
+typedef struct crepl_inc_t
 {
     UT_hash_handle hh;
     char incname[];
-} uschshell_inc_t;
+} crepl_inc_t;
 
-typedef struct uschshell_t 
+typedef struct crepl_t 
 {
-    uschshell_def_t *p_defs;
-    uschshell_lib_t *p_libs;
-    uschshell_sym_t *p_syms;
-    uschshell_dyfn_t *p_dyfns;
-    uschshell_inc_t *p_incs;
+    crepl_def_t *p_defs;
+    crepl_lib_t *p_libs;
+    crepl_sym_t *p_syms;
+    crepl_dyfn_t *p_dyfns;
+    crepl_inc_t *p_incs;
     char tmpdir[];
-} uschshell_t;
+} crepl_t;
 
 struct usch_ids
 {
