@@ -333,6 +333,10 @@ static char *test_crepl_parse()
     mu_assert("error != 0", error == 0);
     mu_assert("crepl_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
     free(pp_cmds);
+    error = crepl_preparse(p_context, "ls(); int i = 0; i++; sizeof int; int a; char **p = NULL; char* q = NULL; long long int *p = NULL", &state, &pp_cmds);
+    mu_assert("error != 0", error == 0);
+    free(pp_cmds);
+
 cleanup:
     (void)status;
     crepl_destroy(p_context);

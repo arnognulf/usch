@@ -625,6 +625,109 @@ static int is_builtin_cmd(char *p_str)
     }
     return is_builtin;
 }
+
+static void store_and_clear_definition(char *p_line, int start_in, int end)
+{
+    int start = start_in;
+    int i = 0;
+    int lastid = 0;
+    int firstid = -1;
+    int assignid = -1;
+    //char *p_var = NULL;
+    if (start == end)
+    {
+        return;
+    }
+    if (p_line[start] == '\0')
+        return;
+    while (p_line[start] == '\t' || p_line[start] == ' ')
+        start++;
+    if (strncmp(&p_line[start], "sizeof ", strlen("sizeof ")) == 0)
+        return;
+    i = start;
+    while (i < end)
+    {
+        if (p_line[i] == '\0' || p_line[i] == '=')
+            break;
+        while (p_line[i] == '_' || isalpha(p_line[i]))
+        {
+            if (firstid == -1)
+            {
+                firstid = i;
+            }
+            lastid = i;
+            i++;
+            while (p_line[i] == '_' || isalnum(p_line[i]))
+                i++;
+        }
+        if (p_line[i] == '=')
+        {
+            assignid = i;
+            break;
+        }
+        if (p_line[i] == ';')
+        {
+            break;
+        }
+
+        i++;
+    }
+    printf("%d\n", lastid);
+    printf("first: %s\n", &p_line[firstid]);
+    printf("last: %s\n", &p_line[lastid]);
+    for (i = lastid; p_line[i] == '_' || isalnum(p_line[i]); i++)
+    {
+        putchar(p_line[i]);
+    }
+    (void)assignid;
+    //p_var = store_range(p_line, firstid, assignid);
+    //clear_range(p_line, firstid, lastid-1);
+    putchar('\n');
+}
+static void print_definitions(char *p_line)
+{
+    int i = 0;
+    int start = 0;
+    int identifiers = 0;
+    if (p_line == NULL)
+        return;
+
+    while (p_line[i] != '\0')
+    {
+        if (p_line[i] == ';' && identifiers > 1)
+        {
+            store_and_clear_definition(p_line, start, i);
+        }
+        if (p_line[i] == ';')
+        {
+            identifiers = 0;
+            start = i + 1;
+        }
+        while (p_line[i] == ' ' || p_line[i] == '*')
+        {
+            i++;
+        }
+
+        if (p_line[i] == '_' || isalpha(p_line[i]))
+        {
+            i++;
+            while (isalnum(p_line[i]) || p_line[i] == '_')
+            {
+                i++;
+            }
+            identifiers++;
+        }
+        else
+        {
+            i++;
+        }
+    }
+    if (identifiers > 1)
+    {
+        store_and_clear_definition(p_line, start, i);
+    }
+}
+
 int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state, char ***ppp_cmds)
 {
     int i;
@@ -731,6 +834,7 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
         }
         state = USCHSHELL_STATE_CPARSER;
     }
+    print_definitions(p_line);
     *p_state = state;
     *ppp_cmds = pp_cmds;
     pp_cmds = NULL;
