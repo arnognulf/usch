@@ -227,22 +227,6 @@ end:
 }
 
 #if 0
-static void trim_end_space(char *p_input)
-{
-    size_t i;
-    size_t len = strlen(p_input);
-
-    for (i = len - 1; i > 0; i--)
-    {
-        if (p_input[i] == ' ' || p_input[i] == '\t')
-            p_input[i] = '\0';
-        else
-             break;
-    }
-}
-
-#endif // 0
-#if 0
 static int pre_assign(char *p_input, char **pp_pre_assign)
 {
     int status = 0;
@@ -450,14 +434,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             bufstradd(&stmt_c, "(libname) crepl_lib(p_crepl_context, (libname))\n");
 
         }
-        else if (strcmp(definition.p_symname, "cd") != 0)
-        {
-            bufstradd(&stmt_c, "#define ");
-            bufstradd(&stmt_c, definition.p_symname);
-            bufstradd(&stmt_c, "(...) usch_cmd(\"");
-            bufstradd(&stmt_c, definition.p_symname);
-            bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
-        }
+
         bufstradd(&stmt_c, "int ");
 
         bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);

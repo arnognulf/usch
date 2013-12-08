@@ -1,3 +1,25 @@
+/*
+ * USCH - The (permutated) tcsh successor
+ * Copyright (c) 2013 Thomas Eriksson 
+ * 
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ * 
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ * 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,6 +40,7 @@
 #include "usch_debug.h"
 #include "bufstr.h"
 #include "crepl_types.h"
+// /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "clang-c/Index.h"
 #include "strutils.h"
 #include "crepl.h"
@@ -41,34 +64,13 @@ static size_t count_stars(char *p_input)
     return num_stars;
 }
 
-//static 
-int equal_identifiers(const char *p_id1, const char *p_id2)
-{
-    int equal_and_valid = 1;
-    int i = 0;
-
-    if (!isalpha(p_id1[i]) || !isalpha(p_id2))
-    {
-        equal_and_valid = 0;
-        goto end;
-    }
-
-    while (isalnum(p_id1[i]) && isalnum(p_id2[i]))
-    {
-        if (p_id1[i] != p_id2[i])
-            equal_and_valid = 0;
-        i++;
-    }
-end:
-    return equal_and_valid;
-}
-
 static size_t count_identifier(char *p_input)
 {
     size_t i = 0;
     if (isdigit(p_input[i]))
         return 0;
-    while (p_input[i] != '\0' && isalnum(p_input[i]))
+    // TODO: handle invalid identifiers starting with nondigits!
+    while (p_input[i] != '\0' && (isalnum(p_input[i]) || p_input[i] == '_'))
         i++;
     return i;
 }
@@ -460,24 +462,14 @@ static enum CXChildVisitResult clang_preparseVisitor(
             {
                 if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
                 {
-                    //printf("found_cur_id = 1\n");
                     p_userdata->found_cur_id = 1;
                 }
                 res = CXChildVisit_Recurse;
 
                 break;
             }
-#if 0
-        case CXCursor_VarDecl:
-            {
-                printf("%s %s\n", clang_getCString(cxparstr), clang_getCString(cxstr));
-                break;
-            }
-
-#endif // 0
         default:
             {
-                //printf("\nfound::: %s\n",clang_getCString(cxstr));
                 res = CXChildVisit_Recurse;
                 break;
             }
@@ -649,10 +641,6 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
     char **pp_cmds = NULL;
     char *p_cmds = NULL;
     int cmdidx = 0;
-
-    //fprintf(stderr, "\nPATH: %s\n", getenv("PATH"));
-
-    //fprintf(stderr, "crepl_preparse() p_input=\"%s\"\n", p_input);
 
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
