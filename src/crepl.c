@@ -32,7 +32,7 @@
 
 // /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "usch.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "bufstr.h"
 #include "crepl_parser.h"
 #include "crepl_types.h"
@@ -54,7 +54,7 @@ int crepl_create(crepl_t **pp_context)
     crepl_sym_t *p_sym = NULL;
     crepl_dyfn_t *p_dyfn = NULL;
     crepl_inc_t *p_inc = NULL;
-    char dir_template[] = "/tmp/usch-XXXXXX";
+    char dir_template[] = "/tmp/crepl-XXXXXX";
     char *p_tempdir = NULL;
 
     p_context = calloc(sizeof(crepl_t) + strlen(dir_template) + 1, 1);
