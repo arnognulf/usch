@@ -337,7 +337,9 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
-    FAIL_IF(crepl_preparse(p_context, input.p_str, &state, &pp_cmds));
+    FAIL_IF(crepl_preparse(p_context, input.p_str, &state));
+    pp_cmds = p_context->pp_cmds;
+    
     if (state == USCHSHELL_STATE_CMDSTART)
     {
         bufstradd(&input, "()");
@@ -540,7 +542,7 @@ end:
     free(p_fullpath_uschrc_h);
     free(stmt_c.p_str);
     free(input.p_str);
-    free(pp_cmds);
+    //free(pp_cmds);
 
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);

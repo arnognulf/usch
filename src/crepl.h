@@ -56,7 +56,7 @@ USCHSHELL_STATE_CMDARG = 3,
 } crepl_state_t;
 
 int crepl_finalize(char *p_unfinalized, char **pp_finalized);
-int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state, char ***ppp_cmds);
+int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state);
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED

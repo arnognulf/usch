@@ -54,7 +54,6 @@ static int xgetch()
     //static unsigned short mask[] = {192, 224, 240};
     struct termios old;
     char buf = '0';
-    char **pp_cmds = NULL;
     if (tcgetattr(0, &old) < 0)
         perror("tcsetattr()");
     old.c_lflag &= ~ICANON;
@@ -75,8 +74,7 @@ static int xgetch()
     if (buf == ' ')
     {
         //fprintf(stderr, "\nxgetch() 1: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
-        FAIL_IF(crepl_preparse(p_global_context, rl_line_buffer, &state, &pp_cmds));
-        free(pp_cmds);
+        FAIL_IF(crepl_preparse(p_global_context, rl_line_buffer, &state));
         //fprintf(stderr, "\nxgetch() 2: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
         if (state == USCHSHELL_STATE_CMDSTART)
         {

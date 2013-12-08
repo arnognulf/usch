@@ -128,6 +128,7 @@ void crepl_destroy(crepl_t *p_context)
             HASH_DEL(p_dyfns, p_dyfn);
         }
         // TODO: free crepl_lib_t
+        free(p_context->pp_cmds);
 
     }
     free(p_context);

@@ -274,7 +274,6 @@ static char *test_crepl_parse()
     struct crepl_t *p_context = NULL;
     error = crepl_create(&p_context);
     crepl_state_t state = USCHSHELL_STATE_CPARSER;
-    char **pp_cmds = NULL;
 #if 0
     int num_ids = 0;
     char **pp_ids = NULL;
@@ -325,17 +324,14 @@ static char *test_crepl_parse()
 #if 0
 #endif // 0
 
-    error = crepl_preparse(p_context, "ls", &state, &pp_cmds);
+    error = crepl_preparse(p_context, "ls", &state);
     mu_assert("error != 0", error == 0);
     mu_assert("crepl_preparse(p_context, \"ls\", &state) != USCHSHELL_STATE_CMDSTART", state == USCHSHELL_STATE_CMDSTART);
-    free(pp_cmds);
-    error = crepl_preparse(p_context, "ls()", &state, &pp_cmds);
+    error = crepl_preparse(p_context, "ls()", &state);
     mu_assert("error != 0", error == 0);
     mu_assert("crepl_preparse(p_context, \"ls()\", &state) != USCHSHELL_STATE_CPARSER", state == USCHSHELL_STATE_CPARSER);
-    free(pp_cmds);
-    error = crepl_preparse(p_context, "ls(); int i = 0; i++; sizeof int; int a; char **p = NULL; char* q = NULL; long long int *p = NULL", &state, &pp_cmds);
+    error = crepl_preparse(p_context, "ls(); int i = 0; i++; sizeof int; int a; char **p = NULL; char* q = NULL; long long int *p = NULL", &state);
     mu_assert("error != 0", error == 0);
-    free(pp_cmds);
 
 cleanup:
     (void)status;

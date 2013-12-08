@@ -581,6 +581,7 @@ static int resolve_identifier(char *p_parsefile_fullname,
     }
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
+    printf("%s\n", p_parsefile_fullname);
     FAIL_IF(p_parsefile == NULL);
 
     FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));
@@ -728,7 +729,7 @@ static void print_definitions(char *p_line)
     }
 }
 
-int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state, char ***ppp_cmds)
+int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state)
 {
     int i;
     preparse_userdata_t userdata;
@@ -836,7 +837,8 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
     }
     print_definitions(p_line);
     *p_state = state;
-    *ppp_cmds = pp_cmds;
+    free(p_context->pp_cmds);
+    p_context->pp_cmds = pp_cmds;
     pp_cmds = NULL;
 end:
     p_cmds = NULL;
