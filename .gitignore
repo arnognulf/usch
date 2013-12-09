@@ -1,3 +1,6 @@
 *.o
 *.swp
-
+*~
+src/usch
+src/tests
+src/test_num_args
