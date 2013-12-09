@@ -32,7 +32,7 @@
 
 // /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "usch.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "bufstr.h"
 #include "crepl_parser.h"
 #include "crepl_types.h"

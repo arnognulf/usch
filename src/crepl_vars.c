@@ -2,7 +2,7 @@
 
 #include "crepl.h"
 #include "crepl_types.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 
 int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
 {

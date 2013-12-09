@@ -98,7 +98,7 @@ static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***
     }
 
     size = (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
-    pp_out = malloc(size);
+    pp_out = calloc(size, 1);
     if (pp_out == NULL)
         goto error;
 
@@ -426,7 +426,7 @@ static inline int usch_cmd_arr(struct usch_stash_mem **pp_in,
             {
                 size_t i = 0;
                 size_t read_size = 1024;
-                p_out = malloc(read_size + sizeof(struct usch_stash_mem));
+                p_out = calloc(read_size + sizeof(struct usch_stash_mem), 1);
                 if (p_out == NULL)
                     goto end;
                 p_out->p_next = NULL;

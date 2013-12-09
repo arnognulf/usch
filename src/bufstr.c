@@ -23,7 +23,7 @@
 #include "bufstr.h"
 #include <string.h>
 #include <unistd.h>
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "malloc.h"
 #define MAX(a,b) \
     ({ __typeof__ (a) _a = (a); \

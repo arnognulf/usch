@@ -37,7 +37,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "bufstr.h"
 #include "crepl_types.h"
 // /usr/lib/llvm-3.4/include/clang-c/Index.h
@@ -92,14 +92,21 @@ int has_trailing_open_parenthesis(char *p_line)
     int i = len - 1;
     int unclosed = 0;
 
-    while (p_line[i] != ')' && i >= 0)
+    while (i >= 0)
     {
-        if (p_line[i] == '(')
+        if (p_line[i] != ')')
         {
-            unclosed = 1;
+            if (p_line[i] == '(')
+            {
+                unclosed = 1;
+                break;
+            }
+            i--;
+        }
+        else
+        {
             break;
         }
-        i--;
     }
     return unclosed;
 }
@@ -109,9 +116,17 @@ static int has_trailing_closed_parenthesis(char *p_line)
     int i = len - 1;
     int closed = 0;
 
-    while (p_line[i] != ')' && i >= 0)
+
+    while (i >= 0)
     {
-        i--;
+        if (p_line[i] != ')')
+        {
+            i--;
+        }
+        else
+        {
+            break;
+        }
     }
     while (i >= 0)
     {
@@ -757,13 +772,13 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
     FAIL_IF(pp_cmds == NULL);
     memcpy((char*)&pp_cmds[num_identifiers + 1], p_line, strlen(p_line));
     // NULL terminate vector before it's content
-    pp_cmds[num_identifiers + 1] = NULL;
+    pp_cmds[num_identifiers] = NULL;
 
     filecontent.p_str = calloc(1, 1024);
     FAIL_IF(filecontent.p_str == NULL);
     filecontent.len = 1024;
 
-    p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename), 1);
+    p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
     FAIL_IF(p_parsefile_fullname == NULL);
     strcpy(p_parsefile_fullname, p_context->tmpdir);
     p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';

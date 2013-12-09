@@ -101,10 +101,10 @@ void crepl_destroy(crepl_t *p_context)
 
     if (p_context)
     {
+        crepl_lib_t *p_current_lib = NULL;
         crepl_sym_t *p_tmpsym = NULL;
         crepl_sym_t *p_sym = NULL;
         crepl_sym_t *p_syms = p_context->p_syms;
-
         HASH_ITER(hh, p_syms, p_sym, p_tmpsym) {
             HASH_DEL(p_syms, p_sym);
         }
@@ -119,6 +119,16 @@ void crepl_destroy(crepl_t *p_context)
 
             HASH_DEL(p_defs, p_def);
         }
+        free(p_defs);
+
+        crepl_inc_t *p_tmpinc = NULL;
+        crepl_inc_t *p_inc = NULL;
+        crepl_inc_t *p_incs = p_context->p_incs;
+
+        HASH_ITER(hh, p_incs, p_inc, p_tmpinc) {
+            HASH_DEL(p_incs, p_inc);
+        }
+        free(p_incs);
 
         crepl_dyfn_t *p_tmpdyfn = NULL;
         crepl_dyfn_t *p_dyfn = NULL;
@@ -129,6 +139,18 @@ void crepl_destroy(crepl_t *p_context)
         }
         // TODO: free crepl_lib_t
         free(p_context->pp_cmds);
+        free(p_context->p_dyfns);
+        free(p_context->p_syms);
+        
+        p_current_lib = p_context->p_libs;
+        while (p_current_lib != NULL)
+        {
+            crepl_lib_t *p_prev_lib = NULL;
+            p_prev_lib = p_current_lib;
+            p_current_lib = p_current_lib->p_next;
+            free(p_prev_lib);
+        }
+        
 
     }
     free(p_context);

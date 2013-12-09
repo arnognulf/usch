@@ -28,7 +28,7 @@
 #include <ctype.h>
 #include "pmcurses.h"
 #include "malloc.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 // poor-man's curses 
 #define MAX(a,b) \
     ({ __typeof__ (a) _a = (a); \

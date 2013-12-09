@@ -28,7 +28,7 @@
 #include <ctype.h>
 
 #include "usch.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include <editline/readline.h>
 #include <locale.h>
 #include <unistd.h>
@@ -38,7 +38,7 @@
 #include <string.h>
 #include <ctype.h>
 #include "crepl.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 static crepl_state_t state = USCHSHELL_STATE_CPARSER;
 
 static struct crepl_t *p_global_context = NULL;

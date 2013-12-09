@@ -31,7 +31,7 @@
 
 #include "usch.h"
 #include "crepl.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "pmcurses.h"
 #include <editline/readline.h>
 #include <locale.h>
@@ -264,6 +264,7 @@ cleanup:
     HASH_ITER(hh, p_users, p_s, p_tmp) {
         HASH_DEL(p_users, p_s);
     }
+    free(p_users);
     return p_message;
 }
 static char *test_crepl_parse()
@@ -424,6 +425,7 @@ cleanup:
     HASH_ITER(hh, p_users, p_s, p_tmp) {
         HASH_DEL(p_users, p_s);
     }
+    free(p_users);
     return p_message;
 }
 

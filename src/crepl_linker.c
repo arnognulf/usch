@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "crepl.h"
 #include "crepl_types.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 #include "clang-c/Index.h"
 #include "bufstr.h"
 #include "strutils.h"
@@ -124,6 +124,7 @@ static enum CXChildVisitResult clang_visitor(
                 //FAIL_IF(p_dyfn == NULL);
                 //strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
                 //p_dyfn->p_dyfndef = bufstr.p_str;
+                free(bufstr.p_str);
                 bufstr.p_str = NULL;
 
                 break;
@@ -186,7 +187,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname)
 
     FAIL_IF(p_context == NULL || p_libname == NULL);
     
-    p_lib = calloc(sizeof(crepl_lib_t) + strlen(p_libname), 1);
+    p_lib = calloc(sizeof(crepl_lib_t) + strlen(p_libname) + 1, 1);
     FAIL_IF(p_lib == NULL);
 
     strcpy(p_lib->libname, p_libname);

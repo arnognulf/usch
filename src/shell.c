@@ -4,7 +4,7 @@
 
 #include "pmcurses.h"
 #include "crepl.h"
-#include "usch_debug.h"
+#include "crepl_debug.h"
 
 #define INPUT_BUFFER_MAX 32676
 #define INPUT_HISTORY_BUFFERS 15
