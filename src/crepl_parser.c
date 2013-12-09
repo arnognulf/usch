@@ -596,7 +596,7 @@ static int resolve_identifier(char *p_parsefile_fullname,
     }
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
-    printf("%s\n", p_parsefile_fullname);
+    //printf("%s\n", p_parsefile_fullname);
     FAIL_IF(p_parsefile == NULL);
 
     FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));

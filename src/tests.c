@@ -201,9 +201,6 @@ static char *test_crepl_vars()
     crepl_load(p_context, "char char_test", (void*)&char_test);
     mu_assert("error: char_test != 3.14", char_test == 'a');
 
-
-    crepl_destroy(p_context);
-    return NULL;
 cleanup:
     crepl_destroy(p_context);
     return p_message;
@@ -226,8 +223,6 @@ static char *test_crepl_dyld()
     //error = crepl_include(p_context, "<xmmintrin.h>");
     mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
 
-    crepl_destroy(p_context);
-    return NULL;
 cleanup:
     crepl_destroy(p_context);
     return p_message;
@@ -239,34 +234,6 @@ typedef struct usch_test_vars_t {
     char name[];
 } usch_test_vars_t;
 
-static char *test_uthash()
-{
-    char *p_message = NULL;
-    char **n, *names[] = { "joe", "bob", "betty", NULL };
-    usch_test_vars_t *p_s = NULL;
-    usch_test_vars_t *p_tmp = NULL;
-    usch_test_vars_t *p_users = NULL;
-    int i=0;
-
-    for (n = names; *n != NULL; n++) {
-        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
-        strncpy(p_s->name, *n,strlen(*n));
-        p_s->id = i++;
-        HASH_ADD_STR( p_users, name, p_s );
-    }
-
-    HASH_FIND_STR(p_users, "betty", p_s);
-    mu_assert("error: HASH_FIND_STR(users, \"betty\", p_s) != NULL", p_s != NULL);
-
-cleanup:
-
-    /* free the hash table contents */
-    HASH_ITER(hh, p_users, p_s, p_tmp) {
-        HASH_DEL(p_users, p_s);
-    }
-    free(p_users);
-    return p_message;
-}
 static char *test_crepl_parse()
 {
     int status;
@@ -400,42 +367,11 @@ cleanup:
     return p_message;
 }
 
-static char *test_uthash1()
-{
-    char *p_message = NULL;
-    char **n, *names[] = { "mccleoad", NULL };
-    usch_test_vars_t *p_s = NULL;
-    usch_test_vars_t *p_tmp = NULL;
-    usch_test_vars_t *p_users = NULL;
-    int i=0;
-    for (n = names; *n != NULL; n++) {
-        p_s = (usch_test_vars_t*)calloc(sizeof(usch_test_vars_t) + strlen(*n) + 1,1);
-        strncpy(p_s->name, *n, strlen(*n));
-        p_s->id = i++;
-        HASH_ADD_STR( p_users, name, p_s );
-    }
-
-    HASH_FIND_STR(p_users, "mccleoad", p_s);
-
-    mu_assert("error: HASH_FIND_STR(users, \"mccleoad\", p_s) != NULL", p_s != NULL);
-
-cleanup:
-
-    /* free the hash table contents */
-    HASH_ITER(hh, p_users, p_s, p_tmp) {
-        HASH_DEL(p_users, p_s);
-    }
-    free(p_users);
-    return p_message;
-}
-
 static char * all_tests()
 {
     mu_run_test(test_strsplit);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
-    mu_run_test(test_uthash);
-    mu_run_test(test_uthash1);
     mu_run_test(test_crepl_vars);
     mu_run_test(test_crepl_dyld);
     mu_run_test(test_parserutils);

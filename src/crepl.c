@@ -96,6 +96,68 @@ end:
     free(p_context);
     return status;
 }
+// http://stackoverflow.com/questions/2256945/removing-a-non-empty-directory-programmatically-in-c-or-c
+static int remove_directory(const char *p_path)
+{
+    DIR *p_d = opendir(p_path);
+    size_t path_len = strlen(p_path);
+    int r = -1;
+
+    if (p_d)
+    {
+        struct dirent *p_de;
+
+        r = 0;
+
+        while (!r && (p_de=readdir(p_d)))
+        {
+            int r2 = -1;
+            char *buf;
+            size_t len;
+
+            /* Skip the names "." and ".." as we don't want to recurse on them. */
+            if (!strcmp(p_de->d_name, ".") || !strcmp(p_de->d_name, ".."))
+            {
+                continue;
+            }
+
+            len = path_len + strlen(p_de->d_name) + 2; 
+            buf = malloc(len);
+
+            if (buf)
+            {
+                struct stat statbuf;
+
+                snprintf(buf, len, "%s/%s", p_path, p_de->d_name);
+
+                if (!stat(buf, &statbuf))
+                {
+                    if (S_ISDIR(statbuf.st_mode))
+                    {
+                        r2 = remove_directory(buf);
+                    }
+                    else
+                    {
+                        r2 = unlink(buf);
+                    }
+                }
+
+                free(buf);
+            }
+
+            r = r2;
+        }
+
+        closedir(p_d);
+    }
+
+    if (!r)
+    {
+        r = rmdir(p_path);
+    }
+
+    return r;
+}
 void crepl_destroy(crepl_t *p_context)
 {
 
@@ -108,6 +170,7 @@ void crepl_destroy(crepl_t *p_context)
         HASH_ITER(hh, p_syms, p_sym, p_tmpsym) {
             HASH_DEL(p_syms, p_sym);
         }
+        free(p_context->p_syms);
 
         crepl_def_t *p_tmpdef = NULL;
         crepl_def_t *p_def = NULL;
@@ -119,7 +182,7 @@ void crepl_destroy(crepl_t *p_context)
 
             HASH_DEL(p_defs, p_def);
         }
-        free(p_defs);
+        free(p_context->p_defs);
 
         crepl_inc_t *p_tmpinc = NULL;
         crepl_inc_t *p_inc = NULL;
@@ -128,7 +191,7 @@ void crepl_destroy(crepl_t *p_context)
         HASH_ITER(hh, p_incs, p_inc, p_tmpinc) {
             HASH_DEL(p_incs, p_inc);
         }
-        free(p_incs);
+        free(p_context->p_incs);
 
         crepl_dyfn_t *p_tmpdyfn = NULL;
         crepl_dyfn_t *p_dyfn = NULL;
@@ -137,11 +200,8 @@ void crepl_destroy(crepl_t *p_context)
         HASH_ITER(hh, p_dyfns, p_dyfn, p_tmpdyfn) {
             HASH_DEL(p_dyfns, p_dyfn);
         }
-        // TODO: free crepl_lib_t
-        free(p_context->pp_cmds);
         free(p_context->p_dyfns);
-        free(p_context->p_syms);
-        
+
         p_current_lib = p_context->p_libs;
         while (p_current_lib != NULL)
         {
@@ -151,7 +211,8 @@ void crepl_destroy(crepl_t *p_context)
             free(p_prev_lib);
         }
         
-
+        free(p_context->pp_cmds);
+        (void)remove_directory(p_context->tmpdir);
     }
     free(p_context);
     return;

@@ -39,7 +39,6 @@ static enum CXChildVisitResult clang_visitor(
                 int i;
                 CXType return_type;
 
-                cxstr = clang_getCursorSpelling(cursor);
                 ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
                 ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
                 bufstr.p_str = calloc(1024, 1);
@@ -68,6 +67,7 @@ static enum CXChildVisitResult clang_visitor(
                     cxkindstr = clang_getTypeSpelling(argType);
                     cxargstr = clang_getCursorSpelling(argCursor);
                     bufstradd(&bufstr, clang_getCString(cxkindstr)); 
+                    clang_disposeString(cxkindstr);
                     bufstradd(&bufstr, " "); 
                     bufstradd(&bufstr, clang_getCString(cxargstr)); 
                     if (i != (num_args - 1))
@@ -98,6 +98,7 @@ static enum CXChildVisitResult clang_visitor(
                     {
                         bufstradd(&bufstr, ", "); 
                     }
+                    clang_disposeString(cxkindstr);
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n");
@@ -253,6 +254,9 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     p_incs = p_context->p_incs;
     p_tmpdir = p_context->tmpdir;
     p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_h) + 1, 1);
+    HASH_FIND_STR(p_incs, p_header, p_inc);
+    FAIL_IF(p_inc != NULL);
+    
     strcpy(p_tmpheader, p_tmpdir);
     p_tmpheader[strlen(p_tmpheader)] = '/';
     strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_h);
@@ -281,7 +285,9 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     FAIL_IF(p_inc == NULL);
     strcpy(p_inc->incname, p_header);
     HASH_ADD_STR(p_incs, incname, p_inc);
+    p_inc = NULL;
 end:
+    free(p_inc);
     free(p_tmpheader);
     if (p_includefile)
         fclose(p_includefile);

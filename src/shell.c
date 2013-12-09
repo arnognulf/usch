@@ -1,8 +1,6 @@
-#include <assert.h>
 #include <string.h>
 #include <malloc.h>
 
-#include "pmcurses.h"
 #include "crepl.h"
 #include "crepl_debug.h"
 
