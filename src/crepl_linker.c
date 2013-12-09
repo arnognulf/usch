@@ -1,6 +1,5 @@
 #include <dlfcn.h>
 #include <stdio.h>
-#include "crepl.h"
 #include "crepl_types.h"
 #include "crepl_debug.h"
 #include "clang-c/Index.h"
@@ -307,6 +306,7 @@ void* crepl_getdyfnhandle(crepl_t *p_context, const char *p_id)
     p_dyfns = p_context->p_dyfns;
 
     HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
+    FAIL_IF(p_dyfn == NULL);
 
     p_handle = p_dyfn->p_handle;
 end:

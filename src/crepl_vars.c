@@ -1,6 +1,5 @@
 #include <stdio.h>
 
-#include "crepl.h"
 #include "crepl_types.h"
 #include "crepl_debug.h"
 

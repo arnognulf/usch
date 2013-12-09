@@ -20,31 +20,21 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <ctype.h>
-#include <stdlib.h>
-#include <string.h>
 #include "crepl_parser.h"
-#include <stdio.h>
-#include <dirent.h>
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <dlfcn.h>
-#include <assert.h>
-#include <dirent.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <unistd.h>
-#include "crepl_debug.h"
-#include "bufstr.h"
-#include "crepl_types.h"
-// /usr/lib/llvm-3.4/include/clang-c/Index.h
+#include <assert.h>                     // for assert
+#include <ctype.h>                      // for isalnum, isalpha, isdigit, etc
+#include <limits.h>                     // for PATH_MAX
+#include <stddef.h>                     // for size_t
+#include <stdio.h>                      // for printf, fclose, putchar, etc
+#include <stdlib.h>                     // for NULL, free, calloc, getenv
+#include <string.h>                     // for strlen, strcpy, strncmp, etc
+#include <sys/stat.h>                   // for stat
+#include "bufstr.h"                     // for bufstradd, bufstr_t
+#include "crepl.h"                      // for ::USCHSHELL_STATE_CPARSER, etc
+#include "crepl_debug.h"                // for FAIL_IF
+#include "crepl_types.h"                // for preparse_userdata_t, etc
+#include "strutils.h"                   // for fwrite_ok
 #include "clang-c/Index.h"
-#include "strutils.h"
-#include "crepl.h"
-
 static size_t count_stars(char *p_input)
 {
     size_t i = 0;
@@ -747,8 +737,8 @@ static void print_definitions(char *p_line)
 int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state)
 {
     int i;
+    crepl_state_t state = USCHSHELL_STATE_CPARSER;
     preparse_userdata_t userdata;
-    crepl_state_t state;
     int status = 0;
     bufstr_t filecontent = {0,0};
     char preparse_filename[] = "preparse.c";

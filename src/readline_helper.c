@@ -20,25 +20,17 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include "minunit.h"
-#include <dlfcn.h>
-#include <ctype.h>
+#include <ctype.h>                      // for isspace
+#include <editline/readline.h>          // for rl_insert_text, etc
+#include <locale.h>                     // for NULL, setlocale, LC_CTYPE
+#include <stdio.h>                      // for perror, fprintf, stderr
+#include <stdlib.h>                     // for free
+#include <string.h>                     // for strlen
+#include <termios.h>                    // for termios, tcsetattr, ECHO, etc
+#include <unistd.h>                     // for read
+#include "crepl.h"                      // for ::USCHSHELL_STATE_CPARSER, etc
+#include "crepl_debug.h"                // for FAIL_IF
 
-#include "usch.h"
-#include "crepl_debug.h"
-#include <editline/readline.h>
-#include <locale.h>
-#include <unistd.h>
-#include <termios.h>
-#include <stdio.h>
-#include <stdint.h>
-#include <string.h>
-#include <ctype.h>
-#include "crepl.h"
-#include "crepl_debug.h"
 static crepl_state_t state = USCHSHELL_STATE_CPARSER;
 
 static struct crepl_t *p_global_context = NULL;

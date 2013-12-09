@@ -20,22 +20,15 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <stdio.h>
-#include <assert.h>
-#include <string.h>
-#include "minunit.h"
-#include "clang-c/Index.h"
-#include <dlfcn.h>
-#include <ctype.h>
-#include "../external/uthash/src/uthash.h"
-
-#include "usch.h"
-#include "crepl.h"
-#include "crepl_debug.h"
-#include "pmcurses.h"
-#include <editline/readline.h>
-#include <locale.h>
-#include "crepl_parser.h"
+#include <locale.h>                     // for NULL
+#include <stdio.h>                      // for printf
+#include <stdlib.h>                     // for free
+#include <string.h>                     // for strcmp
+#include "../external/uthash/src/uthash.h"  // for UT_hash_handle
+#include "crepl.h"                      // for crepl_define, crepl_load, etc
+#include "crepl_parser.h"               // for stripwhite, identifier_pos
+#include "minunit.h"                    // for mu_assert, mu_run_test
+#include "usch.h"                       // for usch_cmd, usch_stashfree, etc
 
 int tests_run = 0;
 static char * test_strsplit() {
