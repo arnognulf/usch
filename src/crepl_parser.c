@@ -615,16 +615,7 @@ end:
 static int is_builtin_cmd(char *p_str)
 {
     int is_builtin = 0;
-    if (strncmp(p_str, "lib", strlen("lib")) == 0 && strlen("lib") == strlen(p_str))
-    {
-        is_builtin = 1;
-    }
     if (strncmp(p_str, "cd", strlen("cd")) == 0 && strlen("cd") == strlen(p_str))
-    {
-        is_builtin = 1;
-    }
-
-    if (strncmp(p_str, "define", strlen("define")) == 0 && strlen("define") == strlen(p_str))
     {
         is_builtin = 1;
     }
@@ -802,6 +793,16 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
     char *p_cmds = NULL;
     int cmdidx = 0;
 
+    for (i = 0; i < (int)strlen(p_input);i++)
+    {
+        if (p_input[i] == ' ' || p_input[i] == '\t')
+            continue;
+        if (p_input[i] == '#')
+        {
+            *p_state = CREPL_STATE_PREPROCESSOR;
+            ENDOK_IF(1);
+        }
+    }
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
     p_line = stripwhite(p_line_copy);

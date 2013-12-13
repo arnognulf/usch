@@ -87,6 +87,8 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
     int i = 0;
     int start = 0;
     char *p_defs_line = NULL;
+    if (p_defs_line_in == NULL)
+        ENDOK_IF(1);
     p_defs_line = strdup(p_defs_line_in);
     FAIL_IF(p_defs_line == NULL);
 
@@ -137,6 +139,9 @@ static int append_storedefs(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs
     int i = 0;
     int start = 0;
     char *p_defs_line = NULL;
+    if (p_defs_line_in == NULL)
+        ENDOK_IF(1);
+
     p_defs_line = strdup(p_defs_line_in);
     FAIL_IF(p_defs_line == NULL);
 
@@ -468,11 +473,14 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF(p_stmt_c == NULL);
 
     FAIL_IF(crepl_preparse(p_context, input.p_str, &state));
-    FAIL_IF(crepl_parsedefs(p_context, input.p_str));
-    free(input.p_str);
-    input.p_str = p_context->p_nodef_line;
-    input.len = strlen(p_context->p_nodef_line);
-    p_context->p_nodef_line = NULL;
+    if (state != CREPL_STATE_PREPROCESSOR)
+    {
+        FAIL_IF(crepl_parsedefs(p_context, input.p_str));
+        free(input.p_str);
+        input.p_str = p_context->p_nodef_line;
+        input.len = strlen(p_context->p_nodef_line);
+        p_context->p_nodef_line = NULL;
+    }
 
     pp_cmds = p_context->pp_cmds;
     
@@ -503,8 +511,53 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
         {
             bufstradd(&input, ")");
         }
+    }
+    if (state == CREPL_STATE_PREPROCESSOR)
+    {
+        bufstr_t preproc_cmd;
+        int i = 0;
+        while (input.p_str[i] == ' ' || input.p_str[i] == '\t')
+            i++;
 
+        if (strncmp(&input.p_str[i], "#lib ", strlen("#lib ")) == 0)
+        {
+            preproc_cmd.len = 128;
+            preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
+            FAIL_IF(preproc_cmd.p_str == NULL);
 
+            bufstradd(&preproc_cmd, "(void)crepl_lib(p_crepl_context, \"");
+            ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
+            bufstradd(&preproc_cmd, &input.p_str[i+strlen("#lib ")]);
+            bufstradd(&preproc_cmd, "\");");
+            printf("xyz: %s\n", input.p_str);
+            printf("xyz: %s\n", preproc_cmd.p_str);
+            free(input.p_str);
+            input.p_str = preproc_cmd.p_str;
+            input.len = preproc_cmd.len;
+        }
+        else if (strncmp(&input.p_str[i], "#lib", strlen("#lib")) == 0)
+        { 
+             printf("usch: invalid #lib macro directive. usage:\n#lib /path/to/library.so\n");
+        }
+        if (strncmp(&input.p_str[i], "#include ", strlen("#include ")) == 0)
+        {
+            preproc_cmd.len = 128;
+            preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
+            FAIL_IF(preproc_cmd.p_str == NULL);
+
+            bufstradd(&preproc_cmd, "(void)crepl_include(p_crepl_context, \"");
+            ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
+            bufstradd(&preproc_cmd, &input.p_str[i+strlen("#include ")]);
+            bufstradd(&preproc_cmd, "\");");
+            free(input.p_str);
+            input.p_str = preproc_cmd.p_str;
+            input.len = preproc_cmd.len;
+
+        }
+        else if (strncmp(&input.p_str[i], "#include", strlen("#include")) == 0)
+        { 
+             printf("usch: invalid #include macro directive. usage:\n#include <header.h>\nor:\n#include \"header.h\"\n");
+        }
     }
 
 
@@ -533,98 +586,33 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     }
 
     bufstradd(&stmt_c, "static struct crepl_t *p_crepl_context = NULL;\n");
-    bufstradd(&stmt_c, "void crepl_set_context(struct crepl_t *p_context)\n{\np_crepl_context = p_context;\t\n}\n");
+    bufstradd(&stmt_c, "void crepl_set_context(struct crepl_t *p_context)\n{\n\tp_crepl_context = p_context;\t\n}\n");
 
-    for (i = 0; pp_cmds[i] != NULL; i++)
+    if (pp_cmds != NULL)
     {
-        if (strcmp(pp_cmds[i], "cd") == 0)
+        for (i = 0; pp_cmds[i] != NULL; i++)
         {
-            ;
-        }
-        else if (strcmp(pp_cmds[i], "lib") == 0)
-        {
-            ;
-        }
-        else if (strcmp(pp_cmds[i], "header") == 0)
-        {
-            ;
-        }
-        else
-        {
-            bufstradd(&stmt_c, "#define ");
-            bufstradd(&stmt_c, definition.p_symname);
-            bufstradd(&stmt_c, "(...) usch_cmd(\"");
-            bufstradd(&stmt_c, definition.p_symname);
-            bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+            if (strcmp(pp_cmds[i], "cd") == 0)
+            {
+                ;
+            }
+            else
+            {
+                bufstradd(&stmt_c, "#define ");
+                bufstradd(&stmt_c, definition.p_symname);
+                bufstradd(&stmt_c, "(...) usch_cmd(\"");
+                bufstradd(&stmt_c, definition.p_symname);
+                bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+            }
         }
     }
 
-#if 0
-    if (iscmd(input.p_str))
-    {
-        if (strcmp(definition.p_symname, "include") == 0)
-        {
-            bufstradd(&stmt_c, "#define include");
-            bufstradd(&stmt_c, "(header) crepl_include(p_crepl_context, (header))\n");
-        }
-        else if (strcmp(definition.p_symname, "lib") == 0){
-            bufstradd(&stmt_c, "#define lib");
-            bufstradd(&stmt_c, "(libname) crepl_lib(p_crepl_context, (libname))\n");
+    bufstradd(&stmt_c, "int ");
+    bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
+    bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
+    bufstradd(&stmt_c, input.p_str);
 
-        }
-
-        bufstradd(&stmt_c, "int ");
-
-        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
-        bufstradd(&stmt_c, input.p_str);
-
-        bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
-    }
-    else if(is_definition(input.p_str))
-    {
-        FAIL_IF(pre_assign(input.p_str, &p_pre_assign) != 0);
-        bufstradd(&stmt_c, p_pre_assign);
-        bufstradd(&stmt_c, ";\n");
-
-        bufstradd(&stmt_c, "int \n");
-        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n");
-        bufstradd(&stmt_c, "\tcrepl_define(p_context, sizeof(");
-        bufstradd(&stmt_c, get_symname(p_pre_assign));
-        bufstradd(&stmt_c, "), \"");
-        bufstradd(&stmt_c, p_pre_assign);
-        bufstradd(&stmt_c, "\");\n");
-
-        FAIL_IF(post_assign(input.p_str, &p_post_assign));
-        if (strlen(p_post_assign) > 0)
-        {
-            bufstradd(&stmt_c, "\t");
-            bufstradd(&stmt_c, get_symname(p_pre_assign));
-            bufstradd(&stmt_c, " = ");
-            bufstradd(&stmt_c, p_post_assign);
-            bufstradd(&stmt_c, ";\n");
-
-            bufstradd(&stmt_c, "\tcrepl_store(p_context, \"");
-            bufstradd(&stmt_c, p_pre_assign);
-            bufstradd(&stmt_c, "\", (void*)&");
-            bufstradd(&stmt_c, get_symname(p_pre_assign));
-            bufstradd(&stmt_c, ");\n");
-
-        }
-
-        bufstradd(&stmt_c, "\treturn 0;\n}\n");
-    }
-    else /* as is */   
-#endif // 0
-    {
-        bufstradd(&stmt_c, "int ");
-        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
-        bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
-        bufstradd(&stmt_c, input.p_str);
-
-        bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
-    }
+    bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
 
     FAIL_IF(!fwrite_ok(stmt_c.p_str, p_stmt_c));
 

@@ -53,6 +53,7 @@ CREPL_STATE_ERROR = 0,
 CREPL_STATE_CPARSER = 1,
 CREPL_STATE_CMDSTART = 2,
 CREPL_STATE_CMDARG = 3,
+CREPL_STATE_PREPROCESSOR = 4,
 } crepl_state_t;
 int crepl_parsedefs(struct crepl_t *p_context, char *p_line);
 
