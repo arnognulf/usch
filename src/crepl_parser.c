@@ -632,14 +632,25 @@ static int is_builtin_cmd(char *p_str)
     return is_builtin;
 }
 
-static void store_and_clear_definition(char *p_line, int start_in, int end)
+static void clear_range(char *p_line, int start, int end)
 {
+    int i;
+
+    for (i = start; i <= end; i++)
+    {
+        p_line[i] = ' ';
+    }
+}
+static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_defstart, int *p_num_defs, int start_in, int end)
+{
+    (void)p_defs;
+    (void)pp_defstart;
     int start = start_in;
     int i = 0;
-    int lastid = 0;
+    int last_clear = 0;
+    int def_end = 0;
     int firstid = -1;
-    int assignid = -1;
-    //char *p_var = NULL;
+
     if (start == end)
     {
         return;
@@ -661,48 +672,71 @@ static void store_and_clear_definition(char *p_line, int start_in, int end)
             {
                 firstid = i;
             }
-            lastid = i;
+            last_clear = i - 1;
             i++;
             while (p_line[i] == '_' || isalnum(p_line[i]))
                 i++;
         }
-        if (p_line[i] == '=')
-        {
-            assignid = i;
-            break;
-        }
         if (p_line[i] == ';')
-        {
             break;
-        }
 
         i++;
     }
-    printf("%d\n", lastid);
+    def_end = i;
+    printf("%d\n", last_clear);
     printf("first: %s\n", &p_line[firstid]);
-    printf("last: %s\n", &p_line[lastid]);
-    for (i = lastid; p_line[i] == '_' || isalnum(p_line[i]); i++)
+    printf("last_clear: %s\n", &p_line[last_clear]);
+    printf("def_end: %s\n", &p_line[def_end]);
+    *p_num_defs = *p_num_defs + 1;
+    if (*pp_defstart == NULL)
+    {
+        *pp_defstart = &p_defs[firstid];
+    }
+    for (i = last_clear; p_line[i] == '_' || isalnum(p_line[i]); i++)
     {
         putchar(p_line[i]);
     }
-    (void)assignid;
-    //p_var = store_range(p_line, firstid, assignid);
-    //clear_range(p_line, firstid, lastid-1);
+
+    for (i = start; i < def_end; i++)
+    {
+        p_defs[i] = p_line[i];
+    }
+    clear_range(p_line, firstid, last_clear);
+    p_defs[def_end] = ';';
     putchar('\n');
 }
-static void print_definitions(char *p_line)
+
+int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
 {
+    (void)p_context;
+    int status = 0;
     int i = 0;
     int start = 0;
     int identifiers = 0;
-    if (p_line == NULL)
-        return;
+    char *p_defs = NULL;
+    char *p_defstart = NULL;
+    int num_defs = 0;
+    char *p_line = NULL;
+
+    FAIL_IF(p_context == NULL || p_line_c == NULL);
+    free(p_context->p_nodef_line);
+    p_context->p_nodef_line = NULL;
+    free(p_context->p_defs_line);
+    p_context->p_defs_line = NULL;
+
+    p_line = strdup(p_line_c);
+    FAIL_IF(p_line == NULL);
+    p_defs = calloc(strlen(p_line) + 2, 1);
+    FAIL_IF(p_defs == NULL);
+    memset(p_defs, ' ', strlen(p_line)+1);
+    p_defs[strlen(p_line)+0] = ';';
+    p_defs[strlen(p_line)+1] = '\0';
 
     while (p_line[i] != '\0')
     {
         if (p_line[i] == ';' && identifiers > 1)
         {
-            store_and_clear_definition(p_line, start, i);
+            store_and_clear_definition(p_line, p_defs, &p_defstart, &num_defs, start, i);
         }
         if (p_line[i] == ';')
         {
@@ -730,8 +764,18 @@ static void print_definitions(char *p_line)
     }
     if (identifiers > 1)
     {
-        store_and_clear_definition(p_line, start, i);
+        store_and_clear_definition(p_line, p_defs, &p_defstart, &num_defs, start, i);
     }
+    printf("rinsed line: %s\n", p_line);
+    printf("defs: %s\n", p_defs);
+    p_context->p_nodef_line = p_line;
+    p_line = NULL;
+    p_context->p_defs_line = p_defs;
+    p_defs = NULL;
+end:
+    free(p_defs);
+    free(p_line);
+    return status;
 }
 
 int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state)
@@ -840,7 +884,6 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
         }
         state = USCHSHELL_STATE_CPARSER;
     }
-    print_definitions(p_line);
     *p_state = state;
     free(p_context->pp_cmds);
     p_context->pp_cmds = pp_cmds;

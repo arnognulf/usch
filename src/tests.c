@@ -300,6 +300,23 @@ cleanup:
     return p_message;
 }
 
+static char *test_crepl_parsedefs()
+{
+    char *p_message = NULL;
+    int error;
+    struct crepl_t *p_context = NULL;
+    error = crepl_create(&p_context);
+    mu_assert("error != 0", error == 0);
+    error = crepl_parsedefs(p_context, "ls(); int i = 0; i++; sizeof int; int a; char **p = NULL; char* q = NULL; long long int *p = NULL");
+    //mu_assert("error != 0", error == 0);
+
+cleanup:
+ //   (void)status;
+    crepl_destroy(p_context);
+    return p_message;
+}
+
+
 static char *test_crepl_finalize()
 {
     int status;
@@ -372,7 +389,8 @@ static char * all_tests()
     mu_run_test(test_crepl_finalize);
     mu_run_test(test_crepl_parent);
     mu_run_test(test_usch_strout);
-    //mu_run_test(test_pmcurses);
+    mu_run_test(test_crepl_parsedefs);
+//mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);
     return 0;

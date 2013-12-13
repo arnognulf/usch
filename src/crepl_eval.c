@@ -75,6 +75,12 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
     crepl_def_t *p_defs = NULL;
     crepl_def_t *p_def = NULL;
     crepl_def_t *p_tmp = NULL;
+    bufstr_t filecontent;
+
+    filecontent.len = 1024;
+    filecontent.p_str = calloc(filecontent.len, 1);
+    FAIL_IF(filecontent.p_str == NULL);
+    (void)filecontent.p_str;
 
     p_defs = p_context->p_defs;
     tempdir_len = strlen(p_tempdir);
@@ -277,6 +283,29 @@ end:
 #endif // 0
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
+static void add_vars(crepl_t *p_context, char *p_defs_line)
+{
+    (void)p_context;
+    int i = 0;
+    int start = 0;
+
+    while (p_defs_line[i] == '\t' || p_defs_line[i] == ' ')
+    {
+        i++;
+    }
+    start = i;
+    while (p_defs_line[i] != '\0')
+    {
+        if (p_defs_line[i] == ';')
+        {
+            p_defs_line[i] = '\0';
+            printf("store: %s\n", p_defs_line[start]);
+            //status = crepl_store(p_context, "int int_test", (void*)&int_test);
+        }
+        i++;
+    }
+}
+
 int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
     int i = 0;
@@ -338,6 +367,9 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF(p_stmt_c == NULL);
 
     FAIL_IF(crepl_preparse(p_context, input.p_str, &state));
+    FAIL_IF(crepl_parsedefs(p_context, input.p_str));
+    add_vars(p_context, p_context->p_defs_line);
+
     pp_cmds = p_context->pp_cmds;
     
     if (state == USCHSHELL_STATE_CMDSTART)

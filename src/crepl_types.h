@@ -50,6 +50,8 @@ typedef struct crepl_inc_t
 typedef struct crepl_t 
 {
     char **pp_cmds;
+    char *p_nodef_line;
+    char *p_defs_line;
     crepl_def_t *p_defs;
     crepl_lib_t *p_libs;
     crepl_sym_t *p_syms;
