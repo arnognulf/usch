@@ -30,7 +30,7 @@
 #include <string.h>                     // for strlen, strcpy, strncmp, etc
 #include <sys/stat.h>                   // for stat
 #include "bufstr.h"                     // for bufstradd, bufstr_t
-#include "crepl.h"                      // for ::USCHSHELL_STATE_CPARSER, etc
+#include "crepl.h"                      // for ::CREPL_STATE_CPARSER, etc
 #include "crepl_debug.h"                // for FAIL_IF
 #include "crepl_types.h"                // for preparse_userdata_t, etc
 #include "strutils.h"                   // for fwrite_ok
@@ -495,9 +495,9 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
 {
     int i;
     p_bufstr->p_str[0] = '\0';
-    bufstradd(p_bufstr, "#ifndef USCHSHELL_PARSER\n");
-    bufstradd(p_bufstr, "#define USCHSHELL_PARSER\n");
-    bufstradd(p_bufstr, "#endif // USCHSHELL_PARSER\n");
+    bufstradd(p_bufstr, "#ifndef CREPL_PARSER\n");
+    bufstradd(p_bufstr, "#define CREPL_PARSER\n");
+    bufstradd(p_bufstr, "#endif // CREPL_PARSER\n");
     bufstradd(p_bufstr, "struct crepl_t;\n");
     bufstradd(p_bufstr, "#include <usch.h>\n");
     bufstradd(p_bufstr, "#include \"includes.h\"\n");
@@ -513,7 +513,7 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
         bufstradd(p_bufstr, "(...) {};\n");
     }
     bufstradd(p_bufstr, "int ");
-    bufstradd(p_bufstr, USCHSHELL_DYN_FUNCNAME);
+    bufstradd(p_bufstr, CREPL_DYN_FUNCNAME);
     bufstradd(p_bufstr, "()\n");
     bufstradd(p_bufstr, "{\n");
     bufstradd(p_bufstr, "\t");
@@ -586,7 +586,6 @@ static int resolve_identifier(char *p_parsefile_fullname,
     }
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
-    //printf("%s\n", p_parsefile_fullname);
     FAIL_IF(p_parsefile == NULL);
 
     FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));
@@ -683,10 +682,6 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
         i++;
     }
     def_end = i;
-    printf("%d\n", last_clear);
-    printf("first: %s\n", &p_line[firstid]);
-    printf("last_clear: %s\n", &p_line[last_clear]);
-    printf("def_end: %s\n", &p_line[def_end]);
     *p_num_defs = *p_num_defs + 1;
     if (*pp_defstart == NULL)
     {
@@ -766,8 +761,20 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
     {
         store_and_clear_definition(p_line, p_defs, &p_defstart, &num_defs, start, i);
     }
-    printf("rinsed line: %s\n", p_line);
-    printf("defs: %s\n", p_defs);
+    i = 0;
+    while(i < (int)strlen(p_line))
+    {
+        if (p_defs[i] == ';')
+        {
+            i++;
+            while(p_defs[i] == ' ' || p_defs[i] == ';')
+            {
+                p_defs[i] = ' ';
+                i++;
+            }
+        }
+        i++;
+    }
     p_context->p_nodef_line = p_line;
     p_line = NULL;
     p_context->p_defs_line = p_defs;
@@ -781,7 +788,7 @@ end:
 int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state)
 {
     int i;
-    crepl_state_t state = USCHSHELL_STATE_CPARSER;
+    crepl_state_t state = CREPL_STATE_CPARSER;
     preparse_userdata_t userdata;
     int status = 0;
     bufstr_t filecontent = {0,0};
@@ -820,7 +827,7 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
     
     for (i = 0; pp_identifiers[i] != NULL; i++)
     {
-        state = USCHSHELL_STATE_CPARSER;
+        state = CREPL_STATE_CPARSER;
 
         userdata.p_cur_id = pp_identifiers[i];
         userdata.found_cur_id = 0;
@@ -841,7 +848,7 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
                 // unknown error
                 if (userdata.found_cur_id == 0)
                 {
-                        state = USCHSHELL_STATE_ERROR;
+                        state = CREPL_STATE_ERROR;
                         break;
                 }
                 // TODO: if prevchar identifer is a system command, we probably are in some parameter unless...
@@ -862,15 +869,15 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
 
                     if (has_trailing_closed_parenthesis(p_line))
                     {
-                        state = USCHSHELL_STATE_CPARSER;
+                        state = CREPL_STATE_CPARSER;
                     }
                     else if (has_trailing_open_parenthesis(p_line))
                     {
-                        state = USCHSHELL_STATE_CMDARG;
+                        state = CREPL_STATE_CMDARG;
                     } 
                     else
                     {
-                        state = USCHSHELL_STATE_CMDSTART;
+                        state = CREPL_STATE_CMDSTART;
                     }
                     break;
                 }
@@ -878,11 +885,11 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
             else
             {
                 // the identifier could not be resolved, nor is it a system command
-                state = USCHSHELL_STATE_ERROR;
+                state = CREPL_STATE_ERROR;
                 break;
             }
         }
-        state = USCHSHELL_STATE_CPARSER;
+        state = CREPL_STATE_CPARSER;
     }
     *p_state = state;
     free(p_context->pp_cmds);
@@ -897,7 +904,6 @@ end:
     free(pp_cmds);
 
     free(filecontent.p_str);
-    //fprintf(stderr, "\nPATH: %s\n", getenv("PATH"));
     return status;
 }
 size_t find_matching(char end, char *p_incomplete)

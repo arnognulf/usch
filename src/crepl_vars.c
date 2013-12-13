@@ -18,7 +18,7 @@ int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
     p_def = calloc(sizeof(crepl_def_t) + strlen(p_defname) + 1, 1);
     FAIL_IF(p_def == NULL);
 
-    if (var_size > USCHSHELL_DEFINE_SIZE)
+    if (var_size > CREPL_DEFINE_SIZE)
     {
         p_alloc_data = calloc(var_size, 1);
         FAIL_IF(p_alloc_data == NULL);
@@ -126,7 +126,7 @@ static void print_updated_variables(char *p_defname, void *p_data)
 int crepl_store(crepl_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
-    uint8_t tmp[USCHSHELL_DEFINE_SIZE] = {0};
+    uint8_t tmp[CREPL_DEFINE_SIZE] = {0};
     int is_updated = 0;
     if (p_context == NULL || p_defname == NULL)
         return -1;

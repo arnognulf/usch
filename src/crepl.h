@@ -20,8 +20,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#ifndef USCHSHELL_H
-#define USCHSHELL_H
+#ifndef CREPL_H
+#define CREPL_H
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -49,10 +49,10 @@ int crepl_lib(struct crepl_t *p_context, char *p_dynlib);
 int crepl_include(struct crepl_t *p_context, char *p_header);
 
 typedef enum {
-USCHSHELL_STATE_ERROR = 0,
-USCHSHELL_STATE_CPARSER = 1,
-USCHSHELL_STATE_CMDSTART = 2,
-USCHSHELL_STATE_CMDARG = 3,
+CREPL_STATE_ERROR = 0,
+CREPL_STATE_CPARSER = 1,
+CREPL_STATE_CMDSTART = 2,
+CREPL_STATE_CMDARG = 3,
 } crepl_state_t;
 int crepl_parsedefs(struct crepl_t *p_context, char *p_line);
 
@@ -64,5 +64,5 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
 #ifdef __cplusplus
 }
 #endif // __cplusplus
-#endif // USCHSHELL_H
+#endif // CREPL_H
 

@@ -1,15 +1,15 @@
 #include <ctype.h>
 #include "../external/uthash/src/uthash.h"
 
-#define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
-#define USCHSHELL_DEFINE_SIZE 8
+#define CREPL_DYN_FUNCNAME "usch_dyn_func"
+#define CREPL_DEFINE_SIZE 8
 typedef struct crepl_def_t
 {
     UT_hash_handle hh;
     size_t size;
     void *p_body_data;
     void *p_alloc_data;
-    uint8_t data[USCHSHELL_DEFINE_SIZE];
+    uint8_t data[CREPL_DEFINE_SIZE];
     char defname[];
 } crepl_def_t;
 

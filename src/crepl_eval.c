@@ -43,23 +43,142 @@
 #include "../external/uthash/src/uthash.h"
 
 
-#define USCHSHELL_DYN_FUNCNAME "usch_dyn_func"
+#define CREPL_DYN_FUNCNAME "usch_dyn_func"
 
 // TODO: DUPE of crepl_vars.c
 // this function is a naive parser and should probably not be used anyway
 static char *get_symname(char *p_defname)
 {
-    char *p_tmp = p_defname;
+    int len = (int)strlen(p_defname);
+    int i = len - 1;
     char *p_symname = p_defname;
-    while (*p_tmp != '\0')
+    if (len == 0)
+        return &p_defname[len-1];
+    p_symname = &p_defname[len];
+    while (i > 0 && !isalnum(p_defname[i]) && p_defname[i] != ';')
+        i--;
+    while (i >= 0)
     {
-        if (*p_tmp == ' ' || *p_tmp == '*')
+        if (isalnum(p_defname[i]))
         {
-            p_symname = p_tmp;
+            i--;
         }
-        p_tmp++;
+        else
+        {
+            if (isalpha(p_defname[i+1]))
+            {
+                p_symname = &p_defname[i+1];
+            }
+            break;
+        }
     }
-    return p_symname + 1;
+    if (i == 0 && isalpha(p_defname[i]))
+    {
+        p_symname = &p_defname[i];
+    }
+    return p_symname;
+}
+
+
+static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs_line_in)
+{
+    (void)p_context;
+    int status = 0;
+    int i = 0;
+    int start = 0;
+    char *p_defs_line = NULL;
+    p_defs_line = strdup(p_defs_line_in);
+    FAIL_IF(p_defs_line == NULL);
+
+    while (p_defs_line[i] == '\t' || p_defs_line[i] == ' ')
+    {
+        i++;
+    }
+    start = i;
+    while (p_defs_line[i] != '\0')
+    {
+        if (p_defs_line[i] == ';')
+        {
+            int nulpos = i;
+            while ((nulpos-1) >= 0)
+            {
+                if (p_defs_line[nulpos-1] == ' ' || p_defs_line[nulpos-1] == '\t')
+                {
+                    nulpos--;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            p_defs_line[nulpos] = '\0';
+            if (strlen(get_symname(&p_defs_line[start])) == 0)
+            {
+                i++;
+                continue;
+            }
+            bufstradd(p_bufstr, "(void)crepl_define(p_context, sizeof(");
+            bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
+            bufstradd(p_bufstr, "), \"");
+            bufstradd(p_bufstr, &p_defs_line[start]);
+            bufstradd(p_bufstr, "\");\n");
+        }
+        i++;
+    }
+end:
+    free(p_defs_line);
+    return status;
+}
+
+static int append_storedefs(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs_line_in)
+{
+    int status = 0;
+    (void)p_context;
+    int i = 0;
+    int start = 0;
+    char *p_defs_line = NULL;
+    p_defs_line = strdup(p_defs_line_in);
+    FAIL_IF(p_defs_line == NULL);
+
+    while (p_defs_line[i] == '\t' || p_defs_line[i] == ' ')
+    {
+        i++;
+    }
+    start = i;
+    while (p_defs_line[i] != '\0')
+    {
+        if (p_defs_line[i] == ';')
+        {
+            int nulpos = i;
+            while ((nulpos-1) >= 0)
+            {
+                if (p_defs_line[nulpos-1] == ' ' || p_defs_line[nulpos-1] == '\t')
+                {
+                    nulpos--;
+                }
+                else
+                {
+                    break;
+                }
+            }
+            p_defs_line[nulpos] = '\0';
+            if (strlen(get_symname(&p_defs_line[start])) == 0)
+            {
+                i++;
+                continue;
+            }
+            bufstradd(p_bufstr, "\tcrepl_store(p_context, \"");
+            bufstradd(p_bufstr, &p_defs_line[start]);
+            bufstradd(p_bufstr, "\", (void*)&");
+            bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
+            bufstradd(p_bufstr, ");\n");
+
+        }
+        i++;
+    }
+end:
+    free(p_defs_line);
+    return status;
 }
 
 
@@ -75,12 +194,12 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
     crepl_def_t *p_defs = NULL;
     crepl_def_t *p_def = NULL;
     crepl_def_t *p_tmp = NULL;
-    bufstr_t filecontent;
+    bufstr_t definitions_h;
 
-    filecontent.len = 1024;
-    filecontent.p_str = calloc(filecontent.len, 1);
-    FAIL_IF(filecontent.p_str == NULL);
-    (void)filecontent.p_str;
+    definitions_h.len = 1024;
+    definitions_h.p_str = calloc(definitions_h.len, 1);
+    FAIL_IF(definitions_h.p_str == NULL);
+    (void)definitions_h.p_str;
 
     p_defs = p_context->p_defs;
     tempdir_len = strlen(p_tempdir);
@@ -95,46 +214,51 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
     p_definitionsfile[filename_length-1] = '\0';
     p_definitions_h = fopen(p_definitionsfile, "w+");
     FAIL_IF(p_definitions_h == NULL);
+    bufstradd(&definitions_h, p_context->p_defs_line);
+    bufstradd(&definitions_h, ";");
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
-            FAIL_IF(!fwrite_ok(";\n", p_definitions_h));
+            bufstradd(&definitions_h, p_def->defname);
+            bufstradd(&definitions_h, ";\n");
         }
     }
-    FAIL_IF(!fwrite_ok("\nvoid crepl_load_vars(struct crepl_t *p_context)\n{\n", p_definitions_h));
+    bufstradd(&definitions_h, "\nvoid crepl_load_vars(struct crepl_t *p_context)\n{\n");
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("\tcrepl_load(p_context, \"", p_definitions_h));
-            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
-            FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
-            FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
-            FAIL_IF(!fwrite_ok(");\n", p_definitions_h));
+            bufstradd(&definitions_h, "\tcrepl_load(p_context, \"");
+            bufstradd(&definitions_h, p_def->defname);
+            bufstradd(&definitions_h, "\", (void*)&");
+            bufstradd(&definitions_h, get_symname(p_def->defname));
+            bufstradd(&definitions_h, ");\n");
         }
     }
+    FAIL_IF(append_definitions(p_context, &definitions_h, p_context->p_defs_line));
 
-    FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
+    bufstradd(&definitions_h, "\n}\n");
 
-    FAIL_IF(!fwrite_ok("\nvoid crepl_store_vars(struct crepl_t *p_context)\n{\n", p_definitions_h));
+    bufstradd(&definitions_h, "\nvoid crepl_store_vars(struct crepl_t *p_context)\n{\n");
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
         {
-            FAIL_IF(!fwrite_ok("\tcrepl_store(p_context, \"", p_definitions_h));
-            FAIL_IF(!fwrite_ok(p_def->defname, p_definitions_h));
-            FAIL_IF(!fwrite_ok("\", (void*)&", p_definitions_h));
-            FAIL_IF(!fwrite_ok(get_symname(p_def->defname), p_definitions_h));
-            FAIL_IF(!fwrite_ok(");\n", p_definitions_h));
+            bufstradd(&definitions_h, "\tcrepl_store(p_context, \"");
+            bufstradd(&definitions_h, p_def->defname);
+            bufstradd(&definitions_h, "\", (void*)&");
+            bufstradd(&definitions_h, get_symname(p_def->defname));
+            bufstradd(&definitions_h, ");\n");
         }
     }
+    FAIL_IF(append_storedefs(p_context, &definitions_h, p_context->p_defs_line));
 
-    FAIL_IF(!fwrite_ok("return;\n}\n", p_definitions_h));
-
-
+    bufstradd(&definitions_h, "\n}\n");
+    FAIL_IF(!fwrite_ok(definitions_h.p_str, p_definitions_h));
+    
 end:
+    free(definitions_h.p_str);
     if(p_definitions_h)
         fclose(p_definitions_h);
     free(p_definitionsfile);
@@ -283,29 +407,6 @@ end:
 #endif // 0
 #define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
 
-static void add_vars(crepl_t *p_context, char *p_defs_line)
-{
-    (void)p_context;
-    int i = 0;
-    int start = 0;
-
-    while (p_defs_line[i] == '\t' || p_defs_line[i] == ' ')
-    {
-        i++;
-    }
-    start = i;
-    while (p_defs_line[i] != '\0')
-    {
-        if (p_defs_line[i] == ';')
-        {
-            p_defs_line[i] = '\0';
-            printf("store: %s\n", p_defs_line[start]);
-            //status = crepl_store(p_context, "int int_test", (void*)&int_test);
-        }
-        i++;
-    }
-}
-
 int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
     int i = 0;
@@ -368,15 +469,18 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
     FAIL_IF(crepl_preparse(p_context, input.p_str, &state));
     FAIL_IF(crepl_parsedefs(p_context, input.p_str));
-    add_vars(p_context, p_context->p_defs_line);
+    free(input.p_str);
+    input.p_str = p_context->p_nodef_line;
+    input.len = strlen(p_context->p_nodef_line);
+    p_context->p_nodef_line = NULL;
 
     pp_cmds = p_context->pp_cmds;
     
-    if (state == USCHSHELL_STATE_CMDSTART)
+    if (state == CREPL_STATE_CMDSTART)
     {
         bufstradd(&input, "()");
     }
-    if (state == USCHSHELL_STATE_CMDARG)
+    if (state == CREPL_STATE_CMDARG)
     {
         size_t quotes = 0;
         size_t rparens = 0;
@@ -471,7 +575,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
         bufstradd(&stmt_c, "int ");
 
-        bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
+        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
         bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
         bufstradd(&stmt_c, input.p_str);
 
@@ -484,7 +588,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
         bufstradd(&stmt_c, ";\n");
 
         bufstradd(&stmt_c, "int \n");
-        bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
+        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
         bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n");
         bufstradd(&stmt_c, "\tcrepl_define(p_context, sizeof(");
         bufstradd(&stmt_c, get_symname(p_pre_assign));
@@ -515,7 +619,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 #endif // 0
     {
         bufstradd(&stmt_c, "int ");
-        bufstradd(&stmt_c, USCHSHELL_DYN_FUNCNAME);
+        bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
         bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
         bufstradd(&stmt_c, input.p_str);
 
@@ -534,7 +638,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_tempdylib[tempdir_len] = '/';
     strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
     p_tempdylib[dylib_length-1] = '\0';
-    if (usch_shell_cc("-rdynamic", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
+    if (usch_shell_cc("-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
         ENDOK_IF(1);
@@ -554,7 +658,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF((p_error = dlerror()) != NULL);
     (*set_context)(p_context);
 
-    *(void **) (&dyn_func) = dlsym(p_handle, USCHSHELL_DYN_FUNCNAME);
+    *(void **) (&dyn_func) = dlsym(p_handle, CREPL_DYN_FUNCNAME);
     FAIL_IF((p_error = dlerror()) != NULL);
     (*dyn_func)(p_context);
 

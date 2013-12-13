@@ -28,10 +28,10 @@
 #include <string.h>                     // for strlen
 #include <termios.h>                    // for termios, tcsetattr, ECHO, etc
 #include <unistd.h>                     // for read
-#include "crepl.h"                      // for ::USCHSHELL_STATE_CPARSER, etc
+#include "crepl.h"                      // for ::CREPL_STATE_CPARSER, etc
 #include "crepl_debug.h"                // for FAIL_IF
 
-static crepl_state_t state = USCHSHELL_STATE_CPARSER;
+static crepl_state_t state = CREPL_STATE_CPARSER;
 
 static struct crepl_t *p_global_context = NULL;
 static int xgetch() 
@@ -68,14 +68,14 @@ static int xgetch()
         //fprintf(stderr, "\nxgetch() 1: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
         FAIL_IF(crepl_preparse(p_global_context, rl_line_buffer, &state));
         //fprintf(stderr, "\nxgetch() 2: state=%d rl_line_buffer=%s\n", (int)state, rl_line_buffer);
-        if (state == USCHSHELL_STATE_CMDSTART)
+        if (state == CREPL_STATE_CMDSTART)
         {
             char text[] = "(";
             rl_insert_text(text);
             rl_redisplay();
             buf = '\"'; 
         }
-        else if (state == USCHSHELL_STATE_CMDARG)
+        else if (state == CREPL_STATE_CMDARG)
         {
             char text[] = "\", ";
             rl_insert_text(text);
@@ -136,7 +136,7 @@ static int prompt(struct crepl_t *p_context)
     {
         //size_t clear_len = 0;
         char *p_s = NULL;
-        state = USCHSHELL_STATE_CPARSER;
+        state = CREPL_STATE_CPARSER;
         rl_initialize();
         rl_set_prompt("/* usch */ ");
         p_line = readline ("/* usch */ ");

@@ -659,9 +659,9 @@ end:
 
 #define USCH_CMD_ARGS(...) usch_cmd_impl(USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define usch_cmd(cmd, ...) USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
-#ifndef USCHSHELL_PARSER
+#ifndef CREPL_PARSER
 #define cd(...) usch_cmd("cd", ##__VA_ARGS__)
-#endif // USCHSHELL_PARSER
+#endif // CREPL_PARSER
 
 #if NEED_VIM_WORKAROUND
 {
