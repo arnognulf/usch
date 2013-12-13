@@ -529,35 +529,6 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
     bufstradd(p_bufstr, ";\n\treturn 0;\n");
     bufstradd(p_bufstr, "}\n");
 }
-#if 0
-static int recurse_protector = 0;
-
-size_t find_parent_identifier(char *p_str, char **pp_parent)
-{
-    size_t i = 0;
-
-    while (p_str[i] != '\0')
-    {
-        if (isalpha(p_str[i]))
-        {
-            while (isalnum(p_str[i]))
-            {
-                i++;
-            }
-        }
-        switch (p_str[i])
-        {
-            case '(':
-            case '[':
-            case '"':
-            case '\'':
-
-        }
-        i++;
-    }
-    return i;
-}
-#endif // 0
 
 char* crepl_parent_identifier(char *p_str)
 {
@@ -640,6 +611,7 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
     int last_clear = 0;
     int def_end = 0;
     int firstid = -1;
+    int identifiers = 0;
 
     if (start == end)
     {
@@ -666,6 +638,7 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
             i++;
             while (p_line[i] == '_' || isalnum(p_line[i]))
                 i++;
+            identifiers++;
         }
         if (p_line[i] == ';')
             break;
@@ -678,18 +651,22 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
     {
         *pp_defstart = &p_defs[firstid];
     }
+#if 0
     for (i = last_clear; p_line[i] == '_' || isalnum(p_line[i]); i++)
     {
         putchar(p_line[i]);
     }
-
-    for (i = start; i < def_end; i++)
+#endif // 0
+    if (identifiers > 1)
     {
-        p_defs[i] = p_line[i];
+        for (i = start; i < def_end; i++)
+        {
+            p_defs[i] = p_line[i];
+        }
+        clear_range(p_line, firstid, last_clear);
+        p_defs[def_end] = ';';
+        //putchar('\n');
     }
-    clear_range(p_line, firstid, last_clear);
-    p_defs[def_end] = ';';
-    putchar('\n');
 }
 
 int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)

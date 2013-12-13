@@ -86,6 +86,7 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
     int status = 0;
     int i = 0;
     int start = 0;
+    int has_semicolons = 0;
     char *p_defs_line = NULL;
     if (p_defs_line_in == NULL)
         ENDOK_IF(1);
@@ -102,6 +103,7 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
         if (p_defs_line[i] == ';')
         {
             int nulpos = i;
+            has_semicolons = 1;
             while ((nulpos-1) >= 0)
             {
                 if (p_defs_line[nulpos-1] == ' ' || p_defs_line[nulpos-1] == '\t')
@@ -127,6 +129,14 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
         }
         i++;
     }
+    if (!has_semicolons && strlen(get_symname(&p_defs_line[start])) > 0)
+    {
+        bufstradd(p_bufstr, "(void)crepl_define(p_context, sizeof(");
+        bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
+        bufstradd(p_bufstr, "), \"");
+        bufstradd(p_bufstr, &p_defs_line[start]);
+        bufstradd(p_bufstr, "\");\n");
+    }
 end:
     free(p_defs_line);
     return status;
@@ -138,6 +148,7 @@ static int append_storedefs(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs
     (void)p_context;
     int i = 0;
     int start = 0;
+    int has_semicolons = 0;
     char *p_defs_line = NULL;
     if (p_defs_line_in == NULL)
         ENDOK_IF(1);
@@ -155,6 +166,7 @@ static int append_storedefs(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs
         if (p_defs_line[i] == ';')
         {
             int nulpos = i;
+            has_semicolons = 1;
             while ((nulpos-1) >= 0)
             {
                 if (p_defs_line[nulpos-1] == ' ' || p_defs_line[nulpos-1] == '\t')
@@ -180,6 +192,14 @@ static int append_storedefs(crepl_t *p_context, bufstr_t *p_bufstr, char *p_defs
 
         }
         i++;
+    }
+    if (!has_semicolons && strlen(get_symname(&p_defs_line[start])) > 0)
+    {
+        bufstradd(p_bufstr, "\tcrepl_store(p_context, \"");
+        bufstradd(p_bufstr, &p_defs_line[start]);
+        bufstradd(p_bufstr, "\", (void*)&");
+        bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
+        bufstradd(p_bufstr, ");\n");
     }
 end:
     free(p_defs_line);
@@ -230,6 +250,7 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
         }
     }
     bufstradd(&definitions_h, "\nvoid crepl_load_vars(struct crepl_t *p_context)\n{\n");
+    FAIL_IF(append_definitions(p_context, &definitions_h, p_context->p_defs_line));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
@@ -241,7 +262,6 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
             bufstradd(&definitions_h, ");\n");
         }
     }
-    FAIL_IF(append_definitions(p_context, &definitions_h, p_context->p_defs_line));
 
     bufstradd(&definitions_h, "\n}\n");
 
@@ -525,12 +545,10 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
             FAIL_IF(preproc_cmd.p_str == NULL);
 
-            bufstradd(&preproc_cmd, "(void)crepl_lib(p_crepl_context, \"");
+            bufstradd(&preproc_cmd, "\t(void)crepl_lib(p_crepl_context, \"");
             ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#lib ")]);
             bufstradd(&preproc_cmd, "\");");
-            printf("xyz: %s\n", input.p_str);
-            printf("xyz: %s\n", preproc_cmd.p_str);
             free(input.p_str);
             input.p_str = preproc_cmd.p_str;
             input.len = preproc_cmd.len;
@@ -545,7 +563,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
             FAIL_IF(preproc_cmd.p_str == NULL);
 
-            bufstradd(&preproc_cmd, "(void)crepl_include(p_crepl_context, \"");
+            bufstradd(&preproc_cmd, "\t(void)crepl_include(p_crepl_context, \"");
             ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#include ")]);
             bufstradd(&preproc_cmd, "\");");
@@ -654,7 +672,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF((p_error = dlerror()) != NULL);
     (*crepl_store_vars)(p_context);
 
-
 end:
     free(definition.p_symname);
     if (p_handle)
@@ -666,6 +683,11 @@ end:
     free(p_fullpath_uschrc_h);
     free(stmt_c.p_str);
     free(input.p_str);
+    free(p_context->p_nodef_line);
+    p_context->p_nodef_line = NULL;
+    free(p_context->p_defs_line);
+    p_context->p_defs_line = NULL;
+
     //free(pp_cmds);
 
     if (p_stmt_c != NULL)

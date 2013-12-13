@@ -259,7 +259,7 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     strcpy(p_tmpheader, p_tmpdir);
     p_tmpheader[strlen(p_tmpheader)] = '/';
     strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_h);
-    printf("header: %s\n", p_tmpheader);
+    //printf("header: %s\n", p_tmpheader);
 
     p_includefile = fopen(p_tmpheader, "w");
     FAIL_IF(p_includefile == NULL);
