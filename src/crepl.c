@@ -56,6 +56,7 @@ int crepl_create(crepl_t **pp_context)
     crepl_inc_t *p_inc = NULL;
     char dir_template[] = "/tmp/crepl-XXXXXX";
     char *p_tempdir = NULL;
+    char **pp_ldpath = NULL;
 
     p_context = calloc(sizeof(crepl_t) + strlen(dir_template) + 1, 1);
     FAIL_IF(p_context == NULL);
@@ -82,7 +83,12 @@ int crepl_create(crepl_t **pp_context)
     HASH_ADD_STR(p_context->p_incs, incname, p_inc);
     strcpy(p_context->tmpdir, p_tempdir);
 
+    pp_ldpath = crepl_getldpath();
+    FAIL_IF(pp_ldpath == NULL);
+    p_context->pp_ldpaths = pp_ldpath;
+
     *pp_context = p_context;
+    pp_ldpath = NULL;
     p_context = NULL;
     p_def = NULL;
     p_sym = NULL;

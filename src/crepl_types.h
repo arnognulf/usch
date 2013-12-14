@@ -49,6 +49,7 @@ typedef struct crepl_inc_t
 
 typedef struct crepl_t 
 {
+    char **pp_ldpaths;
     char **pp_cmds;
     char *p_nodef_line;
     char *p_defs_line;

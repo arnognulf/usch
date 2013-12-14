@@ -5,8 +5,85 @@
 #include "clang-c/Index.h"
 #include "bufstr.h"
 #include "strutils.h"
-
+#include "usch.h"
 static int has_symbol(struct crepl_t *p_context, const char* p_sym);
+
+char **crepl_getldpath()
+{
+    usch_stash_t stash = {0};
+    int i = 0;
+    int j = 0;
+    int ld_idx = 0;
+    int status = 0;
+    int num_paths = 0;
+    int count = 0;
+    char **pp_ldpath = NULL;
+    char *p_ldscript = NULL;
+    char *p_ldpaths = NULL;
+    
+    p_ldscript = usch_strout(&stash, "ld", "--verbose");
+    FAIL_IF(p_ldscript[0] == '\0');
+
+    while (p_ldscript[i] != '\0')
+    {
+        if (strncmp("SEARCH_DIR(\"", &p_ldscript[i], strlen("SEARCH_DIR(\"")) == 0)
+        {
+
+            i+=strlen("SEARCH_DIR(\"");
+            if (p_ldscript[i] == '=')
+            {
+                i++;
+            }
+            while(p_ldscript[i] != '"')
+            {
+                count++;
+                i++;
+            }
+            // leave space for NUL 
+            count++;
+
+            num_paths++;
+        }
+        i++;
+    }
+    pp_ldpath = calloc((num_paths + 1)*sizeof(char*) + count * sizeof(char), 1);
+    FAIL_IF(pp_ldpath == NULL);
+    
+    p_ldpaths = (char*)&pp_ldpath[num_paths+1];
+
+    i = 0;
+    while (p_ldscript[i] != '\0')
+    {
+        if (strncmp("SEARCH_DIR(\"", &p_ldscript[i], strlen("SEARCH_DIR(\"")) == 0)
+        {
+
+            i+=strlen("SEARCH_DIR(\"");
+            if (p_ldscript[i] == '=')
+            {
+                i++;
+            }
+            pp_ldpath[ld_idx] = &p_ldpaths[j];
+            while(p_ldscript[i] != '"')
+            {
+                p_ldpaths[j] = p_ldscript[i];
+                j++;
+                i++;
+            }
+            p_ldpaths[j] = '\0';
+            j++;
+            ld_idx++;
+        }
+        i++;
+    }
+end:
+    usch_stashfree(&stash);
+    if (status != 0)
+    {
+        free(pp_ldpath);
+    }
+
+    return pp_ldpath;
+}
 
 static enum CXChildVisitResult clang_visitor(
         CXCursor cursor, 
@@ -190,6 +267,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname)
     p_lib = calloc(sizeof(crepl_lib_t) + strlen(p_libname) + 1, 1);
     FAIL_IF(p_lib == NULL);
 
+    // TODO: support #lib m with aid of pp_ldpath
     strcpy(p_lib->libname, p_libname);
 
     p_lib->p_handle = dlopen(p_libname, RTLD_LAZY);
