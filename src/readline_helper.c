@@ -31,6 +31,8 @@
 #include "crepl.h"                      // for ::CREPL_STATE_CPARSER, etc
 #include "crepl_debug.h"                // for FAIL_IF
 
+#include  <signal.h>
+
 static crepl_state_t state = CREPL_STATE_CPARSER;
 
 static struct crepl_t *p_global_context = NULL;
@@ -171,6 +173,10 @@ end:
     return status;
 }
 
+static void siginthandler(int dummy)
+{
+    (void)dummy;
+}
 int main(int argc, char** p_argv)
 {
 
@@ -179,6 +185,9 @@ int main(int argc, char** p_argv)
     struct crepl_t *p_crepl = NULL;
     crepl_create(&p_crepl);
     p_global_context = p_crepl;
+    signal(SIGINT, siginthandler);
+    signal(SIGQUIT, siginthandler);
+
     prompt(p_crepl);
     crepl_destroy(p_crepl);
 }
