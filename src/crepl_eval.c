@@ -610,11 +610,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     {
         for (i = 0; pp_cmds[i] != NULL; i++)
         {
-            if (strcmp(pp_cmds[i], "cd") == 0)
-            {
-                ;
-            }
-            else
+            if (strcmp(pp_cmds[i], "cd") != 0)
             {
                 bufstradd(&stmt_c, "#define ");
                 bufstradd(&stmt_c, definition.p_symname);

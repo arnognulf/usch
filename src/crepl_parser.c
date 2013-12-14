@@ -839,7 +839,34 @@ int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_st
         // identifier is not defined
         if (userdata.found_cur_id == 0)
         {
-            if (is_system_cmd(userdata.p_cur_id) || is_builtin_cmd(userdata.p_cur_id))
+            if (is_builtin_cmd(userdata.p_cur_id))
+            {
+                if (pp_cmds[0] == NULL)
+                {
+                    p_cmds = (char*)&pp_cmds[num_identifiers + 1];
+                    FAIL_IF(p_cmds == NULL);
+                }
+                FAIL_IF(pp_identifiers[i] == NULL);
+                strcpy(p_cmds, pp_identifiers[i]);
+                pp_cmds[cmdidx] = p_cmds;
+                p_cmds += strlen(pp_identifiers[i]) + 1;
+                cmdidx++;
+
+                if (has_trailing_closed_parenthesis(p_line))
+                {
+                    state = CREPL_STATE_CPARSER;
+                }
+                else if (has_trailing_open_parenthesis(p_line))
+                {
+                    state = CREPL_STATE_CMDARG;
+                } 
+                else
+                {
+                    state = CREPL_STATE_CMDSTART;
+                }
+                break;
+            }
+            else if (is_system_cmd(userdata.p_cur_id))
             {
                 // the identifier is available as a system command
                 // try to define the identifier as a function
