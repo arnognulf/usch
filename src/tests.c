@@ -213,9 +213,24 @@ static char *test_crepl_dyld()
 #endif // 0
     mu_assert("error: crepl_lib() != 0", error == 0);
     error = crepl_include(p_context, "<math.h>");
-    //error = crepl_include(p_context, "<xmmintrin.h>");
+    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
+    crepl_destroy(p_context);
+    p_context = NULL;
+
+    error = crepl_create(&p_context);
+    error = crepl_lib(p_context, "m");
+    mu_assert("error: crepl_lib() != 0", error == 0);
+    error = crepl_include(p_context, "<math.h>");
     mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
 
+    crepl_destroy(p_context);
+    p_context = NULL;
+
+    error = crepl_create(&p_context);
+    error = crepl_lib(p_context, "xapian");
+    mu_assert("error: crepl_lib() != 0", error == 0);
+    crepl_destroy(p_context);
+    p_context = NULL;
 cleanup:
     crepl_destroy(p_context);
     return p_message;

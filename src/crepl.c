@@ -85,7 +85,7 @@ int crepl_create(crepl_t **pp_context)
 
     pp_ldpath = crepl_getldpath();
     FAIL_IF(pp_ldpath == NULL);
-    p_context->pp_ldpaths = pp_ldpath;
+    p_context->pp_ldpath = pp_ldpath;
 
     *pp_context = p_context;
     pp_ldpath = NULL;

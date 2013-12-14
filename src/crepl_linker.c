@@ -1,11 +1,15 @@
 #include <dlfcn.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <fnmatch.h>
+
 #include "crepl_types.h"
 #include "crepl_debug.h"
 #include "clang-c/Index.h"
 #include "bufstr.h"
 #include "strutils.h"
 #include "usch.h"
+
 static int has_symbol(struct crepl_t *p_context, const char* p_sym);
 
 char **crepl_getldpath()
@@ -255,22 +259,116 @@ end:
     (void)status;
     return symbol_found;
 }
+char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
+{
+    bufstr_t namecand;
+    struct stat sb;
+    char **pp_ldpath = NULL;
+    int i = 0;
+    int status = 0;
+    char *p_foundlib = NULL;
+    char apistr[(sizeof(int)*8+1)] = {0};
 
-int crepl_lib(struct crepl_t *p_context, char *p_libname)
+    namecand.len = 256;
+    namecand.p_str = calloc(namecand.len, 1);
+
+    pp_ldpath = p_context->pp_ldpath;
+    FAIL_IF(pp_ldpath == NULL);
+
+    if (stat(p_libname_in, &sb) == 0)
+    {
+        p_foundlib = strdup(p_libname_in);
+        ENDOK_IF(1);
+    }
+
+
+    for (i = 0; pp_ldpath[i] != NULL; i++)
+    {
+        namecand.p_str[0] = '\0';
+        bufstradd(&namecand, pp_ldpath[i]);
+        bufstradd(&namecand, "/");
+        bufstradd(&namecand, p_libname_in);
+        if (stat(namecand.p_str, &sb) == 0)
+        {
+            p_foundlib = namecand.p_str;
+            namecand.p_str = NULL;
+            ENDOK_IF(1);
+        }
+        namecand.p_str[0] = '\0';
+        bufstradd(&namecand, pp_ldpath[i]);
+        bufstradd(&namecand, "/lib");
+        bufstradd(&namecand, p_libname_in);
+
+        bufstradd(&namecand, ".so");
+        if (stat(namecand.p_str, &sb) == 0)
+        {
+            p_foundlib = namecand.p_str;
+            namecand.p_str = NULL;
+            ENDOK_IF(1);
+        }
+        namecand.p_str[0] = '\0';
+        bufstradd(&namecand, pp_ldpath[i]);
+        bufstradd(&namecand, "/");
+        bufstradd(&namecand, "lib");
+        bufstradd(&namecand, p_libname_in);
+        bufstradd(&namecand, ".so.*");
+        int apiver;
+        // TODO: there is probably a better way to do this
+        // also the hardcoded limit at 99 may be exceeded by some crazy library, at least 22 is out in the wild.
+        for (apiver = 99; apiver >= 0; apiver--)
+        {
+            namecand.p_str[0] = '\0';
+            bufstradd(&namecand, pp_ldpath[i]);
+            bufstradd(&namecand, "/");
+            bufstradd(&namecand, "lib");
+            bufstradd(&namecand, p_libname_in);
+            bufstradd(&namecand, ".so.");
+            sprintf(apistr, "%d", apiver);
+            bufstradd(&namecand, apistr);
+            apistr[0] = '\0';
+
+            if (stat(namecand.p_str, &sb) == 0)
+            {
+                p_foundlib = namecand.p_str;
+                namecand.p_str = NULL;
+                ENDOK_IF(1);
+            }
+            namecand.p_str[0] = '\0';
+        }
+    }
+    if (p_foundlib == NULL)
+    {
+        printf("lib not found\n");
+    }
+
+end:
+    (void)status;
+    free(namecand.p_str);
+    return p_foundlib;
+
+}
+
+int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
 {
     int status = 0;
     crepl_lib_t *p_lib = NULL;
     crepl_lib_t *p_current_lib = NULL;
+    void *p_handle = NULL;
+    char *p_libname = NULL;
 
-    FAIL_IF(p_context == NULL || p_libname == NULL);
-    
+    FAIL_IF(p_context == NULL || p_libname_in == NULL);
+   
+    p_libname = get_fullname(p_context, p_libname_in);
+    FAIL_IF(p_libname == NULL);
+
+    p_handle = dlopen(p_libname, RTLD_LAZY);
+    FAIL_IF(p_handle == NULL);
+
     p_lib = calloc(sizeof(crepl_lib_t) + strlen(p_libname) + 1, 1);
     FAIL_IF(p_lib == NULL);
 
-    // TODO: support #lib m with aid of pp_ldpath
+    p_lib->p_handle = p_handle;
     strcpy(p_lib->libname, p_libname);
-
-    p_lib->p_handle = dlopen(p_libname, RTLD_LAZY);
 
     p_current_lib = p_context->p_libs;
 
@@ -288,6 +386,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname)
     }
     p_lib = NULL;
 end:
+    free(p_libname);
     free(p_lib);
     return status;
 }

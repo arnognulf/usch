@@ -713,12 +713,36 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
 
         if (p_line[i] == '_' || isalpha(p_line[i]))
         {
+            int skipahead;
+            int valid_identifier = 1;
             i++;
             while (isalnum(p_line[i]) || p_line[i] == '_')
             {
                 i++;
             }
-            identifiers++;
+            skipahead = i;
+
+            while (p_line[skipahead] != '\0' && p_line[skipahead] != ';')
+            {
+                if (p_line[skipahead] == '=')
+                {
+                    // ok
+                }
+                else
+                {
+                    if (p_line[skipahead] == '(')
+                    {
+                        while(p_line[i] != ';')
+                            i++;
+                        break;
+                        valid_identifier = 0;
+                    }
+
+                }
+                skipahead++;
+            }
+            if (valid_identifier)
+                identifiers++;
         }
         else
         {
