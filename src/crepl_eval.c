@@ -455,6 +455,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     char uschrc_h[] = "/.uschrc.h";
+    usch_stash_t s = {NULL};
 
     char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";
@@ -478,7 +479,8 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     stmt_c.p_str = calloc(1024, 1);
     FAIL_IF(stmt_c.p_str == NULL);
     stmt_c.len = 1024;
-    FAIL_IF(usch_strsplit(getenv("PATH"), ":", &pp_path) < 0);
+    pp_path = usch_strsplit(&s, getenv("PATH"), ":");
+    FAIL_IF(pp_path[0] == NULL);
     p_tempdir = p_context->tmpdir;
     FAIL_IF(p_tempdir == NULL);
     tempdir_len = strlen(p_tempdir);
@@ -683,6 +685,7 @@ end:
     p_context->p_nodef_line = NULL;
     free(p_context->p_defs_line);
     p_context->p_defs_line = NULL;
+    usch_stashfree(&s);
 
     //free(pp_cmds);
 

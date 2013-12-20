@@ -51,9 +51,28 @@ cleanup:
 #if 0
 static char * test_strexp()
 {
-    return "not implemented";
-}
+    char *p_message = NULL;
+    usch_stash_t s = {NULL};
 
+    {
+        char **pp_out = usch_strexp(&s, "foo", "bar", "baz");
+        mu_assert("error: pp_out[0] != foo", strcmp(pp_out[0], "foo") == 0);
+        mu_assert("error: pp_out[1] != bar", strcmp(pp_out[1], "bar") == 0);
+        mu_assert("error: pp_out[2] != baz", strcmp(pp_out[2], "baz") == 0);
+        mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
+    }
+    {
+        char **pp_out = usch_strexp(&s, "tes?.c");
+        mu_assert("error: pp_out[0] != test.c", strcmp(pp_out[0], "test.c") == 0);
+        mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
+    }
+cleanup: 
+    usch_stashfree(&s);
+    return p_message;
+}
+#endif // 0
+
+#if 0
 static char * test_cd()
 {
     return "not implemented";
@@ -404,6 +423,7 @@ static char * all_tests()
     mu_run_test(test_crepl_parent);
     mu_run_test(test_usch_strout);
     mu_run_test(test_crepl_parsedefs);
+    //mu_run_test(test_strexp);
 //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);
