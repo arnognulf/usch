@@ -80,7 +80,7 @@ char **crepl_getldpath()
         i++;
     }
 end:
-    usch_stashfree(&stash);
+    usch_stashclean(&stash);
     if (status != 0)
     {
         free(pp_ldpath);

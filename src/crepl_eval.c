@@ -685,7 +685,7 @@ end:
     p_context->p_nodef_line = NULL;
     free(p_context->p_defs_line);
     p_context->p_defs_line = NULL;
-    usch_stashfree(&s);
+    usch_stashclean(&s);
 
     //free(pp_cmds);
 

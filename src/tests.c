@@ -28,7 +28,7 @@
 #include "crepl.h"                      // for crepl_define, crepl_load, etc
 #include "crepl_parser.h"               // for stripwhite, identifier_pos
 #include "minunit.h"                    // for mu_assert, mu_run_test
-#include "usch.h"                       // for usch_cmd, usch_stashfree, etc
+#include "usch.h"                       // for usch_cmd, usch_stashclean, etc
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -44,7 +44,7 @@ static char * test_strsplit() {
         mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
     }
 cleanup:
-    usch_stashfree(&s);
+    usch_stashclean(&s);
     return p_message;
 }
 
@@ -67,7 +67,7 @@ static char * test_strexp()
         mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
     }
 cleanup: 
-    usch_stashfree(&s);
+    usch_stashclean(&s);
     return p_message;
 }
 #endif // 0
@@ -145,7 +145,7 @@ static char *test_usch_strout()
     p_str = usch_strout(&s, "echo", "foo");
     mu_assert("error: usch_strout(\"echo\", \"foo\") != 0", p_str != NULL);
     mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
-    usch_stashfree(&s);
+    usch_stashclean(&s);
 cleanup:
     return p_message;
 }

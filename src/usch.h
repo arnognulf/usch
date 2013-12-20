@@ -83,7 +83,7 @@ static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_
  *   @return Description of the return value
  *   */
 
-static inline void usch_stashfree(usch_stash_t *p_memstash);
+static inline void usch_stashclean(usch_stash_t *p_memstash);
 
 
 /**
@@ -154,7 +154,7 @@ static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_
 
     return status;
 }
-static inline void usch_stashfree(usch_stash_t *p_memstash)
+static inline void usch_stashclean(usch_stash_t *p_memstash)
 {
     struct usch_stash_mem *p_current = NULL;
     if (p_memstash == NULL)
