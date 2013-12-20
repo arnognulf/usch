@@ -33,19 +33,18 @@
 int tests_run = 0;
 static char * test_strsplit() {
     char *p_message = NULL;
-    char **pp_out = NULL;
     char *p_test1 = "foo bar baz";
-    int num_items = 0;
-    num_items = usch_strsplit(p_test1, " ", &pp_out);
-    mu_assert("num_items > 0", num_items > 0);
-    mu_assert("error: pp_out[0] != foo", strcmp(pp_out[0], "foo") == 0);
-    mu_assert("error: pp_out[1] != bar", strcmp(pp_out[1], "bar") == 0);
-    mu_assert("error: pp_out[2] != baz", strcmp(pp_out[2], "baz") == 0);
-    mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
-    free(pp_out);
-    return 0;
+    usch_stash_t s = {NULL};
+    {
+        char **pp_out = NULL;
+        pp_out = usch_strsplit(&s, p_test1, " ");
+        mu_assert("error: pp_out[0] != foo", strcmp(pp_out[0], "foo") == 0);
+        mu_assert("error: pp_out[1] != bar", strcmp(pp_out[1], "bar") == 0);
+        mu_assert("error: pp_out[2] != baz", strcmp(pp_out[2], "baz") == 0);
+        mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
+    }
 cleanup:
-    free(pp_out);
+    usch_stashfree(&s);
     return p_message;
 }
 

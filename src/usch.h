@@ -27,7 +27,7 @@ extern "C" {
 #endif // __cplusplus
 #if NEED_VIM_WORKAROUND
 }
-#endif
+#endif // NEED_VIM_WORKAROUND
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -58,6 +58,38 @@ typedef struct
 {
     struct usch_stash_mem *p_next;
 } usch_stash_t;
+
+static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
+{
+    int status = 0;
+
+    if (p_memstash == NULL || p_memblob == NULL)
+        return -1;
+
+    p_memblob->p_next = p_memstash->p_next;
+    p_memstash->p_next = p_memblob;
+
+    return status;
+}
+static inline void usch_stashfree(usch_stash_t *p_memstash)
+{
+    struct usch_stash_mem *p_current = NULL;
+    if (p_memstash == NULL)
+        return;
+    if (p_memstash->p_next == NULL)
+        return;
+
+    p_current = p_memstash->p_next;
+
+    while (p_current != NULL)
+    {
+        struct usch_stash_mem *p_prev = p_current;
+        p_current = p_current->p_next;
+        free(p_prev);
+    }
+    p_memstash->p_next = NULL;
+}
+
     
 /**
  * <A short one line description>
@@ -69,8 +101,9 @@ typedef struct
  *   @param  ...
  *   @return Description of the return value
  *   */
-static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***ppp_out)
+static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
 {
+    struct usch_stash_mem *p_memblob = NULL;
     char** pp_out = NULL;
     char* p_out = NULL;
     size_t len_in;
@@ -80,8 +113,8 @@ static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***
     size_t size = 0;
     int out_pos = 0;
 
-    if (p_in == NULL || p_delims == NULL || ppp_out == NULL)
-        goto error;
+    if (p_memstash == NULL || p_in == NULL || p_delims == NULL)
+        goto end;
 
     len_in = strlen(p_in);
     len_delims = strlen(p_delims);
@@ -97,11 +130,12 @@ static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***
         }
     }
 
-    size = (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
-    pp_out = calloc(size, 1);
-    if (pp_out == NULL)
-        goto error;
+    size = sizeof(struct usch_stash_mem) + (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
+    p_memblob = calloc(size, 1);
+    if (p_memblob == NULL)
+        goto end;
 
+    pp_out = (char**)p_memblob->str;
     p_out = (char*)(pp_out + num_str + 1);
     memcpy(p_out, p_in, len_in + 1);
 
@@ -119,11 +153,15 @@ static inline int usch_strsplit(const char* p_in, const char* p_delims, char ***
         }
     }
 
-    *ppp_out = pp_out;
-    return (int)num_str;
-
-error:
-    return -1;
+    if (usch_stash(p_memstash, p_memblob) != 0)
+    {
+        printf("stash failed, ohnoes!\n");
+        goto end;
+    }
+    p_memblob = NULL;
+end:
+    free(p_memblob);
+    return pp_out;
 }
 
 //static inline int usch_strexp(char* p_in, char*** ppp_out, pattern1, pattern2, ...)
@@ -184,7 +222,6 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
 }
 #endif // 0
 
-#if 0
 /**
  * <A short one line description>
  *  
@@ -195,7 +232,6 @@ static inline int usch_strexp(char *p_in, size_t num_args, char ***ppp_out, char
  *   @param  ...
  *   @return Description of the return value
  *   */
-
 static inline int usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
     int status = 0;
@@ -284,12 +320,16 @@ end:
 
     return status;
 }
+#if 0
 static inline int usch_whereis(char* p_item, char** pp_dest)
 {
     char **pp_path = NULL;
     int status = 0;
     int num_items = 0;
-    num_items = usch_strsplit(getenv("PATH"), ":", &pp_path);
+    usch_stash_t s = {NULL};
+
+    usch_strsplit(&s, getenv("PATH"), ":", &pp_path);
+
     if (num_items < 1)
     {
         status = -1;
@@ -554,37 +594,6 @@ end:
 
     return status;
 }
-static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
-{
-    int status = 0;
-
-    if (p_memstash == NULL || p_memblob == NULL)
-        return -1;
-
-    p_memblob->p_next = p_memstash->p_next;
-    p_memstash->p_next = p_memblob;
-
-    return status;
-}
-static inline void usch_stashfree(usch_stash_t *p_memstash)
-{
-    struct usch_stash_mem *p_current = NULL;
-    if (p_memstash == NULL)
-        return;
-    if (p_memstash->p_next == NULL)
-        return;
-
-    p_current = p_memstash->p_next;
-
-    while (p_current != NULL)
-    {
-        struct usch_stash_mem *p_prev = p_current;
-        p_current = p_current->p_next;
-        free(p_prev);
-    }
-    p_memstash->p_next = NULL;
-}
-
 static inline char* usch_strout_impl(usch_stash_t *p_memstash, size_t num_args, char *p_name, ...)
 {
     (void)p_memstash;
@@ -665,7 +674,7 @@ end:
 
 #if NEED_VIM_WORKAROUND
 {
-#endif
+#endif // NEED_VIM_WORKAROUND
 
 #ifdef __cplusplus
 }
