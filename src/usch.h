@@ -43,58 +43,47 @@ extern "C" {
 
 /******************************* public declarations **********************************/
 
-/**
- * <A short one line description>
- *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
- *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
- *   */
+
 
 struct usch_stash_mem;
+
+/**
+ * @brief A structure that holds a pointer to a linked list of allocations
+ *  
+ *  
+ *  Returned allocated memory by usch functions should not be explicitly free'd.
+ *
+ *  Instead the usch_stashclean() function should be called.
+ *   */
 typedef struct
 {
     struct usch_stash_mem *p_next;
 } usch_stash_t;
 
 /**
- * <A short one line description>
+ * @brief free allocated memory referenced by p_memstash.
  *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
+ * A function to free any allocated memory referenced by an usch_stash_t structure.
+ *  usch_stashclean can be called any number of times with the same usch_stash_t argument.
  *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
- *   */
-static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob);
-
-/**
- * <A short one line description>
- *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
- *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
+ *   @param Pointer to an usch_stash_t (preferably on the stack)
  *   */
 
 static inline void usch_stashclean(usch_stash_t *p_memstash);
 
 
 /**
- * <A short one line description>
+ * @brief splits a string
  *  
  *  <Longer description>
  *  <May span multiple lines or paragraphs as needed>
  *   
- *   @param  Description of method's or function's input parameter
- *   @param  ...
- *   @return Description of the return value
+ *   @param p_memstash Stash holding allocations.
+ *   @param p_in A string to split.
+ *   @param p_delims Delimiting characters where the string should be split.
+ *   @return A NULL-terminated array of pointers to the substrings.
+ *   @remarks return value must not be freed.
+ *   @remarks return value is never NULL.
  *   */
 static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims);
 
@@ -106,11 +95,10 @@ static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, c
 #define cd(...) usch_cmd("cd", ##__VA_ARGS__)
 #endif // CREPL_PARSER
 
-
-
 /******************************* private APIs, may change without notice  **********************************/
 struct usch_glob_list_t;
 
+static inline int priv_usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob);
 static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct usch_glob_list_t **pp_glob_list);
 static inline void   priv_usch_free_globlist(struct usch_glob_list_t *p_glob_list);
 static inline int    priv_usch_cmd_arr(struct usch_stash_mem **pp_in, 
@@ -225,7 +213,7 @@ static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, c
         }
     }
 
-    if (usch_stash(p_memstash, p_memblob) != 0)
+    if (priv_usch_stash(p_memstash, p_memblob) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
@@ -316,7 +304,7 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
         printf("%s\n", pp_strexp_copy[i]);
     }
 
-    if (usch_stash(p_memstash, p_blob) != 0)
+    if (priv_usch_stash(p_memstash, p_blob) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
@@ -750,7 +738,7 @@ static inline char* priv_usch_strout_impl(usch_stash_t *p_memstash, size_t num_a
         pp_orig_argv[i] = va_arg(p_ap, char *);
     }
     (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num_args, pp_orig_argv);
-    if (usch_stash(p_memstash, p_out) != 0)
+    if (priv_usch_stash(p_memstash, p_out) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
