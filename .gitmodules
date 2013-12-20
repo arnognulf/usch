@@ -1,3 +1,6 @@
 [submodule "external/uthash"]
 	path = external/uthash
 	url = https://github.com/arnognulf/uthash.git
+[submodule "external/linenoise"]
+	path = external/linenoise
+	url = https://github.com/arnognulf/linenoise.git
