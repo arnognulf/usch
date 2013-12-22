@@ -671,10 +671,10 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     (*crepl_store_vars)(p_context);
 
 end:
+    pp_path = NULL; // stashed
     free(definition.p_symname);
     if (p_handle)
         dlclose(p_handle);
-    free(pp_path);
     free(p_tempfile);
     free(p_pre_assign);
     free(p_post_assign);

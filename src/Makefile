@@ -1,10 +1,10 @@
 # mkdtemp requires _BSD_SOURCE
 LLVM_DIR=/usr/lib/llvm-3.4
-CFLAGS=-D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -Wall -Wextra -Werror -g3 -fno-builtin 
-LIBS=$(LLVM_DIR)/lib/libclang.so.1 `pkg-config --libs --cflags libedit` -ldl
-COMMON_SOURCES=crepl.c bufstr.c crepl_parser.c crepl_linker.c crepl_vars.c strutils.c crepl_eval.c
+CFLAGS=-D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -Werror -g3 -fno-builtin 
+LIBS=$(LLVM_DIR)/lib/libclang.so.1 `pkg-config --libs --cflags` -ldl
+COMMON_SOURCES=../external/linenoise/linenoise.c crepl.c bufstr.c crepl_parser.c crepl_linker.c crepl_vars.c strutils.c crepl_eval.c
 TEST_SOURCES=tests.c $(COMMON_SOURCES)
-MAIN_SOURCES=readline_helper.c $(COMMON_SOURCES)
+MAIN_SOURCES=linenoise_main.c $(COMMON_SOURCES)
 TEST_OBJECTS=$(TEST_SOURCES:.c=.o)
 MAIN_OBJECTS=$(MAIN_SOURCES:.c=.o)
 

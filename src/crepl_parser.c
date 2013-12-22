@@ -777,7 +777,7 @@ end:
     return status;
 }
 
-int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state)
+int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t *p_state)
 {
     int i;
     crepl_state_t state = CREPL_STATE_CPARSER;

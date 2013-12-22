@@ -125,12 +125,13 @@ struct usch_stash_mem
 {
     struct usch_stash_mem *p_next;
     size_t size;
+    void *p_extmem;
     char str[];
 };
 
 /******************************* implementations **********************************/
 
-static inline int usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
+static inline int priv_usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
 {
     int status = 0;
 

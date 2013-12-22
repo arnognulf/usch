@@ -59,7 +59,7 @@ CREPL_STATE_PREPROCESSOR = 4,
 int crepl_parsedefs(struct crepl_t *p_context, char *p_line);
 
 int crepl_finalize(char *p_unfinalized, char **pp_finalized);
-int crepl_preparse(struct crepl_t *p_context, char *p_input, crepl_state_t *p_state);
+int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t *p_state);
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED
