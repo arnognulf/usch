@@ -48,7 +48,6 @@ cleanup:
     return p_message;
 }
 
-#if 0
 static char * test_strexp()
 {
     char *p_message = NULL;
@@ -62,15 +61,15 @@ static char * test_strexp()
         mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
     }
     {
-        char **pp_out = usch_strexp(&s, "tes?.c");
-        mu_assert("error: pp_out[0] != test.c", strcmp(pp_out[0], "test.c") == 0);
+        char **pp_out = usch_strexp(&s, "crepl_ev*.c");
+        printf("%s\n", pp_out[0]);
+        mu_assert("error: pp_out[0] != crepl_eval.c", strcmp(pp_out[0], "crepl_eval.c") == 0);
         mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
     }
 cleanup: 
     usch_stashclean(&s);
     return p_message;
 }
-#endif // 0
 
 #if 0
 static char * test_cd()
@@ -412,6 +411,7 @@ cleanup:
 
 static char * all_tests()
 {
+    mu_run_test(test_strexp);
     mu_run_test(test_strsplit);
     mu_run_test(test_usch_cmd);
     mu_run_test(test_usch_chdir);
@@ -423,7 +423,6 @@ static char * all_tests()
     mu_run_test(test_crepl_parent);
     mu_run_test(test_usch_strout);
     mu_run_test(test_crepl_parsedefs);
-    //mu_run_test(test_strexp);
 //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
 //    mu_run_test(test_editline);

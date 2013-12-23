@@ -1,14 +1,46 @@
 USCH - The (permutated) tcsh successor
 ======================================
 
+TL;DR
+-----
+
+USCH is a shell where C is the command language. It has nothing to do with the harmfully considered csh or tcsh.
+
+About
+-----
+
 USCH is a shell in early stages that aims to be a C Read-Evaluate-Print-Loop interpreter, useful enough for day-to-day use so the user can use a modern language like C instead of some deprecated oddjobb syntax from the sixties.
+
 Commands are entered as-is with the REPL filling out the blanks (or more correct paranthesis).
+
 
 What differs USCH from other C REPL implementations is that it's fully Free Software and has a fun little hackable codebase with portable C99 syntax.
 
-More complete and well-tested alternatives are:
+Related C interpreters
+----------------------
+
 Cling: http://root.cern.ch/drupal/content/cling (no shell, C++ only, non-trivial to build last time I tried)
+
 Ch: http://www.softintegration.com/ (no source for inspection but free to use, uses C99 superset)
+
+Usage
+-----
+USCH consists of the usch.h shell API and the REPL interpreter crepl.
+The USCH shell is started by entering:
+
+    ./usch
+
+At the shell prompt.
+
+
+
+For any identifiers that have not yet been defined, the command path is searched for a command with the name of the identifier.
+
+
+The command will then be defined as a variadic macro with zero or more arguments, where each argument is passed as a string.
+
+
+Paranthesises and quotation marks will be inserted after such varadic macro when the spacebar is pressed, this is referred to as space-completion (in contrast to tab-completion), if a space character is required, press space twice.
 
 Available commands
 -------------------
@@ -19,10 +51,11 @@ Within the REPL, all commands not colliding with C functions or macros are decla
 Within the REPL and when including usch.h in a standalone .c file the following functions/MACROs are declared:
 
     int cd("pwd");
-    int whereis(char **pp_cached_paths, char *p_item, char *pp_destination);
-    int strsplit(char *p_str, char *p_delims, char ***ppp_out);
-    int strexp(char ***ppp_out, char *p_str1, ...);
-    int strjoin(char ***ppp_out, char *p_delim, char *p_str1, ...);
+    char** usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
+    char** usch_strexp(usch_stash_t *p_memstash, char *p_item1, ...)
+    char** usch_strexp_arr(usch_stash_t *p_memstash, char **pp_items)
+    char*  usch_strjoin(usch_stash_t *p_memstash, char *p_item1, ...)
+    char*  usch_strjoin_arr(usch_stash_t *p_memstash, char **pp_items)
 
 Using USCH as a scripting language
 ----------------------------------
@@ -32,15 +65,30 @@ Creating an "alias" or enabling to call a command from a C99 file can be done as
 
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
-    // This is not done yet...
-    int i;
-    char **pp_list = NULL;
-    for (i = 0, num_items = strexp(&pp_list, "*.h"); i < num_items; i++)
+    // usch_stash_t is a linked list where allocations are stashed
+    usch_stash_t s = {NULL};
+    char *pp_exp;
+    // usch_strexp will never return NULL
+    for (pp_exp = usch_strexp(&s, "*.h"); *pp_exp != NULL; pp_exp++)
     {
-        printf("%s\n", pp_list[i]);
+        printf("%s\n", pp_exp[i]);
     }
-    free(pp_list);
+    // clean allocations in stash list
+    usch_stashclean(&s);
+    // pp_exp is now already free'd 
+    pp_exp = NULL;
+
+BUGS
+----
+Usch cannot be compiled with -pedantic this is a limitation of the 0-n arg macro.
+
+Report bugs at: https://github.com/arnognulf/usch/issues
+
+Contributing
+------------
+Create a fork, and send a pull request or patch either via Github or from your public git server.
 
 License
 -------
 USCH is licensed under the MIT/X11 license. See LICENSE for more information.
+

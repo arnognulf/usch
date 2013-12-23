@@ -227,7 +227,6 @@ end:
 
 static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_args, char *p_str, ...)
 {
-    // TODO: b0rked
     char **pp_strexp = NULL;
     va_list p_ap;
     size_t i;
@@ -260,6 +259,8 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
     }
 
     p_actual_format = calloc(num_args*2, sizeof(char));
+    if (p_actual_format == NULL)
+        goto end;
 
     for (i = 0; i < num_args * 2; i += 2)
     {
@@ -277,30 +278,35 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
     pp_strexp_extmem = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_strexp_extmem == NULL)
         goto end;
+    for (i = 0; pp_strexp_extmem[i] != NULL; i++)
+        printf("xxx: %s\n", pp_strexp_extmem[i]);
 
     for (i = 0; pp_strexp_extmem[i] != NULL; i++)
-        total_len += strlen(pp_strexp_extmem[i]);
+        total_len += strlen(pp_strexp_extmem[i]) + 1;
 
     num_globbed_args = i;
 
-    p_blob = calloc(sizeof(usch_stash_t) + (num_globbed_args + 1) * sizeof(char*) + total_len + num_globbed_args, 1);
+    p_blob = calloc(sizeof(struct usch_stash_mem) + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
     if (p_blob == NULL)
         goto end;
 
     pp_strexp_copy = (char**)p_blob->str;
+    pp_strexp_copy[num_globbed_args] = NULL;
     p_strexp_data = (char*)&pp_strexp_copy[num_globbed_args+1];
-    for (i = 0; i < num_globbed_args; i++)
+    // TODO: debug
+    memset(p_strexp_data, 0x0, total_len);
+    for (i = 0; pp_strexp_extmem[i] != NULL; i++)
     {
-        size_t len = strlen(pp_strexp_extmem[i]) + 1;
+        size_t len = strlen(pp_strexp_extmem[i]);
 
         pp_strexp_copy[i] = &p_strexp_data[pos];
-        pos += len;
+        pos += len + 1;
         printf("ext: %s\n", pp_strexp_extmem[i]);
         memcpy(pp_strexp_copy[i], pp_strexp_extmem[i], len);
         printf("copy: %s\n", pp_strexp_copy[i]);
     }
 
-    for (i = 0; i < num_globbed_args; i++)
+    for (i = 0; pp_strexp_extmem[i] != NULL; i++)
     {
         printf("%s\n", pp_strexp_copy[i]);
     }
