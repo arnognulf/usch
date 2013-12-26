@@ -29,6 +29,127 @@
 #include "crepl_parser.h"               // for stripwhite, identifier_pos
 #include "minunit.h"                    // for mu_assert, mu_run_test
 #include "usch.h"                       // for usch_cmd, usch_stashclean, etc
+static int count_argc(char **pp_orig_argv)
+{
+    int i;
+    int orig_argc = 0;
+    for (i = 0; pp_orig_argv[i] != NULL; i++)
+    {
+        orig_argc++;
+    }
+
+    return orig_argc;
+}
+static int count_pipes(char **pp_orig_argv)
+{
+    int i;
+    int num_pipes = 0;
+    for (i = 0; pp_orig_argv[i] != NULL; i++)
+    {
+        if (*pp_orig_argv[i] == '|')
+        {
+            num_pipes++;
+        }
+    }
+
+    return num_pipes;
+}
+
+// http://stackoverflow.com/questions/8389033/implementation-of-multiple-pipes-in-c
+static void pipe_test(char** pp_orig_argv)
+{
+    char **pp_piped_argv = NULL;
+    int status;
+    int i = 0;
+    int j = 0;
+    pid_t pid;
+    int orig_argc = count_argc(pp_orig_argv);
+    int num_pipes = count_pipes(pp_orig_argv);
+
+    int pipefds[num_pipes * 2];
+
+    pp_piped_argv = calloc((orig_argc + 1) * sizeof(char **), 1);
+    if (pp_piped_argv == NULL)
+        goto end;
+
+    pp_piped_argv[0] = pp_orig_argv[0];
+    j++;
+    for (i = 0, j = 1; pp_orig_argv[i] != NULL; i++)
+    {
+        if (*pp_orig_argv[i] == '|')
+        {
+            pp_piped_argv[j] = pp_orig_argv[i+1];
+            j++;
+            pp_orig_argv[i] = NULL;
+        }
+    }
+
+    for (i = 0; i <= orig_argc; i++)
+    {
+        printf("%d: %s\n", i, pp_orig_argv[i]);
+    }
+
+    for(i = 0; i < (num_pipes); i++){
+        if(pipe(pipefds + i*2) < 0) {
+            perror("couldn't pipe");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (i = 0, j = 0; pp_piped_argv[i] != NULL; i++)
+    {
+        pid = fork();
+        if(pid == 0)
+        {
+            //if not last command
+            if(pp_piped_argv[i+1] != NULL)
+            {
+                if(dup2(pipefds[j + 1], 1) < 0){
+                    perror("dup2");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
+            //if not first command&& j!= 2*num_pipes
+            if(i != 0 && j != num_pipes * 2)
+            {
+                if(dup2(pipefds[j-2], 0) < 0){
+                    perror(" dup2");///j-2 0 j+1 1
+                    exit(EXIT_FAILURE);
+
+                }
+            }
+
+            for(i = 0; i < num_pipes * 2; i++){
+                close(pipefds[i]);
+            }
+
+            printf("%s\n", pp_piped_argv[i]);
+            if( execvp(pp_piped_argv[i], &pp_piped_argv[i]) < 0 ){
+                perror(pp_piped_argv[i]);
+                exit(EXIT_FAILURE);
+            }
+        }
+        else if(pid < 0)
+        {
+            perror("error");
+            exit(EXIT_FAILURE);
+        }
+
+        j+=2;
+    }
+    /**Parent closes the pipes and wait for children*/
+
+    for(i = 0; i < num_pipes * 2; i++){
+        close(pipefds[i]);
+    }
+
+    for(i = 0; i < num_pipes + 1; i++)
+        wait(&status);
+end:
+    free(pp_piped_argv);
+    return;
+}
 
 int tests_run = 0;
 static char * test_strsplit() {
@@ -47,6 +168,17 @@ cleanup:
     usch_stashclean(&s);
     return p_message;
 }
+
+static char * test_pipe()
+{
+    char *p_message = NULL;
+    char *pp_argv[] = {"printf", "foo", "bar", "baz", "|", "grep", "foo", "|", "wc", "-l", NULL};
+
+    pipe_test(pp_argv);
+
+    return p_message;
+}
+
 
 static char * test_strexp()
 {
@@ -411,6 +543,8 @@ cleanup:
 
 static char * all_tests()
 {
+    mu_run_test(test_pipe);
+
     mu_run_test(test_strexp);
     mu_run_test(test_strsplit);
     mu_run_test(test_usch_cmd);
