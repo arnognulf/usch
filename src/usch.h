@@ -278,8 +278,6 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
     pp_strexp_extmem = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_strexp_extmem == NULL)
         goto end;
-    for (i = 0; pp_strexp_extmem[i] != NULL; i++)
-        printf("xxx: %s\n", pp_strexp_extmem[i]);
 
     for (i = 0; pp_strexp_extmem[i] != NULL; i++)
         total_len += strlen(pp_strexp_extmem[i]) + 1;
@@ -301,16 +299,8 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
 
         pp_strexp_copy[i] = &p_strexp_data[pos];
         pos += len + 1;
-        printf("ext: %s\n", pp_strexp_extmem[i]);
         memcpy(pp_strexp_copy[i], pp_strexp_extmem[i], len);
-        printf("copy: %s\n", pp_strexp_copy[i]);
     }
-
-    for (i = 0; pp_strexp_extmem[i] != NULL; i++)
-    {
-        printf("%s\n", pp_strexp_copy[i]);
-    }
-
     if (priv_usch_stash(p_memstash, p_blob) != 0)
     {
         printf("stash failed, ohnoes!\n");
