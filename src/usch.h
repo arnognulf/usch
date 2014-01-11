@@ -394,7 +394,7 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
         status = 1;
         // TODO: discard if not executable
         //printf("%s %lo\n", new_path, sb.st_mode);
-        p_dest = (char*)malloc(dir_length + 1 + item_length + 1);
+        p_dest = (char*)calloc(dir_length + 1 + item_length + 1, 1);
         if (p_dest == NULL)
         {
             status = -1;
@@ -459,7 +459,7 @@ static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, 
 		}
 		else
 		{
-			p_current_glob_item->p_next = calloc(1, sizeof(usch_glob_list_t));
+			p_current_glob_item->p_next = calloc(sizeof(usch_glob_list_t), 1);
 			if (p_current_glob_item->p_next == NULL)
 				goto end;
 			p_current_glob_item = p_current_glob_item->p_next;
@@ -512,6 +512,66 @@ static inline void priv_usch_free_globlist(struct usch_glob_list_t *p_glob_list)
     }
 }
 
+static inline int count_argc(char **pp_argv)
+{
+    int argc = 0;
+    for (int i = 0; pp_argv[i] != NULL; i++)
+    {
+        argc++;
+    }
+    return argc+1;
+}
+static inline int count_pipes(char **pp_argv)
+{
+    int count = 0;
+    for (int i = 0; pp_argv[i] != NULL; i++)
+    {
+        if (strcmp(pp_argv[i], "|") == 0)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+static inline void closepipes(int *p_pipes, int num_pipes)
+{
+    int i;
+    for (i = 0; i < num_pipes*2; i++)
+    {
+        close(p_pipes[i]);
+    }
+}
+static inline void pipeargv_to_nullargv(char **pp_srcargv, char **pp_destargv)
+{
+    int i;
+    for (i = 0; pp_srcargv[i] != NULL; i++)
+    {
+        if (*pp_srcargv[i] != '|')
+        {
+            pp_destargv[i] = pp_srcargv[i];
+        }
+        else
+        {
+            pp_destargv[i] = NULL;
+        }
+    }
+    pp_destargv[i] = NULL;
+}
+static inline char **get_childargv(char **pp_argv, int child)
+{
+    int arg = 0;
+    int child_idx = 0;
+    while (1)
+    {
+        if (child == child_idx)
+            return &pp_argv[arg];
+        while (pp_argv[arg] != NULL)
+            arg++;
+        child_idx++;
+        arg++;
+    }
+}
+
 static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in, 
                                struct usch_stash_mem **pp_out,
                                struct usch_stash_mem **pp_err,
@@ -523,37 +583,57 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
     struct usch_stash_mem *p_out = NULL;
     int pipefd[2] = {0, 0};
 	struct usch_glob_list_t *p_glob_list = NULL;
-	char **pp_argv = NULL;
 	pid_t child_pid;
     int status = 0;
+    char **pp_exp_argv = NULL;
+    char **pp_argv = NULL;
+    int num_pipes = 0;
+    int num_children = 0;
+    int argc;
+    int i;
 
-	pid_t w;
 	int child_status = -1;
+    (void)child_status;
 
     if (pp_out != NULL)
     {
         pipe(pipefd);
     }
-    pp_argv = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
-    if (pp_argv == NULL)
-        goto end;
+    pp_exp_argv = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
 
-	if (strcmp(pp_argv[0], "cd") == 0)
+    num_pipes = count_pipes(pp_exp_argv);
+    num_children = num_pipes+1;
+    argc = count_argc(pp_exp_argv);
+    pp_argv = calloc((argc + 1)* sizeof(char*), 1);
+    int pipes[num_pipes*2];
+
+    pipeargv_to_nullargv(pp_exp_argv, pp_argv);
+
+    for (i = 0; i < num_pipes; i++)
+    {
+        pipe(&pipes[i*2]);
+    }
+
+	if (strcmp(pp_exp_argv[0], "cd") == 0)
 	{
-		if (pp_argv[1] == NULL)
+		if (pp_exp_argv[1] == NULL)
 			chdir(getenv("HOME"));
 		else
-			chdir(pp_argv[1]);
+			chdir(pp_exp_argv[1]);
 	}
 	else
 	{
-		child_pid = fork();
-		if ( child_pid == -1 ) {
-			perror("Cannot proceed. fork() error");
-			return 1;
-		}
-		if(child_pid == 0)
-		{
+    for (int child = 0; child < num_children; child++)
+    {
+        if (fork() == 0)
+        {
+            if (child == 0)
+            {
+                dup2(pipes[1], 1);
+            } 
+            else if (child == num_children - 1)
+            {
+                dup2(pipes[(num_children -1) * 2 - 2], 0);
             if (pp_out != NULL)
             {
                 close(pipefd[0]); // close reading end in the child
@@ -561,6 +641,28 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
                 close(pipefd[1]); // this descriptor is no longer needed
             }
 
+
+            }
+            else
+            {
+                dup2(pipes[child * 2 - 2], 0);
+                dup2(pipes[child * 2 + 1], 1);
+            }
+
+            closepipes(pipes, num_pipes);
+
+            execvp(*get_childargv(pp_argv, child), get_childargv(pp_argv, child));
+        }
+    }
+
+
+		child_pid = fork();
+		if ( child_pid == -1 ) {
+			perror("Cannot proceed. fork() error");
+			return 1;
+		}
+		if(child_pid == 0)
+		{
             int execv_status = execvp(pp_argv[0], pp_argv);
             fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
 
@@ -594,38 +696,14 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
                 }
                 p_out->str[i] = '\0';
             }
-            else
-                do
-                {
-
-                    {
-                        w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
-                        if (w == -1)
-                        {
-                            perror("waitpid");
-                            exit(EXIT_FAILURE);
-                        }
-
-                        if (WIFEXITED(child_status)) 
-                        {
-                            status = WEXITSTATUS(child_status);
-                        }
-                        else if (WIFSIGNALED(child_status))
-                        {
-                            printf("killed by signal %d\n", WTERMSIG(child_status));
-                        }
-                        else if (WIFSTOPPED(child_status))
-                        {
-                            printf("stopped by signal %d\n", WSTOPSIG(child_status));
-                        }
-                        else if (WIFCONTINUED(child_status))
-                        {
-                            printf("continued\n");
-                        }
-                    }
-                } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
         }
     }
+
+    closepipes(pipes, num_pipes);
+
+    for (i = 0; i < num_children; i++)
+        wait(&status);
+
     if (pp_out != NULL)
     {
         *pp_out = p_out;
@@ -633,6 +711,7 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
 end:
     priv_usch_free_globlist(p_glob_list);
     free(pp_argv);
+    free(pp_exp_argv);
 
     return status;
 }
