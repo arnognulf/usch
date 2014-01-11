@@ -580,6 +580,8 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
 {
     (void)pp_in;
     (void)pp_err;
+    pid_t w;
+    (void)w;
     struct usch_stash_mem *p_out = NULL;
     int pipefd[2] = {0, 0};
 	struct usch_glob_list_t *p_glob_list = NULL;
@@ -622,87 +624,75 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
 			chdir(pp_exp_argv[1]);
 	}
 	else
-	{
-    for (int child = 0; child < num_children; child++)
     {
-        if (fork() == 0)
+        for (int child = 0; child < num_children; child++)
         {
-            if (child == 0)
+            child_pid = fork();
+            if (child_pid == 0)
             {
-                dup2(pipes[1], 1);
-            } 
-            else if (child == num_children - 1)
-            {
-                dup2(pipes[(num_children -1) * 2 - 2], 0);
-            if (pp_out != NULL)
-            {
-                close(pipefd[0]); // close reading end in the child
-                dup2(pipefd[1], 1); // send stdout to the pipe
-                close(pipefd[1]); // this descriptor is no longer needed
-            }
-
-
-            }
-            else
-            {
-                dup2(pipes[child * 2 - 2], 0);
-                dup2(pipes[child * 2 + 1], 1);
-            }
-
-            closepipes(pipes, num_pipes);
-
-            execvp(*get_childargv(pp_argv, child), get_childargv(pp_argv, child));
-        }
-    }
-
-
-		child_pid = fork();
-		if ( child_pid == -1 ) {
-			perror("Cannot proceed. fork() error");
-			return 1;
-		}
-		if(child_pid == 0)
-		{
-            int execv_status = execvp(pp_argv[0], pp_argv);
-            fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
-
-            _exit(execv_status);
-        }
-        else
-        {
-            if (pp_out != NULL)
-            {
-                size_t i = 0;
-                size_t read_size = 1024;
-                p_out = calloc(read_size + sizeof(struct usch_stash_mem), 1);
-                if (p_out == NULL)
-                    goto end;
-                p_out->p_next = NULL;
-                p_out->size = read_size;
-
-                close(pipefd[1]);  // close the write end of the pipe in the parent
-
-                while (read(pipefd[0], &p_out->str[i], 1) != 0)
+                if (child == 0)
                 {
-                    i++;
-                    if (i >= read_size)
+                    dup2(pipes[1], 1);
+                } 
+                else if (child == num_children - 1)
+                {
+                    if (pp_out != NULL)
                     {
-                        read_size *= 2;
-                        p_out = realloc(p_out, read_size + sizeof(struct usch_stash_mem));
-                        if (p_out == NULL)
-                            goto end;
-                        p_out->size = read_size;
+                        //close(pipefd[0]); // close reading end in the child
+                        //dup2(pipefd[1], 1); // send stdout to the pipe
+                        //close(pipefd[1]); // this descriptor is no longer needed
                     }
+                    else
+                    {
+                        dup2(pipes[(num_children -1) * 2 - 2], 0);
+                    }
+
                 }
-                p_out->str[i] = '\0';
+                else
+                {
+                    dup2(pipes[child * 2 - 2], 0);
+                    dup2(pipes[child * 2 + 1], 1);
+                }
+
+                closepipes(pipes, num_pipes);
+
+                int execv_status = execvp(*get_childargv(pp_argv, child), get_childargv(pp_argv, child));
+                _exit(execv_status);
             }
         }
+        if (pp_out != NULL)
+        {
+            size_t i = 0;
+            size_t read_size = 1024;
+            p_out = calloc(read_size + sizeof(struct usch_stash_mem), 1);
+            if (p_out == NULL)
+                goto end;
+            p_out->p_next = NULL;
+            p_out->size = read_size;
+
+            close(pipefd[1]);  // close the write end of the pipe in the parent
+
+            while (read(pipefd[0], &p_out->str[i], 1) != 0)
+            {
+                i++;
+                if (i >= read_size)
+                {
+                    read_size *= 2;
+                    p_out = realloc(p_out, read_size + sizeof(struct usch_stash_mem));
+                    if (p_out == NULL)
+                        goto end;
+                    p_out->size = read_size;
+                }
+            }
+            p_out->str[i] = '\0';
+        }
+
+        closepipes(pipes, num_pipes);
+
+        for (i = 0; i < num_children; i++)
+            wait(&child_status);
+        status = WEXITSTATUS(child_status);
     }
-
-    closepipes(pipes, num_pipes);
-
-    for (i = 0; i < num_children; i++)
-        wait(&status);
 
     if (pp_out != NULL)
     {

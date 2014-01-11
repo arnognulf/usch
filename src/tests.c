@@ -410,6 +410,7 @@ cleanup:
 
 static char * all_tests()
 {
+    mu_run_test(test_usch_strout);
 
     mu_run_test(test_strexp);
     mu_run_test(test_strsplit);
@@ -421,7 +422,6 @@ static char * all_tests()
     mu_run_test(test_crepl_parse);
     mu_run_test(test_crepl_finalize);
     mu_run_test(test_crepl_parent);
-    mu_run_test(test_usch_strout);
     mu_run_test(test_crepl_parsedefs);
 //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);
