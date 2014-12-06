@@ -587,10 +587,16 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
             {
                 i++;
             }
-            i++;
+            if (pp_argv[i] == NULL && i != argc)
+            {
+                i++;
+            }
 		}
-		input = run(&pp_argv[i], input, first, 1, &child_pid);
-		status = xcleanup(n);
+        if (pp_argv[i] == NULL && i != argc)
+        {
+            input = run(&pp_argv[i], input, first, 1, &child_pid);
+        }
+		status = xcleanup(child_pid);
 		n = 0;
     }
     if (pp_out != NULL)
@@ -739,10 +745,9 @@ end:
  * So if 'command' returns a file descriptor, the next 'command' has this
  * descriptor as its 'input'.
  */
-static int command(char **pp_argv, int input, int first, int last)
+static int command(char **pp_argv, int input, int first, int last, int *p_child_pid)
 {
 	int pipettes[2];
-    int child_pid;
     pid_t pid;
  
 	/* Invoke pipe */
@@ -785,31 +790,67 @@ static int command(char **pp_argv, int input, int first, int last)
 	if (last == 1)
 		close(pipettes[READ]);
  
+    *p_child_pid = pid;
+    printf("pid=%d\n", pid);
 	return pipettes[READ];
 }
  
 /* Final xcleanup, 'wait' for processes to terminate.
  *  n : Number of times 'command' was invoked.
  */
-static int xcleanup(int n)
+static int xcleanup(int child_pid)
 {
 	int i;
-    pid_t w;
+    pid_t wpid;
     int status;
-	for (i = 0; i < n; ++i) 
-    {
-		status = wait(NULL); 
-        printf("%d\n", status);
-    }
-    return status;
+    int child_status;
+    do {
+        wpid = waitpid(child_pid, &status, WUNTRACED
+#ifdef WCONTINUED       /* Not all implementations support this */
+                | WCONTINUED
+#endif
+                );
+        if (wpid == -1) {
+            perror("waitpid");
+            exit(EXIT_FAILURE);
+        }
+
+
+        if (WIFEXITED(status)) {
+            //printf("child exited, status=%d\n", WEXITSTATUS(status));
+            child_status = WEXITSTATUS(status);
+
+
+        } else if (WIFSIGNALED(status)) {
+            //printf("child killed (signal %d)\n", WTERMSIG(status));
+            child_status = -1;
+
+
+        } else if (WIFSTOPPED(status)) {
+            //printf("child stopped (signal %d)\n", WSTOPSIG(status));
+            child_status = -1;
+
+
+#ifdef WIFCONTINUED     /* Not all implementations support this */
+        } else if (WIFCONTINUED(status)) {
+            //printf("child continued\n");
+            child_status = -1;
+#endif
+        } else {    /* Non-standard case -- may never happen */
+            //printf("Unexpected status (0x%x)\n", status);
+            child_status = -1;
+        }
+    } while (!WIFEXITED(status) && !WIFSIGNALED(status));
+    return child_status;
 }
  
  
 static int run(char **pp_argv, int input, int first, int last, int *p_child_pid)
 {
 	if (pp_argv[0] != NULL) {
+        printf("%s\n", pp_argv[0]);
 		n += 1;
-		return command(pp_argv, input, first, last);
+		return command(pp_argv, input, first, last, p_child_pid);
 	}
 	return 0;
 }
