@@ -1,6 +1,10 @@
 USCH - The (permutated) tcsh successor
 ======================================
 
+UNDER CONSTRUCTION
+==================
+Things are not working even at a basic level, take any code and docs with a grain of salt :(
+
 TL;DR
 -----
 
@@ -66,15 +70,15 @@ Creating an "alias" or enabling to call a command from a C99 file can be done as
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
     // usch_stash_t is a linked list where allocations are stashed
-    usch_stash_t s = {NULL};
-    char *pp_exp;
+    ustash_t s = {NULL};
+    char **hdrs;
     // usch_strexp will never return NULL
-    for (pp_exp = usch_strexp(&s, "*.h"); *pp_exp != NULL; pp_exp++)
+    for (hdrs = ustrexp(&s, "*.h"); *hdrs != NULL; hdrs++)
     {
-        printf("%s\n", pp_exp[i]);
+        printf("%s\n", hdrs[i]);
     }
-    // clean allocations in stash list
-    usch_stashclean(&s);
+    // clear allocations in stash list
+    uclear(&s);
     // pp_exp is now already free'd 
     pp_exp = NULL;
 

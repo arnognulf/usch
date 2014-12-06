@@ -754,7 +754,6 @@ static int command(char **pp_argv, int input, int first, int last)
 	*/
  
 	if (pid == 0) {
-        printf("first = %d, last = %d, input = %d\n", first, last, input);
 		if (first == 1 && last == 0 && input == 0) {
 			// First command
 			dup2( pipettes[WRITE], STDOUT_FILENO );
