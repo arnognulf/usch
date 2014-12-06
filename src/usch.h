@@ -137,7 +137,6 @@ struct ustash_item
 static int run(char **pp_argv, int input, int first, int last, int *p_child_pid);
 static int n = 0; /* number of calls to 'command' */
 
-int command_pipe[2];
 static int xcleanup(int n);
  
 #define READ  0
@@ -536,6 +535,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
     (void)pp_in;
     (void)pp_err;
     struct ustash_item *p_out = NULL;
+    // TODO: fix here
     int pipefd[2] = {0, 0};
 	struct uglob_list_t *p_glob_list = NULL;
 	char **pp_argv = NULL;
@@ -544,6 +544,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
     int i = 0;
     int child_pid = 0;
 
+    // and fix here
     if (pp_out != NULL)
     {
         pipe(pipefd);
@@ -596,6 +597,36 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
         {
             input = run(&pp_argv[i], input, first, 1, &child_pid);
         }
+
+        if (pp_out != NULL)
+        {
+            size_t i = 0;
+            size_t read_size = 1024;
+            p_out = calloc(read_size + sizeof(struct ustash_item), 1);
+            if (p_out == NULL)
+                goto end;
+            p_out->p_next = NULL;
+            p_out->size = read_size;
+
+            close(pipefd[1]);  // close the write end of the pipe in the parent
+
+            while (read(pipefd[0], &p_out->str[i], 1) != 0)
+            {
+                i++;
+                if (i >= read_size)
+                {
+                    read_size *= 2;
+                    p_out = realloc(p_out, read_size + sizeof(struct ustash_item));
+                    if (p_out == NULL)
+                        goto end;
+                    p_out->size = read_size;
+                }
+            }
+            p_out->str[i] = '\0';
+        }
+
+
+
 		status = xcleanup(child_pid);
 		n = 0;
     }
@@ -800,7 +831,6 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
  */
 static int xcleanup(int child_pid)
 {
-	int i;
     pid_t wpid;
     int status;
     int child_status;

@@ -121,6 +121,19 @@ cleanup:
     return p_message;
 }
 
+#define test_ls(...) ucmd("ls", ##__VA_ARGS__)
+
+static char *test_ucmd_pipe()
+{
+    char *p_message = NULL;
+    int num_args;
+    num_args = test_ls("testdir/*", "|", "wc", "-l");
+    mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 0);
+
+    return NULL;
+cleanup:
+    return p_message;
+}
 
 #define test_upwd(...) ucmd("pwd", ##__VA_ARGS__)
 
@@ -412,21 +425,21 @@ cleanup:
 
 static char * all_tests()
 {
-    //mu_run_test(test_strexp);
-    //mu_run_test(test_strsplit);
+#if 0
+    mu_run_test(test_strexp);
+    mu_run_test(test_strsplit);
     mu_run_test(test_ucmd);
-    //mu_run_test(test_uchdir);
-    //mu_run_test(test_crepl_vars);
-    //mu_run_test(test_crepl_dyld);
-    //mu_run_test(test_parserutils);
-    //mu_run_test(test_crepl_parse);
-    //mu_run_test(test_crepl_finalize);
-    //mu_run_test(test_crepl_parent);
-    //mu_run_test(test_ustrout);
-//    mu_run_test(test_crepl_parsedefs);
-//mu_run_test(test_pmcurses);
-    //mu_run_test(test_input);
-//    mu_run_test(test_editline);
+    mu_run_test(test_ucmd_pipe);
+    mu_run_test(test_uchdir);
+    mu_run_test(test_crepl_vars);
+    mu_run_test(test_crepl_dyld);
+    mu_run_test(test_parserutils);
+    mu_run_test(test_crepl_parse);
+    mu_run_test(test_crepl_finalize);
+    mu_run_test(test_crepl_parent);
+#endif // 0
+    mu_run_test(test_ustrout);
+    //mu_run_test(test_crepl_parsedefs);
     return 0;
 }
 

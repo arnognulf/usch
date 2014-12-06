@@ -259,7 +259,7 @@ end:
     (void)status;
     return symbol_found;
 }
-char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
+static char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
 {
     bufstr_t namecand;
     struct stat sb;
