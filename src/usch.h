@@ -137,7 +137,6 @@ struct ustash_item
 static int run(char **pp_argv, int input, int first, int last, int *p_child_pid);
 static int n = 0; /* number of calls to 'command' */
 
-pid_t pid;
 int command_pipe[2];
 static int xcleanup(int n);
  
@@ -571,8 +570,6 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 	}
 	else
 	{
-// TODO woo
-//
 		int input = 0;
 		int first = 1;
         for (i = 0;  i < argc; i++)
@@ -742,15 +739,16 @@ end:
  * So if 'command' returns a file descriptor, the next 'command' has this
  * descriptor as its 'input'.
  */
-static int command(char **pp_argv, int input, int first, int last, int *p_child_pid)
+static int command(char **pp_argv, int input, int first, int last)
 {
 	int pipettes[2];
     int child_pid;
+    pid_t pid;
  
 	/* Invoke pipe */
     
 	pipe( pipettes );	
-	child_pid = fork();
+	pid = fork();
  
 	/*
 	 SCHEME:
@@ -771,7 +769,10 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 		}
  
 		if (execvp(pp_argv[0], pp_argv) == -1)
+        {
+            printf("execv failed!\n");
 			_exit(EXIT_FAILURE); // If child fails
+        }
 	}
  
 	if (input != 0) 
@@ -784,8 +785,6 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 	if (last == 1)
 		close(pipettes[READ]);
  
-    
-    *p_child_pid = child_pid;
 	return pipettes[READ];
 }
  
@@ -795,44 +794,13 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 static int xcleanup(int n)
 {
 	int i;
-    //int child_status = -1;
     pid_t w;
     int status;
-#if 1
 	for (i = 0; i < n; ++i) 
     {
 		status = wait(NULL); 
         printf("%d\n", status);
     }
-#endif // 0
-#if 0
-    do
-    {
-        w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
-        if (w == -1)
-        {
-            perror("waitpid");
-            exit(EXIT_FAILURE);
-        }
-
-        if (WIFEXITED(child_status)) 
-        {
-            status = WEXITSTATUS(child_status);
-        }
-        else if (WIFSIGNALED(child_status))
-        {
-            printf("killed by signal %d\n", WTERMSIG(child_status));
-        }
-        else if (WIFSTOPPED(child_status))
-        {
-            printf("stopped by signal %d\n", WSTOPSIG(child_status));
-        }
-        else if (WIFCONTINUED(child_status))
-        {
-            printf("continued\n");
-        }
-    } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
-#endif // 0
     return status;
 }
  
@@ -841,7 +809,7 @@ static int run(char **pp_argv, int input, int first, int last, int *p_child_pid)
 {
 	if (pp_argv[0] != NULL) {
 		n += 1;
-		return command(pp_argv, input, first, last, p_child_pid);
+		return command(pp_argv, input, first, last);
 	}
 	return 0;
 }

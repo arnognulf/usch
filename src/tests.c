@@ -121,6 +121,7 @@ cleanup:
     return p_message;
 }
 
+
 #define test_upwd(...) ucmd("pwd", ##__VA_ARGS__)
 
 static char *test_uchdir()
