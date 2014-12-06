@@ -430,7 +430,7 @@ end:
     return status;
 }
 #endif // 0
-#define usch_shell_cc(...) usch_cmd("gcc", ##__VA_ARGS__)
+#define usch_shell_cc(...) ucmd("gcc", ##__VA_ARGS__)
 
 int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
@@ -455,7 +455,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     char uschrc_h[] = "/.uschrc.h";
-    usch_stash_t s = {NULL};
+    ustash_t s = {NULL};
 
     char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";
@@ -479,7 +479,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     stmt_c.p_str = calloc(1024, 1);
     FAIL_IF(stmt_c.p_str == NULL);
     stmt_c.len = 1024;
-    pp_path = usch_strsplit(&s, getenv("PATH"), ":");
+    pp_path = ustrsplit(&s, getenv("PATH"), ":");
     FAIL_IF(pp_path[0] == NULL);
     p_tempdir = p_context->tmpdir;
     FAIL_IF(p_tempdir == NULL);
@@ -616,7 +616,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             {
                 bufstradd(&stmt_c, "#define ");
                 bufstradd(&stmt_c, definition.p_symname);
-                bufstradd(&stmt_c, "(...) usch_cmd(\"");
+                bufstradd(&stmt_c, "(...) ucmd(\"");
                 bufstradd(&stmt_c, definition.p_symname);
                 bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
             }
@@ -634,7 +634,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
     fclose(p_stmt_c);
     p_stmt_c = NULL;
-//    usch_cmd("cat", p_tempfile);
+//    ucmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
     FAIL_IF(p_tempdylib == NULL);
@@ -642,7 +642,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_tempdylib[tempdir_len] = '/';
     strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
     p_tempdylib[dylib_length-1] = '\0';
-    if (usch_shell_cc("-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
+    if (usch_shell_cc("-I/home/arno/Workspace/usch2/src", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
         ENDOK_IF(1);
@@ -685,7 +685,7 @@ end:
     p_context->p_nodef_line = NULL;
     free(p_context->p_defs_line);
     p_context->p_defs_line = NULL;
-    usch_stashclean(&s);
+    uclear(&s);
 
     //free(pp_cmds);
 

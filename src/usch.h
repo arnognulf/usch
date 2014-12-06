@@ -30,7 +30,6 @@ extern "C" {
 #endif // NEED_VIM_WORKAROUND
 
 #include <stdarg.h>
-#include <stdlib.h>
 #include <string.h>
 #include <malloc.h>
 #include <errno.h>
@@ -40,36 +39,28 @@ extern "C" {
 #include <sys/unistd.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+ 
 /******************************* public declarations **********************************/
 
-
-
-struct usch_stash_mem;
+/**
+ * Forward declaration for private struct stash struct.
+ */
+struct ustash_item;
+typedef struct ustash ustash_t;
 
 /**
- * @brief A structure that holds a pointer to a linked list of allocations
+ * @brief free allocated memory referenced by p_ustash.
  *  
- *  
- *  Returned allocated memory by usch functions should not be explicitly free'd.
- *
- *  Instead the usch_stashclean() function should be called.
- *   */
-typedef struct
-{
-    struct usch_stash_mem *p_next;
-} usch_stash_t;
-
-/**
- * @brief free allocated memory referenced by p_memstash.
- *  
- * A function to free any allocated memory referenced by an usch_stash_t structure.
- *  usch_stashclean can be called any number of times with the same usch_stash_t argument.
+ * Clear allocated memory referenced by an ustash_t structure.
+ * uclear() can be called any number of times with the same ustash_t pointer.
  *   
- *   @param Pointer to an usch_stash_t (preferably on the stack)
+ *   @param Pointer to an ustash_t (preferably on the stack)
  *   */
 
-static inline void usch_stashclean(usch_stash_t *p_memstash);
+static inline void uclear(ustash_t *p_ustash);
 
 
 /**
@@ -78,93 +69,118 @@ static inline void usch_stashclean(usch_stash_t *p_memstash);
  *  <Longer description>
  *  <May span multiple lines or paragraphs as needed>
  *   
- *   @param p_memstash Stash holding allocations.
+ *   @param p_ustash Stash holding allocations.
  *   @param p_in A string to split.
  *   @param p_delims Delimiting characters where the string should be split.
  *   @return A NULL-terminated array of pointers to the substrings.
  *   @remarks return value must not be freed.
  *   @remarks return value is never NULL.
  *   */
-static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims);
+static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char* p_delims);
 
-#define usch_strout(p_memstash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_memstash), (cmd), ##__VA_ARGS__)
-#define usch_strexp(p_memstash, item, ...) PRIV_USCH_STREXP_ARGS((p_memstash), (item), ##__VA_ARGS__)
-#define usch_cmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
+#define ustrout(p_ustash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_ustash), (cmd), ##__VA_ARGS__)
+#define ustrexp(p_ustash, item, ...) PRIV_USCH_STREXP_ARGS((p_ustash), (item), ##__VA_ARGS__)
+#define ucmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
 
 #ifndef CREPL_PARSER
-#define cd(...) usch_cmd("cd", ##__VA_ARGS__)
+#define cd(...) ucmd("cd", ##__VA_ARGS__)
 #endif // CREPL_PARSER
 
 /******************************* private APIs, may change without notice  **********************************/
-struct usch_glob_list_t;
+/**
+ * @brief A structure that holds a pointer to a linked list of allocations
+ *  
+ *  
+ *  Returned allocated memory by usch functions should not be explicitly free'd.
+ *
+ *  Instead the uclear() function should be called.
+ *   */
+typedef struct ustash
+{
+    struct ustash_item *p_list;
+} ustash_t;
 
-static inline int priv_usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob);
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct usch_glob_list_t **pp_glob_list);
-static inline void   priv_usch_free_globlist(struct usch_glob_list_t *p_glob_list);
-static inline int    priv_usch_cmd_arr(struct usch_stash_mem **pp_in, 
-                               struct usch_stash_mem **pp_out,
-                               struct usch_stash_mem **pp_err,
+
+struct uglob_list_t;
+
+static inline int priv_usch_stash(ustash_t *p_ustash, struct ustash_item *p_stashitem);
+static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct uglob_list_t **pp_glob_list);
+static inline void   priv_usch_free_globlist(struct uglob_list_t *p_glob_list);
+static inline int    priv_usch_cmd_arr(struct ustash_item **pp_in, 
+                               struct ustash_item **pp_out,
+                               struct ustash_item **pp_err,
                                size_t num_args,
                                char **pp_orig_argv);
-static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_args, char *p_str, ...);
+static inline char **priv_usch_strexp_impl(ustash_t *p_ustash, size_t num_args, char *p_str, ...);
 static inline int    priv_usch_cmd_impl(size_t num_args, char *p_name, ...);
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest);
 #define PRIV_USCH_ARGC(...) PRIV_USCH_ARGC_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5,4,3,2,1)
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
-#define PRIV_USCH_STROUT_ARGS(p_memstash, ...) priv_usch_strout_impl((p_memstash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
-#define PRIV_USCH_STREXP_ARGS(p_memstash, ...) priv_usch_strexp_impl((p_memstash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
+#define PRIV_USCH_STROUT_ARGS(p_ustash, ...) priv_usch_strout_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
+#define PRIV_USCH_STREXP_ARGS(p_ustash, ...) priv_usch_strexp_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_CMD_ARGS(...) priv_usch_cmd_impl(PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
-struct usch_glob_list_t
+struct uglob_list_t
 {
-    struct usch_glob_list_t *p_next;
+    struct uglob_list_t *p_next;
     glob_t glob_data;
-} usch_glob_list_t;
+} uglob_list_t;
 
-struct usch_stash_mem
+struct ustash_item
 {
-    struct usch_stash_mem *p_next;
+    struct ustash_item *p_next;
     size_t size;
     void *p_extmem;
     char str[];
 };
 
+static int run(char **pp_argv, int input, int first, int last);
+static int n = 0; /* number of calls to 'command' */
+
+pid_t pid;
+int command_pipe[2];
+static void xcleanup(int n);
+ 
+#define READ  0
+#define WRITE 1
+ 
 /******************************* implementations **********************************/
 
-static inline int priv_usch_stash(usch_stash_t *p_memstash, struct usch_stash_mem *p_memblob)
+static inline int priv_usch_stash(ustash_t *p_ustash, struct ustash_item *p_stashitem)
 {
     int status = 0;
 
-    if (p_memstash == NULL || p_memblob == NULL)
+    if (p_ustash == NULL || p_stashitem == NULL)
         return -1;
 
-    p_memblob->p_next = p_memstash->p_next;
-    p_memstash->p_next = p_memblob;
+    p_stashitem->p_next = p_ustash->p_list;
+    p_ustash->p_list = p_stashitem;
 
     return status;
 }
-static inline void usch_stashclean(usch_stash_t *p_memstash)
+
+static inline void uclear(ustash_t *p_ustash)
 {
-    struct usch_stash_mem *p_current = NULL;
-    if (p_memstash == NULL)
+    struct ustash_item *p_current = NULL;
+    if (p_ustash == NULL)
         return;
-    if (p_memstash->p_next == NULL)
+    if (p_ustash->p_list == NULL)
         return;
 
-    p_current = p_memstash->p_next;
+    p_current = p_ustash->p_list;
 
     while (p_current != NULL)
     {
-        struct usch_stash_mem *p_prev = p_current;
+        struct ustash_item *p_prev = p_current;
         p_current = p_current->p_next;
         free(p_prev);
     }
-    p_memstash->p_next = NULL;
+    p_ustash->p_list = NULL;
 }
 
-static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
+static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char* p_delims)
 {
-    struct usch_stash_mem *p_memblob = NULL;
+    struct ustash_item *p_stashitem = NULL;
     char** pp_out = NULL;
     char* p_out = NULL;
     size_t len_in;
@@ -174,7 +190,7 @@ static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, c
     size_t size = 0;
     int out_pos = 0;
 
-    if (p_memstash == NULL || p_in == NULL || p_delims == NULL)
+    if (p_ustash == NULL || p_in == NULL || p_delims == NULL)
         goto end;
 
     len_in = strlen(p_in);
@@ -191,12 +207,12 @@ static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, c
         }
     }
 
-    size = sizeof(struct usch_stash_mem) + (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
-    p_memblob = calloc(size, 1);
-    if (p_memblob == NULL)
+    size = sizeof(struct ustash_item) + (len_in + 1) * sizeof(char) + (num_str + 1) * sizeof(char*);
+    p_stashitem = calloc(size, 1);
+    if (p_stashitem == NULL)
         goto end;
 
-    pp_out = (char**)p_memblob->str;
+    pp_out = (char**)p_stashitem->str;
     p_out = (char*)(pp_out + num_str + 1);
     memcpy(p_out, p_in, len_in + 1);
 
@@ -214,27 +230,27 @@ static inline char **usch_strsplit(usch_stash_t *p_memstash, const char* p_in, c
         }
     }
 
-    if (priv_usch_stash(p_memstash, p_memblob) != 0)
+    if (priv_usch_stash(p_ustash, p_stashitem) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
     }
-    p_memblob = NULL;
+    p_stashitem = NULL;
 end:
-    free(p_memblob);
+    free(p_stashitem);
     return pp_out;
 }
 
-static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_args, char *p_str, ...)
+static inline char **priv_usch_strexp_impl(ustash_t *p_ustash, size_t num_args, char *p_str, ...)
 {
     char **pp_strexp = NULL;
     va_list p_ap;
     size_t i;
     char **pp_orig_argv = NULL;
     char *p_actual_format = NULL;
-    struct usch_stash_mem *p_blob = NULL;
+    struct ustash_item *p_blob = NULL;
     static char* emptyarr[1];
-	struct usch_glob_list_t *p_glob_list = NULL;
+	struct uglob_list_t *p_glob_list = NULL;
     size_t total_len = 0;
     char **pp_strexp_copy = NULL;
     char **pp_strexp_extmem = NULL;
@@ -284,7 +300,7 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
 
     num_globbed_args = i;
 
-    p_blob = calloc(sizeof(struct usch_stash_mem) + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
+    p_blob = calloc(sizeof(struct ustash_item) + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
     if (p_blob == NULL)
         goto end;
 
@@ -301,7 +317,7 @@ static inline char **priv_usch_strexp_impl(usch_stash_t *p_memstash, size_t num_
         pos += len + 1;
         memcpy(pp_strexp_copy[i], pp_strexp_extmem[i], len);
     }
-    if (priv_usch_stash(p_memstash, p_blob) != 0)
+    if (priv_usch_stash(p_ustash, p_blob) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
@@ -413,14 +429,14 @@ end:
     return status;
 }
 #if 0
-static inline int usch_whereis(char* p_item, char** pp_dest)
+static inline int uwhereis(char* p_item, char** pp_dest)
 {
     char **pp_path = NULL;
     int status = 0;
     int num_items = 0;
-    usch_stash_t s = {NULL};
+    ustash_t s = {NULL};
 
-    usch_strsplit(&s, getenv("PATH"), ":", &pp_path);
+    ustrsplit(&s, getenv("PATH"), ":", &pp_path);
 
     if (num_items < 1)
     {
@@ -433,11 +449,11 @@ end:
     return status;
 }
 #endif // 0
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct usch_glob_list_t **pp_glob_list)
+static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct uglob_list_t **pp_glob_list)
 {
     char **pp_expanded_argv = NULL;
-	struct usch_glob_list_t *p_glob_list = NULL;
-	struct usch_glob_list_t *p_current_glob_item = NULL;
+	struct uglob_list_t *p_glob_list = NULL;
+	struct uglob_list_t *p_current_glob_item = NULL;
 	size_t i, j;
 	int orig_arg_idx = 0;
 	int num_glob_items = 0;
@@ -452,14 +468,14 @@ static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, 
 
 		if (p_current_glob_item == NULL)
 		{
-			p_current_glob_item = calloc(1, sizeof(usch_glob_list_t));
+			p_current_glob_item = calloc(1, sizeof(uglob_list_t));
 			if (p_current_glob_item == NULL)
 				goto end;
 			p_glob_list = p_current_glob_item;
 		}
 		else
 		{
-			p_current_glob_item->p_next = calloc(1, sizeof(usch_glob_list_t));
+			p_current_glob_item->p_next = calloc(1, sizeof(uglob_list_t));
 			if (p_current_glob_item->p_next == NULL)
 				goto end;
 			p_current_glob_item = p_current_glob_item->p_next;
@@ -495,14 +511,14 @@ static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, 
 end:
     return pp_expanded_argv;
 }
-static inline void priv_usch_free_globlist(struct usch_glob_list_t *p_glob_list)
+static inline void priv_usch_free_globlist(struct uglob_list_t *p_glob_list)
 {
     if (p_glob_list)
     {
-        struct usch_glob_list_t *p_current_glob_item = p_glob_list;
+        struct uglob_list_t *p_current_glob_item = p_glob_list;
         while (p_current_glob_item != NULL)
         {
-            struct usch_glob_list_t *p_free_glob_item = p_current_glob_item;
+            struct uglob_list_t *p_free_glob_item = p_current_glob_item;
 
             p_current_glob_item = p_current_glob_item->p_next;
 
@@ -512,23 +528,21 @@ static inline void priv_usch_free_globlist(struct usch_glob_list_t *p_glob_list)
     }
 }
 
-static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in, 
-                               struct usch_stash_mem **pp_out,
-                               struct usch_stash_mem **pp_err,
+static inline int priv_usch_cmd_arr(struct ustash_item **pp_in, 
+                               struct ustash_item **pp_out,
+                               struct ustash_item **pp_err,
                                size_t num_args,
                                char **pp_orig_argv)
 {
     (void)pp_in;
     (void)pp_err;
-    struct usch_stash_mem *p_out = NULL;
+    struct ustash_item *p_out = NULL;
     int pipefd[2] = {0, 0};
-	struct usch_glob_list_t *p_glob_list = NULL;
+	struct uglob_list_t *p_glob_list = NULL;
 	char **pp_argv = NULL;
-	pid_t child_pid;
+    int argc = 0;
     int status = 0;
-
-	pid_t w;
-	int child_status = -1;
+    int i = 0;
 
     if (pp_out != NULL)
     {
@@ -537,6 +551,15 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
     pp_argv = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_argv == NULL)
         goto end;
+
+    while (pp_argv[argc] != NULL)
+    {
+        if (*pp_argv[argc] == '|')
+        {
+            pp_argv[argc] = NULL;
+        }
+        argc++;
+    }
 
 	if (strcmp(pp_argv[0], "cd") == 0)
 	{
@@ -547,84 +570,30 @@ static inline int priv_usch_cmd_arr(struct usch_stash_mem **pp_in,
 	}
 	else
 	{
-		child_pid = fork();
-		if ( child_pid == -1 ) {
-			perror("Cannot proceed. fork() error");
-			return 1;
-		}
-		if(child_pid == 0)
-		{
-            if (pp_out != NULL)
-            {
-                close(pipefd[0]); // close reading end in the child
-                dup2(pipefd[1], 1); // send stdout to the pipe
-                close(pipefd[1]); // this descriptor is no longer needed
-            }
-
-            int execv_status = execvp(pp_argv[0], pp_argv);
-            fprintf(stderr, "usch: no such file or directory; %s\n", pp_argv[0]);
-
-            _exit(execv_status);
-        }
-        else
+// TODO woo
+//
+		int input = 0;
+		int first = 1;
+        for (i = 0;  i < argc; i++)
         {
-            if (pp_out != NULL)
-            {
-                size_t i = 0;
-                size_t read_size = 1024;
-                p_out = calloc(read_size + sizeof(struct usch_stash_mem), 1);
-                if (p_out == NULL)
-                    goto end;
-                p_out->p_next = NULL;
-                p_out->size = read_size;
-
-                close(pipefd[1]);  // close the write end of the pipe in the parent
-
-                while (read(pipefd[0], &p_out->str[i], 1) != 0)
-                {
-                    i++;
-                    if (i >= read_size)
-                    {
-                        read_size *= 2;
-                        p_out = realloc(p_out, read_size + sizeof(struct usch_stash_mem));
-                        if (p_out == NULL)
-                            goto end;
-                        p_out->size = read_size;
-                    }
-                }
-                p_out->str[i] = '\0';
-            }
-            else
-                do
-                {
-
-                    {
-                        w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
-                        if (w == -1)
-                        {
-                            perror("waitpid");
-                            exit(EXIT_FAILURE);
-                        }
-
-                        if (WIFEXITED(child_status)) 
-                        {
-                            status = WEXITSTATUS(child_status);
-                        }
-                        else if (WIFSIGNALED(child_status))
-                        {
-                            printf("killed by signal %d\n", WTERMSIG(child_status));
-                        }
-                        else if (WIFSTOPPED(child_status))
-                        {
-                            printf("stopped by signal %d\n", WSTOPSIG(child_status));
-                        }
-                        else if (WIFCONTINUED(child_status))
-                        {
-                            printf("continued\n");
-                        }
-                    }
-                } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+            printf("argv[%d] = %s\n", i, pp_argv[i]);
         }
+
+        i = 0;
+        while (i < argc)
+        {
+			input = run(&pp_argv[i], input, first, 0);
+ 
+			first = 0;
+            while (i < argc && pp_argv[i] != NULL)
+            {
+                i++;
+            }
+            i++;
+		}
+		input = run(&pp_argv[i], input, first, 1);
+		xcleanup(n);
+		n = 0;
     }
     if (pp_out != NULL)
     {
@@ -688,9 +657,9 @@ end:
 
     return status;
 }
-static inline char* priv_usch_strout_impl(usch_stash_t *p_memstash, size_t num_args, char *p_name, ...)
+static inline char* priv_usch_strout_impl(ustash_t *p_ustash, size_t num_args, char *p_name, ...)
 {
-    (void)p_memstash;
+    (void)p_ustash;
     (void)num_args;
     (void)p_name;
 
@@ -700,7 +669,7 @@ static inline char* priv_usch_strout_impl(usch_stash_t *p_memstash, size_t num_a
     size_t i;
     char **pp_orig_argv = NULL;
     char *p_actual_format = NULL;
-    struct usch_stash_mem *p_out = NULL;
+    struct ustash_item *p_out = NULL;
     static char emptystr[1];
 
     emptystr[0] = '\0';
@@ -735,7 +704,7 @@ static inline char* priv_usch_strout_impl(usch_stash_t *p_memstash, size_t num_a
         pp_orig_argv[i] = va_arg(p_ap, char *);
     }
     (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num_args, pp_orig_argv);
-    if (priv_usch_stash(p_memstash, p_out) != 0)
+    if (priv_usch_stash(p_ustash, p_out) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
@@ -756,6 +725,85 @@ end:
 
     return p_strout;
 }
+
+/*
+ * Handle commands separatly
+ * input: return value from previous command (useful for pipe file descriptor)
+ * first: 1 if first command in pipe-sequence (no input from previous pipe)
+ * last: 1 if last command in pipe-sequence (no input from previous pipe)
+ *
+ * EXAMPLE: If you type "ls | grep shell | wc" in your shell:
+ *    fd1 = command(0, 1, 0), with args[0] = "ls"
+ *    fd2 = command(fd1, 0, 0), with args[0] = "grep" and args[1] = "shell"
+ *    fd3 = command(fd2, 0, 1), with args[0] = "wc"
+ *
+ * So if 'command' returns a file descriptor, the next 'command' has this
+ * descriptor as its 'input'.
+ */
+static int command(char **pp_argv, int input, int first, int last)
+{
+	int pipettes[2];
+ 
+	/* Invoke pipe */
+	pipe( pipettes );	
+	pid = fork();
+ 
+	/*
+	 SCHEME:
+	 	STDIN --> O --> O --> O --> STDOUT
+	*/
+ 
+	if (pid == 0) {
+        printf("first = %d, last = %d, input = %d\n", first, last, input);
+		if (first == 1 && last == 0 && input == 0) {
+			// First command
+			dup2( pipettes[WRITE], STDOUT_FILENO );
+		} else if (first == 0 && last == 0 && input != 0) {
+			// Middle command
+			dup2(input, STDIN_FILENO);
+			dup2(pipettes[WRITE], STDOUT_FILENO);
+		} else {
+			// Last command
+			dup2( input, STDIN_FILENO );
+		}
+ 
+		if (execvp(pp_argv[0], pp_argv) == -1)
+			_exit(EXIT_FAILURE); // If child fails
+	}
+ 
+	if (input != 0) 
+		close(input);
+ 
+	// Nothing more needs to be written
+	close(pipettes[WRITE]);
+ 
+	// If it's the last command, nothing more needs to be read
+	if (last == 1)
+		close(pipettes[READ]);
+ 
+	return pipettes[READ];
+}
+ 
+/* Final xcleanup, 'wait' for processes to terminate.
+ *  n : Number of times 'command' was invoked.
+ */
+static void xcleanup(int n)
+{
+	int i;
+	for (i = 0; i < n; ++i) 
+		wait(NULL); 
+}
+ 
+ 
+static int run(char **pp_argv, int input, int first, int last)
+{
+	if (pp_argv[0] != NULL) {
+		n += 1;
+		return command(pp_argv, input, first, last);
+	}
+	return 0;
+}
+ 
 
 #if NEED_VIM_WORKAROUND
 {

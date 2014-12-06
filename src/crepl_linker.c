@@ -14,7 +14,7 @@ static int has_symbol(struct crepl_t *p_context, const char* p_sym);
 
 char **crepl_getldpath()
 {
-    usch_stash_t stash = {0};
+    ustash_t stash = {0};
     int i = 0;
     int j = 0;
     int ld_idx = 0;
@@ -25,7 +25,7 @@ char **crepl_getldpath()
     char *p_ldscript = NULL;
     char *p_ldpaths = NULL;
     
-    p_ldscript = usch_strout(&stash, "ld", "--verbose");
+    p_ldscript = ustrout(&stash, "ld", "--verbose");
     FAIL_IF(p_ldscript[0] == '\0');
 
     while (p_ldscript[i] != '\0')
@@ -80,7 +80,7 @@ char **crepl_getldpath()
         i++;
     }
 end:
-    usch_stashclean(&stash);
+    uclear(&stash);
     if (status != 0)
     {
         free(pp_ldpath);

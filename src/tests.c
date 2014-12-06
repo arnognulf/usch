@@ -28,46 +28,46 @@
 #include "crepl.h"                      // for crepl_define, crepl_load, etc
 #include "crepl_parser.h"               // for stripwhite, identifier_pos
 #include "minunit.h"                    // for mu_assert, mu_run_test
-#include "usch.h"                       // for usch_cmd, usch_stashclean, etc
+#include "usch.h"                       // for ucmd, uclear, etc
 
 int tests_run = 0;
 static char * test_strsplit() {
     char *p_message = NULL;
     char *p_test1 = "foo bar baz";
-    usch_stash_t s = {NULL};
+    ustash_t s = {NULL};
     {
         char **pp_out = NULL;
-        pp_out = usch_strsplit(&s, p_test1, " ");
+        pp_out = ustrsplit(&s, p_test1, " ");
         mu_assert("error: pp_out[0] != foo", strcmp(pp_out[0], "foo") == 0);
         mu_assert("error: pp_out[1] != bar", strcmp(pp_out[1], "bar") == 0);
         mu_assert("error: pp_out[2] != baz", strcmp(pp_out[2], "baz") == 0);
         mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
     }
 cleanup:
-    usch_stashclean(&s);
+    uclear(&s);
     return p_message;
 }
 
 static char * test_strexp()
 {
     char *p_message = NULL;
-    usch_stash_t s = {NULL};
+    ustash_t s = {NULL};
 
     {
-        char **pp_out = usch_strexp(&s, "foo", "bar", "baz");
+        char **pp_out = ustrexp(&s, "foo", "bar", "baz");
         mu_assert("error: pp_out[0] != foo", strcmp(pp_out[0], "foo") == 0);
         mu_assert("error: pp_out[1] != bar", strcmp(pp_out[1], "bar") == 0);
         mu_assert("error: pp_out[2] != baz", strcmp(pp_out[2], "baz") == 0);
         mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
     }
     {
-        char **pp_out = usch_strexp(&s, "crepl_ev*.c");
+        char **pp_out = ustrexp(&s, "crepl_ev*.c");
         printf("%s\n", pp_out[0]);
         mu_assert("error: pp_out[0] != crepl_eval.c", strcmp(pp_out[0], "crepl_eval.c") == 0);
         mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
     }
 cleanup: 
-    usch_stashclean(&s);
+    uclear(&s);
     return p_message;
 }
 
@@ -80,14 +80,14 @@ static char * test_whereis()
 {
     char *p_message = NULL;
     char *p_dest = NULL;
-    int status = usch_whereis("sh", &p_dest);
-    mu_assert("error: usch_whereis(\"sh\", &p_dest) < 1", status > 0);
-    mu_assert("error: usch_whereis(\"sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
+    int status = uwhereis("sh", &p_dest);
+    mu_assert("error: uwhereis(\"sh\", &p_dest) < 1", status > 0);
+    mu_assert("error: uwhereis(\"sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
     free(p_dest);
     p_dest = NULL;
-    status = usch_whereis("/bin/sh", &p_dest);
-    mu_assert("error: usch_whereis(\"sh\", &p_dest) < 1", status > 0);
-    mu_assert("error: usch_whereis(\"/bin/sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
+    status = uwhereis("/bin/sh", &p_dest);
+    mu_assert("error: uwhereis(\"sh\", &p_dest) < 1", status > 0);
+    mu_assert("error: uwhereis(\"/bin/sh\", &p_dest), p_dest != \"/bin/sh\"", strcmp(p_dest, "/bin/sh") == 0);
     free(p_dest);
     p_dest = NULL;
 
@@ -98,9 +98,9 @@ cleanup:
 }
 #endif // 0
 
-#define test_num_args(...) usch_cmd("./test_num_args", ##__VA_ARGS__)
+#define test_num_args(...) ucmd("./test_num_args", ##__VA_ARGS__)
 
-static char *test_usch_cmd()
+static char *test_ucmd()
 {
     char *p_message = NULL;
     int num_args;
@@ -121,30 +121,30 @@ cleanup:
     return p_message;
 }
 
-#define test_usch_pwd(...) usch_cmd("pwd", ##__VA_ARGS__)
+#define test_upwd(...) ucmd("pwd", ##__VA_ARGS__)
 
-static char *test_usch_chdir()
+static char *test_uchdir()
 {
     char *p_message = NULL;
     int error;
     error = cd(".");
     mu_assert("error: cd(\".\") != 0", error == 0);
-    error = test_usch_pwd();
-    mu_assert("error: test_usch_pwd() != 0", error == 0);
+    error = test_upwd();
+    mu_assert("error: test_upwd() != 0", error == 0);
     return NULL;
 cleanup:
     return p_message;
 }
-static char *test_usch_strout()
+static char *test_ustrout()
 {
     char *p_message = NULL;
     char *p_str = NULL;
-    usch_stash_t s = {NULL};
+    ustash_t s = {NULL};
 
-    p_str = usch_strout(&s, "echo", "foo");
-    mu_assert("error: usch_strout(\"echo\", \"foo\") != 0", p_str != NULL);
-    mu_assert("error: usch_strout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
-    usch_stashclean(&s);
+    p_str = ustrout(&s, "echo", "foo");
+    mu_assert("error: ustrout(\"echo\", \"foo\") != 0", p_str != NULL);
+    mu_assert("error: ustrout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
+    uclear(&s);
 cleanup:
     return p_message;
 }
@@ -253,11 +253,11 @@ cleanup:
     return p_message;
 }
 
-typedef struct usch_test_vars_t {
+typedef struct utest_vars_t {
     int id;
     UT_hash_handle hh;
     char name[];
-} usch_test_vars_t;
+} utest_vars_t;
 
 static char *test_crepl_parse()
 {
@@ -411,19 +411,17 @@ cleanup:
 
 static char * all_tests()
 {
-#if 0
-    mu_run_test(test_strexp);
-    mu_run_test(test_strsplit);
-    mu_run_test(test_usch_cmd);
-    mu_run_test(test_usch_chdir);
-    mu_run_test(test_crepl_vars);
-    mu_run_test(test_crepl_dyld);
-    mu_run_test(test_parserutils);
-    mu_run_test(test_crepl_parse);
-    mu_run_test(test_crepl_finalize);
-    mu_run_test(test_crepl_parent);
-#endif // 0
-    mu_run_test(test_usch_strout);
+    //mu_run_test(test_strexp);
+    //mu_run_test(test_strsplit);
+    mu_run_test(test_ucmd);
+    //mu_run_test(test_uchdir);
+    //mu_run_test(test_crepl_vars);
+    //mu_run_test(test_crepl_dyld);
+    //mu_run_test(test_parserutils);
+    //mu_run_test(test_crepl_parse);
+    //mu_run_test(test_crepl_finalize);
+    //mu_run_test(test_crepl_parent);
+    //mu_run_test(test_ustrout);
 //    mu_run_test(test_crepl_parsedefs);
 //mu_run_test(test_pmcurses);
     //mu_run_test(test_input);

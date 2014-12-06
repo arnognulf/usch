@@ -80,7 +80,7 @@ Similar to "for" in bash, iterating over a file matching pattern can be done as 
 
 BUGS
 ----
-Usch cannot be compiled with -pedantic this is a limitation of the 0-n arg macro.
+Usch cannot be compiled with -pedantic. This is a limitation of the 0-n arg macro.
 
 Report bugs at: https://github.com/arnognulf/usch/issues
 
