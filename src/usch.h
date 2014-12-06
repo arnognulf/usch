@@ -134,12 +134,12 @@ struct ustash_item
     char str[];
 };
 
-static int run(char **pp_argv, int input, int first, int last);
+static int run(char **pp_argv, int input, int first, int last, int *p_child_pid);
 static int n = 0; /* number of calls to 'command' */
 
 pid_t pid;
 int command_pipe[2];
-static void xcleanup(int n);
+static int xcleanup(int n);
  
 #define READ  0
 #define WRITE 1
@@ -543,6 +543,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
     int argc = 0;
     int status = 0;
     int i = 0;
+    int child_pid = 0;
 
     if (pp_out != NULL)
     {
@@ -582,7 +583,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
         i = 0;
         while (i < argc)
         {
-			input = run(&pp_argv[i], input, first, 0);
+			input = run(&pp_argv[i], input, first, 0, &child_pid);
  
 			first = 0;
             while (i < argc && pp_argv[i] != NULL)
@@ -591,8 +592,8 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
             }
             i++;
 		}
-		input = run(&pp_argv[i], input, first, 1);
-		xcleanup(n);
+		input = run(&pp_argv[i], input, first, 1, &child_pid);
+		status = xcleanup(n);
 		n = 0;
     }
     if (pp_out != NULL)
@@ -603,6 +604,7 @@ end:
     priv_usch_free_globlist(p_glob_list);
     free(pp_argv);
 
+    printf("status = %d\n", status);
     return status;
 }
 
@@ -740,13 +742,15 @@ end:
  * So if 'command' returns a file descriptor, the next 'command' has this
  * descriptor as its 'input'.
  */
-static int command(char **pp_argv, int input, int first, int last)
+static int command(char **pp_argv, int input, int first, int last, int *p_child_pid)
 {
 	int pipettes[2];
+    int child_pid;
  
 	/* Invoke pipe */
+    
 	pipe( pipettes );	
-	pid = fork();
+	child_pid = fork();
  
 	/*
 	 SCHEME:
@@ -780,25 +784,64 @@ static int command(char **pp_argv, int input, int first, int last)
 	if (last == 1)
 		close(pipettes[READ]);
  
+    
+    *p_child_pid = child_pid;
 	return pipettes[READ];
 }
  
 /* Final xcleanup, 'wait' for processes to terminate.
  *  n : Number of times 'command' was invoked.
  */
-static void xcleanup(int n)
+static int xcleanup(int n)
 {
 	int i;
+    //int child_status = -1;
+    pid_t w;
+    int status;
+#if 1
 	for (i = 0; i < n; ++i) 
-		wait(NULL); 
+    {
+		status = wait(NULL); 
+        printf("%d\n", status);
+    }
+#endif // 0
+#if 0
+    do
+    {
+        w = waitpid(child_pid, &child_status, WUNTRACED | WCONTINUED);
+        if (w == -1)
+        {
+            perror("waitpid");
+            exit(EXIT_FAILURE);
+        }
+
+        if (WIFEXITED(child_status)) 
+        {
+            status = WEXITSTATUS(child_status);
+        }
+        else if (WIFSIGNALED(child_status))
+        {
+            printf("killed by signal %d\n", WTERMSIG(child_status));
+        }
+        else if (WIFSTOPPED(child_status))
+        {
+            printf("stopped by signal %d\n", WSTOPSIG(child_status));
+        }
+        else if (WIFCONTINUED(child_status))
+        {
+            printf("continued\n");
+        }
+    } while (!WIFEXITED(child_status) && !WIFSIGNALED(child_status));
+#endif // 0
+    return status;
 }
  
  
-static int run(char **pp_argv, int input, int first, int last)
+static int run(char **pp_argv, int input, int first, int last, int *p_child_pid)
 {
 	if (pp_argv[0] != NULL) {
 		n += 1;
-		return command(pp_argv, input, first, last);
+		return command(pp_argv, input, first, last, p_child_pid);
 	}
 	return 0;
 }
