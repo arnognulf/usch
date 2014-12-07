@@ -80,6 +80,7 @@ static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char*
 
 #define ustrout(p_ustash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_ustash), (cmd), ##__VA_ARGS__)
 #define ustrexp(p_ustash, item, ...) PRIV_USCH_STREXP_ARGS((p_ustash), (item), ##__VA_ARGS__)
+#define ustrjoin(p_ustash, str1, ...) PRIV_USCH_STRJOIN_ARGS((p_ustash), (str1), ##__VA_ARGS__)
 #define ucmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
 
 #ifndef CREPL_PARSER
@@ -118,6 +119,7 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,N,...) N
 #define PRIV_USCH_STROUT_ARGS(p_ustash, ...) priv_usch_strout_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_STREXP_ARGS(p_ustash, ...) priv_usch_strexp_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
+#define PRIV_USCH_STRJOIN_ARGS(p_ustash, ...) priv_usch_strjoin_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_CMD_ARGS(...) priv_usch_cmd_impl(PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
 struct uglob_list_t
@@ -337,6 +339,107 @@ end:
     return pp_strexp;
 }
 
+static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, char *p_str1, ...)
+{
+#if 0
+    char **pp_strjoin = NULL;
+    va_list p_ap;
+    size_t i;
+    char **pp_orig_argv = NULL;
+    char *p_actual_format = NULL;
+    struct ustash_item *p_blob = NULL;
+    static char* emptyarr[1];
+	struct uglob_list_t *p_glob_list = NULL;
+    size_t total_len = 0;
+    char **pp_strjoin_copy = NULL;
+    char **pp_strjoin_extmem = NULL;
+    size_t pos = 0;
+    size_t num_globbed_args = 0;
+    char *p_strjoin_data = NULL;
+
+
+    emptyarr[0] = NULL;
+
+    pp_strjoin = emptyarr;
+
+    if (p_str == NULL)
+    {
+        goto end;
+    }
+
+    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
+    if (pp_orig_argv == NULL)
+    {
+        goto end;
+    }
+
+    p_actual_format = calloc(num_args*2, sizeof(char));
+    if (p_actual_format == NULL)
+        goto end;
+
+    for (i = 0; i < num_args * 2; i += 2)
+    {
+        p_actual_format[i + 0] = '%';
+        p_actual_format[i + 1] = 's';
+    }
+    p_str = p_actual_format;
+
+    va_start(p_ap, p_str);
+
+    for (i = 0; i < num_args; i++)
+    {
+        pp_orig_argv[i] = va_arg(p_ap, char *);
+    }
+    pp_strjoin_extmem = priv_usch_globjoinand(pp_orig_argv, num_args, &p_glob_list);
+    if (pp_strjoin_extmem == NULL)
+        goto end;
+
+    for (i = 0; pp_strjoin_extmem[i] != NULL; i++)
+        total_len += strlen(pp_strjoin_extmem[i]) + 1;
+
+    num_globbed_args = i;
+
+    p_blob = calloc(sizeof(struct ustash_item) + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
+    if (p_blob == NULL)
+        goto end;
+
+    pp_strjoin_copy = (char**)p_blob->str;
+    pp_strjoin_copy[num_globbed_args] = NULL;
+    p_strjoin_data = (char*)&pp_strjoin_copy[num_globbed_args+1];
+    // TODO: debug
+    memset(p_strjoin_data, 0x0, total_len);
+    for (i = 0; pp_strjoin_extmem[i] != NULL; i++)
+    {
+        size_t len = strlen(pp_strjoin_extmem[i]);
+
+        pp_strjoin_copy[i] = &p_strjoin_data[pos];
+        pos += len + 1;
+        memcpy(pp_strjoin_copy[i], pp_strjoin_extmem[i], len);
+    }
+    if (priv_usch_stash(p_ustash, p_blob) != 0)
+    {
+        printf("stash failed, ohnoes!\n");
+        goto end;
+    }
+
+    pp_strjoin = pp_strjoin_copy;
+end:
+    pp_strjoin_copy = NULL;
+    if (num_args > 1)
+    {
+        va_end(p_ap);
+    }
+    priv_usch_free_globlist(p_glob_list);
+
+    fflush(stdout);
+    free(pp_orig_argv);
+    free(p_actual_format);
+    free(pp_strjoin_extmem);
+
+    return p_strjoin;
+#endif // 0
+    return NULL;
+}
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
     int status = 0;
@@ -534,8 +637,6 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
     (void)pp_in;
     (void)pp_err;
     struct ustash_item *p_out = NULL;
-    // TODO: fix here
-    int pipefd[2] = {0, 0};
 	struct uglob_list_t *p_glob_list = NULL;
 	char **pp_argv = NULL;
     int argc = 0;
@@ -543,11 +644,6 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
     int i = 0;
     int child_pid = 0;
 
-    // and fix here
-    if (pp_out != NULL)
-    {
-        pipe(pipefd);
-    }
     pp_argv = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_argv == NULL)
         goto end;
@@ -597,41 +693,8 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
             input = run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
         }
 
-        if (pp_out != NULL)
-        {
-            size_t i = 0;
-            size_t read_size = 1024;
-            p_out = calloc(read_size + sizeof(struct ustash_item), 1);
-            if (p_out == NULL)
-                goto end;
-            p_out->p_next = NULL;
-            //p_out->size = read_size;
-
-            close(pipefd[1]);  // close the write end of the pipe in the parent
-
-            while (read(pipefd[0], &p_out->str[i], 1) != 0)
-            {
-                i++;
-                if (i >= read_size)
-                {
-                    read_size *= 2;
-                    p_out = realloc(p_out, read_size + sizeof(struct ustash_item));
-                    if (p_out == NULL)
-                        goto end;
-                    //p_out->size = read_size;
-                }
-            }
-            p_out->str[i] = '\0';
-        }
-
-
-
 		status = xcleanup(child_pid);
 		n = 0;
-    }
-    if (pp_out != NULL)
-    {
-        *pp_out = p_out;
     }
 end:
     priv_usch_free_globlist(p_glob_list);
@@ -858,8 +921,12 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
     *p_child_pid = pid;
     printf("pid=%d\n", pid);
     printf("debug=%s\n", debug);
-    printf("p_ustash_item->str[i]: %s\n", p_ustash_item->str);
-    *pp_out = p_ustash_item;
+    if (p_ustash_item)
+        printf("p_ustash_item->str[i]: %s\n", p_ustash_item->str);
+    if (pp_out)
+    {
+        *pp_out = p_ustash_item;
+    }
     p_ustash_item = NULL;
 end:
     free(p_ustash_item);
