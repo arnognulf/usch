@@ -86,6 +86,8 @@ BUGS
 ----
 Usch cannot be compiled with -pedantic. This is a limitation of the 0-n arg macro.
 
+* entering cd("/home <ENTER> in the interpreter causes invalid read
+
 Report bugs at: https://github.com/arnognulf/usch/issues
 
 Contributing

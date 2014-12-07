@@ -46,7 +46,7 @@ extern "C" {
 /******************************* public declarations **********************************/
 
 /**
- * Forward declaration for private struct stash struct.
+ * Forward declaration for private stash struct.
  */
 struct ustash_item;
 typedef struct ustash ustash_t;

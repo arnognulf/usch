@@ -102,7 +102,6 @@ static char *test_ucmd()
     int num_args;
     num_args = test_num_args("testdir/*");
     mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 4);
-#if 0
     num_args = test_num_args("arg1");
     mu_assert("error: test_num_args(\"arg1\") != 2", num_args == 2);
 
@@ -111,7 +110,6 @@ static char *test_ucmd()
 
     num_args = test_num_args("arg1", "arg2", "arg3");
     mu_assert("error: test_num_args(\"arg1\", \"arg2\", \"arg3\") != 4", num_args == 4);
-#endif // 0
 
     return NULL;
 cleanup:
@@ -430,8 +428,8 @@ cleanup:
 }
 static char * all_tests()
 {
-    //mu_run_test(test_strexp);
-    //mu_run_test(test_strsplit);
+    mu_run_test(test_strexp);
+    mu_run_test(test_strsplit);
     mu_run_test(test_ucmd);
     //mu_run_test(test_ucmd_pipe);
     //mu_run_test(test_uchdir);
@@ -441,9 +439,8 @@ static char * all_tests()
     //mu_run_test(test_crepl_parse);
     //mu_run_test(test_crepl_finalize);
     //mu_run_test(test_crepl_parent);
-    //
     mu_run_test(test_ustrout);
-    //mu_run_test(test_ustrjoin);
+    mu_run_test(test_ustrjoin);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }
