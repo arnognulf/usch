@@ -131,7 +131,7 @@ struct uglob_list_t
 struct ustash_item
 {
     struct ustash_item *p_next;
-    //unsigned char error;
+    unsigned char error;
     char str[];
 };
 

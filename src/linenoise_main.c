@@ -24,8 +24,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include "usch.h"
 #include "crepl.h"
-#include "bufstr.h"
 #include "../external/linenoise/linenoise.h"
 
 static struct crepl_t *p_global_context = NULL;
@@ -93,35 +93,31 @@ int main(int argc, char **argv) {
     size_t len = 0;
     char *p_history = NULL;
     crepl_create(&p_crepl);
+    ustash_t s = {0};
 
     p_global_context = p_crepl;
 
     signal(SIGINT, siginthandler);
     signal(SIGQUIT, siginthandler);
 
-    len = strlen(getenv("HOME")) + strlen("/.usch_history") + 1;
-    p_history = malloc(len);
-    if (p_history == NULL)
-        goto end;
-    strcpy(p_history, getenv("HOME"));
-    memcpy(&p_history[strlen(p_history)], "/.usch_history", strlen("/.usch_history") + /* NUL */ 1);
+    p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
 
     linenoiseSetMultiLine(1);
     linenoiseHistorySetMaxLen(100);
     //linenoiseSetCompletionCallback(completion);
     linenoiseSetSpaceCompletionCallback(spaceCompletion);
-    linenoiseHistoryLoad("history.txt"); /* Load the history at startup */
+    linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
     while((p_line = linenoise("/* usch */ ")) != NULL) {
         if (p_line[0] != '\0') {
             crepl_eval(p_crepl, p_line);
             
             linenoiseHistoryAdd(p_line); /* Add to the history. */
-            linenoiseHistorySave("history.txt"); /* Save the history on disk. */
+            linenoiseHistorySave(p_history); /* Save the history on disk. */
         }
         free(p_line);
     }
-end:
     crepl_destroy(p_crepl);
+    uclear(&s);
     return 0;
 }
