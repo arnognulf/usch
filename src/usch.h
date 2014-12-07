@@ -341,28 +341,23 @@ end:
 
 static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, char *p_str1, ...)
 {
-#if 0
-    char **pp_strjoin = NULL;
+    static char emptystr[1];
+    char *p_strjoin_retval = emptystr;
+    char *p_strjoin = NULL;
+    char *p_dststr = NULL;
+    char **pp_orig_argv = NULL;
+
+    emptystr[0] = '\0';
+
     va_list p_ap;
     size_t i;
-    char **pp_orig_argv = NULL;
     char *p_actual_format = NULL;
     struct ustash_item *p_blob = NULL;
-    static char* emptyarr[1];
-	struct uglob_list_t *p_glob_list = NULL;
     size_t total_len = 0;
-    char **pp_strjoin_copy = NULL;
-    char **pp_strjoin_extmem = NULL;
-    size_t pos = 0;
-    size_t num_globbed_args = 0;
-    char *p_strjoin_data = NULL;
 
+    p_strjoin_retval = emptystr;
 
-    emptyarr[0] = NULL;
-
-    pp_strjoin = emptyarr;
-
-    if (p_str == NULL)
+    if (p_str1 == NULL)
     {
         goto end;
     }
@@ -382,64 +377,56 @@ static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, 
         p_actual_format[i + 0] = '%';
         p_actual_format[i + 1] = 's';
     }
-    p_str = p_actual_format;
+    p_str1 = p_actual_format;
 
-    va_start(p_ap, p_str);
+    va_start(p_ap, p_str1);
 
     for (i = 0; i < num_args; i++)
     {
         pp_orig_argv[i] = va_arg(p_ap, char *);
     }
-    pp_strjoin_extmem = priv_usch_globjoinand(pp_orig_argv, num_args, &p_glob_list);
-    if (pp_strjoin_extmem == NULL)
-        goto end;
+    for (i = 0; pp_orig_argv[i] != NULL; i++)
+    {
+        printf("pp_orig_argv[i] = %s\n", pp_orig_argv[i]);
+        total_len += strlen(pp_orig_argv[i]);
+    }
 
-    for (i = 0; pp_strjoin_extmem[i] != NULL; i++)
-        total_len += strlen(pp_strjoin_extmem[i]) + 1;
-
-    num_globbed_args = i;
-
-    p_blob = calloc(sizeof(struct ustash_item) + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
+    p_blob = calloc(sizeof(struct ustash_item) + sizeof(char) * total_len + 1, 1);
     if (p_blob == NULL)
         goto end;
 
-    pp_strjoin_copy = (char**)p_blob->str;
-    pp_strjoin_copy[num_globbed_args] = NULL;
-    p_strjoin_data = (char*)&pp_strjoin_copy[num_globbed_args+1];
-    // TODO: debug
-    memset(p_strjoin_data, 0x0, total_len);
-    for (i = 0; pp_strjoin_extmem[i] != NULL; i++)
-    {
-        size_t len = strlen(pp_strjoin_extmem[i]);
+    p_dststr = p_blob->str; 
 
-        pp_strjoin_copy[i] = &p_strjoin_data[pos];
-        pos += len + 1;
-        memcpy(pp_strjoin_copy[i], pp_strjoin_extmem[i], len);
+    for (i = 0; pp_orig_argv[i] != NULL; i++)
+    {
+        size_t len = strlen(pp_orig_argv[i]);
+        memcpy(p_dststr, pp_orig_argv[i], len);
+        p_dststr += len;
     }
+
+    *p_dststr = '\0';
+
     if (priv_usch_stash(p_ustash, p_blob) != 0)
     {
         printf("stash failed, ohnoes!\n");
         goto end;
     }
 
-    pp_strjoin = pp_strjoin_copy;
+    p_strjoin_retval = p_blob->str;
+    p_strjoin = NULL;
 end:
-    pp_strjoin_copy = NULL;
     if (num_args > 1)
     {
         va_end(p_ap);
     }
-    priv_usch_free_globlist(p_glob_list);
 
-    fflush(stdout);
     free(pp_orig_argv);
     free(p_actual_format);
-    free(pp_strjoin_extmem);
+    free(p_strjoin);
 
-    return p_strjoin;
-#endif // 0
-    return NULL;
+    return p_strjoin_retval;
 }
+
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
     int status = 0;
@@ -636,7 +623,6 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 {
     (void)pp_in;
     (void)pp_err;
-    struct ustash_item *p_out = NULL;
 	struct uglob_list_t *p_glob_list = NULL;
 	char **pp_argv = NULL;
     int argc = 0;

@@ -72,10 +72,6 @@ cleanup:
 }
 
 #if 0
-static char * test_cd()
-{
-    return "not implemented";
-}
 static char * test_whereis()
 {
     char *p_message = NULL;
@@ -402,8 +398,6 @@ cleanup:
     return NULL;
 }
 
-
-
 static char *test_parserutils()
 {
     char *p_message = NULL;
@@ -423,6 +417,16 @@ cleanup:
     return p_message;
 }
 
+static char *test_ustrjoin()
+{
+    ustash_t s = {0};
+    char *p_message = NULL;
+    mu_assert("error ustrjoin()", strcmp(ustrjoin(&s, "a", "b", "c"), "abc") == 0);
+    mu_assert("error ustrjoin()", strcmp(ustrjoin(&s, "a"), "a") == 0);
+cleanup:
+    uclear(&s);
+    return p_message;
+}
 static char * all_tests()
 {
     //mu_run_test(test_strexp);
@@ -436,7 +440,9 @@ static char * all_tests()
     //mu_run_test(test_crepl_parse);
     //mu_run_test(test_crepl_finalize);
     //mu_run_test(test_crepl_parent);
+    //
     mu_run_test(test_ustrout);
+    mu_run_test(test_ustrjoin);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }
