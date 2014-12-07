@@ -387,7 +387,6 @@ static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, 
     }
     for (i = 0; pp_orig_argv[i] != NULL; i++)
     {
-        printf("pp_orig_argv[i] = %s\n", pp_orig_argv[i]);
         total_len += strlen(pp_orig_argv[i]);
     }
 
@@ -536,7 +535,7 @@ end:
     return status;
 }
 #endif // 0
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct uglob_list_t **pp_glob_list)
+static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, struct uglob_list_t **pp_glob_list)
 {
     char **pp_expanded_argv = NULL;
 	struct uglob_list_t *p_glob_list = NULL;
@@ -654,15 +653,26 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 	{
 		int input = 0;
 		int first = 1;
+#if 0
         for (i = 0;  i < argc; i++)
         {
             printf("argv[%d] = %s\n", i, pp_argv[i]);
         }
-
+#endif // 0
         i = 0;
+        int j = 0;
+        int last = 0;
         while (i < argc)
         {
-			input = run(&pp_argv[i], input, first, 0, &child_pid, pp_out);
+            last = 1;
+            j = i;
+            while (j < argc)
+            {
+                if (pp_argv[j] == '\0')
+                    last = 0;
+                j++;
+            }
+			input = run(&pp_argv[i], input, first, last, &child_pid, pp_out);
  
 			first = 0;
             while (i < argc && pp_argv[i] != NULL)
@@ -674,7 +684,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
                 i++;
             }
 		}
-        if (pp_argv[i] == NULL && i != argc)
+        if (pp_argv[i] == NULL && pp_out == NULL)
         {
             input = run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
         }
@@ -686,7 +696,6 @@ end:
     priv_usch_free_globlist(p_glob_list);
     free(pp_argv);
 
-    printf("status = %d\n", status);
     return status;
 }
 
@@ -829,10 +838,7 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
     struct ustash_item *p_ustash_item = NULL;
 	int pipettes[2];
     pid_t pid;
-    char debug[512] = {0};
- 
-	/* Invoke pipe */
-    
+   
 	pipe(pipettes);
 	pid = fork();
  
@@ -844,14 +850,17 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 	if (pid == 0) {
 		if (first == 1 && last == 0 && input == 0) {
 			// First command
-			dup2( pipettes[WRITE], STDOUT_FILENO );
+			dup2(pipettes[WRITE], STDOUT_FILENO );
 		} else if (first == 0 && last == 0 && input != 0) {
 			// Middle command
 			dup2(input, STDIN_FILENO);
 			dup2(pipettes[WRITE], STDOUT_FILENO);
 		} else {
 			// Last command
-			dup2( input, STDIN_FILENO );
+            if (pp_out)
+                dup2(pipettes[WRITE], STDOUT_FILENO );
+            else
+                dup2(input, STDIN_FILENO);
 		}
  
 		if (execvp(pp_argv[0], pp_argv) == -1)
@@ -867,7 +876,7 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 	// Nothing more needs to be written
 	close(pipettes[WRITE]);
 
-    if (pp_out != NULL && last == 0)
+    if (pp_out != NULL && last == 1)
     {
         size_t i = 0;
         size_t read_size = 1024;
@@ -875,11 +884,6 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
         if (p_ustash_item == NULL)
             goto end;
         p_ustash_item->p_next = NULL;
-
-        strcpy(debug, "debug fun\n\0");
-        //p_ustash_item->size = read_size;
-
-        //close(pipettes[1]);  // close the write end of the pipe in the parent
 
         while (read(pipettes[READ], &p_ustash_item->str[i], 1) != 0)
         {
@@ -890,11 +894,10 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
                 p_ustash_item = realloc(p_ustash_item, read_size + sizeof(struct ustash_item));
                 if (p_ustash_item == NULL)
                     goto end;
-                //p_ustash_item->size = read_size;
             }
         }
         p_ustash_item->str[i] = '\0';
-    } 
+    }
 
 	// If it's the last command, nothing more needs to be read
 	if (last == 1)
@@ -902,13 +905,8 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
 		close(pipettes[READ]);
     }
 
-    // TODO: insert strout code here
-    //
     *p_child_pid = pid;
-    printf("pid=%d\n", pid);
-    printf("debug=%s\n", debug);
-    if (p_ustash_item)
-        printf("p_ustash_item->str[i]: %s\n", p_ustash_item->str);
+
     if (pp_out)
     {
         *pp_out = p_ustash_item;
@@ -971,7 +969,6 @@ static int xcleanup(int child_pid)
 static int run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out)
 {
 	if (pp_argv[0] != NULL) {
-        printf("%s\n", pp_argv[0]);
 		n += 1;
 		return command(pp_argv, input, first, last, p_child_pid, pp_out);
 	}
