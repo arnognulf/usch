@@ -730,10 +730,13 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
                 }
                 else
                 {
-                    if (p_line[skipahead] == '(')
+                    if (p_line[skipahead] == '(' && p_line[i] != '\0')
                     {
-                        while(p_line[i] != ';')
+                        while(p_line[i] != ';' && p_line[i] != '\0')
+                        {
+                            fprintf(stderr, "i = %d\n", i);
                             i++;
+                        }
                         break;
                         valid_identifier = 0;
                     }
