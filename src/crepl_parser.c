@@ -734,10 +734,8 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
                     {
                         while(p_line[i] != ';' && p_line[i] != '\0')
                         {
-                            fprintf(stderr, "i = %d\n", i);
                             i++;
                         }
-                        break;
                         valid_identifier = 0;
                     }
 

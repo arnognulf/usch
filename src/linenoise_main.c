@@ -24,13 +24,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
+#include <dirent.h>
+
 #include "usch.h"
 #include "crepl.h"
 #include "../external/linenoise/linenoise.h"
 
 static struct crepl_t *p_global_context = NULL;
-
-void spaceCompletion(const char *p_buf, linenoiseCompletions *lc) {
+static void handle_sigint(int sig)
+{
+    return;
+}
+void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
+{
     char *p_full_completion = NULL;
     char *p_space_completion = NULL;
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -79,6 +85,50 @@ end:
     free(p_space_completion);
 }
 
+void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
+{
+    DIR *p_dir = NULL;
+    struct dirent *p_dirent = NULL;
+    int i;
+    static ustash_t tab_completion_stash = {0};
+
+    crepl_state_t state = CREPL_STATE_CPARSER;
+    size_t len = 0;
+    len = strlen(p_buf);
+
+    crepl_preparse(p_global_context, p_buf, &state);
+
+    if (state == CREPL_STATE_CMDARG)
+    {
+        const char *p_cmdarg = NULL;
+        size_t arglen = 0;
+
+        for (i = len-1; i >= 0; i--)
+        {
+            if (p_buf[i] == '"')
+            {
+                p_cmdarg = &p_buf[i+1];
+                arglen = strlen(p_cmdarg);
+                break;
+            }
+        }
+
+        p_dir = opendir(".");
+        while ((p_dirent = readdir(p_dir)) != NULL) {
+            if (strncmp(p_cmdarg, p_dirent->d_name, arglen) == 0)
+            {
+                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen]);
+                linenoiseAddCompletion(lc, p_tab_completion);
+            }
+        }
+
+    }
+    if (p_dir)
+        closedir(p_dir);
+    uclear(&tab_completion_stash);
+}
+
+
 
 static void siginthandler(int dummy)
 {
@@ -97,14 +147,14 @@ int main(int argc, char **argv) {
 
     p_global_context = p_crepl;
 
-    signal(SIGINT, siginthandler);
-    signal(SIGQUIT, siginthandler);
+    signal(SIGQUIT, handle_sigint);
+    signal(SIGINT, handle_sigint);
 
     p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
 
     linenoiseSetMultiLine(1);
     linenoiseHistorySetMaxLen(100);
-    //linenoiseSetCompletionCallback(completion);
+    linenoiseSetCompletionCallback(tabCompletion);
     linenoiseSetSpaceCompletionCallback(spaceCompletion);
     linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
