@@ -897,6 +897,14 @@ static int command(char **pp_argv, int input, int first, int last, int *p_child_
             }
         }
         p_ustash_item->str[i] = '\0';
+        if (i > 0)
+        {
+            if (p_ustash_item->str[i - 1] == '\n')
+            {
+                p_ustash_item->str[i - 1] = '\0';
+            }
+        }
+
     }
 
 	// If it's the last command, nothing more needs to be read

@@ -152,7 +152,7 @@ static char *test_ustrout()
 
     p_str = ustrout(&s, "echo", "foo");
     mu_assert("error: ustrout(\"echo\", \"foo\") != 0", p_str != NULL);
-    mu_assert("error: ustrout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo\n") == 0);
+    mu_assert("error: ustrout(\"echo\", \"foo\") != foo", strcmp(p_str, "foo") == 0);
     uclear(&s);
 cleanup:
     return p_message;

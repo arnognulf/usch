@@ -144,6 +144,10 @@ int main(int argc, char **argv) {
     char *p_history = NULL;
     crepl_create(&p_crepl);
     ustash_t s = {0};
+    ustash_t prompt = {0};
+    char *p_prompt = NULL;
+    char *p_hostname = NULL;
+    int i = 0;
 
     p_global_context = p_crepl;
 
@@ -158,7 +162,11 @@ int main(int argc, char **argv) {
     linenoiseSetSpaceCompletionCallback(spaceCompletion);
     linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
-    while((p_line = linenoise("/* usch */ ")) != NULL) {
+    p_hostname = ustrout(&s, "hostname", "-s");
+    p_prompt = ustrjoin(&prompt, getenv("USER"), "@", p_hostname, ":", ustrout(&prompt, "pwd"), "% ");
+    while((p_line = linenoise(p_prompt)) != NULL) 
+    {
+        uclear(&prompt);
         if (p_line[0] != '\0') {
             crepl_eval(p_crepl, p_line);
             
@@ -166,6 +174,7 @@ int main(int argc, char **argv) {
             linenoiseHistorySave(p_history); /* Save the history on disk. */
         }
         free(p_line);
+        p_prompt = ustrjoin(&prompt, getenv("USER"), "@", p_hostname, ":", ustrout(&prompt, "pwd"), "% ");
     }
     crepl_destroy(p_crepl);
     uclear(&s);

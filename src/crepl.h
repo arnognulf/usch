@@ -31,22 +31,22 @@ extern "C" {
 #include <stdlib.h>
 
 struct crepl_t;
-int crepl_create(struct crepl_t **p_context);
-int crepl_eval(struct crepl_t *p_context, char *p_input);
-void crepl_destroy(struct crepl_t *p_context);
+int crepl_create(struct crepl_t **p_crepl);
+int crepl_eval(struct crepl_t *p_crepl, char *p_input);
+void crepl_destroy(struct crepl_t *p_crepl);
 
-int crepl_define(struct crepl_t *p_context, size_t var_size, char *p_defname);
-void crepl_undef(struct crepl_t *p_context, char *p_defname);
-int crepl_load(struct crepl_t *p_context, char *p_defname, void *p_data);
-int crepl_store(struct crepl_t *p_context, char *p_defname, void *p_data);
+int crepl_define(struct crepl_t *p_crepl, size_t var_size, char *p_defname);
+void crepl_undef(struct crepl_t *p_crepl, char *p_defname);
+int crepl_load(struct crepl_t *p_crepl, char *p_defname, void *p_data);
+int crepl_store(struct crepl_t *p_crepl, char *p_defname, void *p_data);
 
-int crepl_define_fn(struct crepl_t *p_context, char *p_fndefname, char *p_body);
-int crepl_undef_fn(struct crepl_t *p_context, char *p_fndefname);
+int crepl_define_fn(struct crepl_t *p_crepl, char *p_fndefname, char *p_body);
+int crepl_undef_fn(struct crepl_t *p_crepl, char *p_fndefname);
 
-int crepl_pathhash(struct crepl_t *p_context);
-int crepl_is_cmd(struct crepl_t *p_context, char *p_item);
-int crepl_lib(struct crepl_t *p_context, char *p_dynlib);
-int crepl_include(struct crepl_t *p_context, char *p_header);
+int crepl_pathhash(struct crepl_t *p_crepl);
+int crepl_is_cmd(struct crepl_t *p_crepl, char *p_item);
+int crepl_lib(struct crepl_t *p_crepl, char *p_dynlib);
+int crepl_include(struct crepl_t *p_crepl, char *p_header);
 char **crepl_getldpath();
 
 typedef enum {
@@ -56,10 +56,10 @@ CREPL_STATE_CMDSTART = 2,
 CREPL_STATE_CMDARG = 3,
 CREPL_STATE_PREPROCESSOR = 4,
 } crepl_state_t;
-int crepl_parsedefs(struct crepl_t *p_context, char *p_line);
+int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line);
 
 int crepl_finalize(char *p_unfinalized, char **pp_finalized);
-int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t *p_state);
+int crepl_preparse(struct crepl_t *p_crepl, const char *p_input, crepl_state_t *p_state);
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED
