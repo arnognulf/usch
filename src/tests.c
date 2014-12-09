@@ -158,6 +158,33 @@ cleanup:
     return p_message;
 }
 
+static char *test_udirname()
+{
+    char *p_message = NULL;
+    char *p_str = NULL;
+    ustash_t s = {NULL};
+
+    p_str = udirname(&s, "/foo/bar/baz.txt");
+    mu_assert("error: udirname(\"/foo/bar/baz.txt\",) != 0", strcmp(p_str, "/foo/bar") == 0);
+    uclear(&s);
+cleanup:
+    return p_message;
+}
+
+static char *test_ustrtrim()
+{
+    char *p_message = NULL;
+    char *p_str = NULL;
+    ustash_t s = {NULL};
+
+    p_str = ustrtrim(&s, "   abc   ");
+    mu_assert("error: ustrtrim(\"   abc   \",) != 0", strcmp(p_str, "abc") == 0);
+    uclear(&s);
+cleanup:
+    return p_message;
+}
+
+
 static char *test_crepl_vars()
 {
     char *p_message = NULL;
@@ -440,6 +467,8 @@ static char * all_tests()
     //mu_run_test(test_crepl_finalize);
     //mu_run_test(test_crepl_parent);
     mu_run_test(test_ustrout);
+    mu_run_test(test_udirname);
+    mu_run_test(test_ustrtrim);
     mu_run_test(test_ustrjoin);
     //mu_run_test(test_crepl_parsedefs);
     return 0;

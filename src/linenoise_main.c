@@ -101,6 +101,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     if (state == CREPL_STATE_CMDARG)
     {
         const char *p_cmdarg = NULL;
+        const char *p_dirarg = NULL;
         size_t arglen = 0;
 
         for (i = len-1; i >= 0; i--)
@@ -113,11 +114,23 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
             }
         }
 
-        p_dir = opendir(".");
+        p_dirarg = udirname(&tab_completion_stash, ustrtrim(&tab_completion_stash, p_cmdarg));
+        fprintf(stderr, "xarg: %s\n", p_dirarg);
+        if (p_dirarg[0] == '/' || (p_dirarg[0] == '.' && p_dirarg[1] == '.'))
+        {
+            p_dir = opendir(p_dirarg);
+        }
+        else
+        {
+            p_dir = opendir(".");
+        }
+
         while ((p_dirent = readdir(p_dir)) != NULL) {
+            //fprintf(stderr, "ABC: %s %s\n", p_dirent->d_name, p_cmdarg);
             if (strncmp(p_cmdarg, p_dirent->d_name, arglen) == 0)
             {
                 char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen]);
+                //fprintf(stderr, "XYZ: %s\n", p_tab_completion);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }

@@ -339,6 +339,76 @@ end:
     return pp_strexp;
 }
 
+static inline char *udirname(ustash_t *p_ustash, const char *p_str)
+{
+    static char emptystr[] = "\0";
+    char *p_dirname = emptystr;
+    struct ustash_item* p_blob = NULL;
+    int i = 0;
+    int end = 0;
+
+    while (p_str[i] != '\0')
+    {
+        if (p_str[i] == '/')
+            end = i;
+        i++;
+    }
+    if (end == 0)
+    {
+        end = i - 1;
+    }
+    p_blob = calloc(end + 1, sizeof(char*));
+    memcpy(p_blob->str, p_str, end);
+    p_blob->str[end] = '\0';
+    fprintf(stderr, "dirname %s\n", p_blob->str);
+
+    if (priv_usch_stash(p_ustash, p_blob) != 0)
+    {
+        goto end;
+    }
+    p_dirname = p_blob->str;
+    p_blob = NULL;
+end:
+    return p_dirname;
+}
+
+static inline char *ustrtrim(ustash_t *p_ustash, const char *p_str)
+{
+    static char emptystr[] = "\0";
+    char *p_trim = emptystr;
+    struct ustash_item* p_blob = NULL;
+    int i = 0;
+    int start = 0;
+    int end = 0;
+    size_t len;
+
+    while (p_str[i] == ' ')
+    {
+        start = i+1;
+        i++;
+    }
+    len = strlen(p_str);
+    i = len - 1;
+    while (p_str[i] == ' ' && i > start)
+    {
+        i--;
+    }
+    end = i+1;
+
+    p_blob = calloc(end - start + 1, sizeof(char*));
+    memcpy(p_blob->str, &p_str[start], end-start);
+    p_blob->str[end] = '\0';
+
+    if (priv_usch_stash(p_ustash, p_blob) != 0)
+    {
+        goto end;
+    }
+    p_trim = p_blob->str;
+    p_blob = NULL;
+end:
+    return p_trim;
+}
+
 static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, char *p_str1, ...)
 {
     static char emptystr[1];
