@@ -33,10 +33,12 @@
 static struct crepl_t *p_global_context = NULL;
 static void handle_sigint(int sig)
 {
+    (void)sig;
     return;
 }
 void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 {
+    fprintf(stderr, "space\n");
     char *p_full_completion = NULL;
     char *p_space_completion = NULL;
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -91,6 +93,9 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     struct dirent *p_dirent = NULL;
     int i;
     static ustash_t tab_completion_stash = {0};
+    
+    if (p_buf == NULL)
+        return;
 
     crepl_state_t state = CREPL_STATE_CPARSER;
     size_t len = 0;
@@ -143,24 +148,17 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
 
 
 
-static void siginthandler(int dummy)
-{
-    (void)dummy;
-}
-
 int main(int argc, char **argv) {
     (void)argc;
     (void)argv;
     char *p_line = NULL;
     struct crepl_t *p_crepl = NULL;
-    size_t len = 0;
     char *p_history = NULL;
     crepl_create(&p_crepl);
     ustash_t s = {0};
     ustash_t prompt = {0};
     char *p_prompt = NULL;
     char *p_hostname = NULL;
-    int i = 0;
 
     p_global_context = p_crepl;
 

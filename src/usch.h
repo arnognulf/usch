@@ -137,6 +137,7 @@ struct ustash_item
 
 static int run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
 static int n = 0; /* number of calls to 'command' */
+static int command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
 
 static int xcleanup(int n);
  
@@ -357,7 +358,7 @@ static inline char *udirname(ustash_t *p_ustash, const char *p_str)
     {
         end = i - 1;
     }
-    p_blob = calloc(end + 1, sizeof(char*));
+    p_blob = calloc(end + 1 + sizeof(struct ustash_item), 1);
     memcpy(p_blob->str, p_str, end);
     p_blob->str[end] = '\0';
     fprintf(stderr, "dirname %s\n", p_blob->str);
@@ -382,6 +383,9 @@ static inline char *ustrtrim(ustash_t *p_ustash, const char *p_str)
     int end = 0;
     size_t len;
 
+    if (p_str == NULL)
+        goto end;
+
     while (p_str[i] == ' ')
     {
         start = i+1;
@@ -395,7 +399,7 @@ static inline char *ustrtrim(ustash_t *p_ustash, const char *p_str)
     }
     end = i+1;
 
-    p_blob = calloc(end - start + 1, sizeof(char*));
+    p_blob = calloc(end - start + 1 + sizeof(struct ustash_item), 1);
     memcpy(p_blob->str, &p_str[start], end-start);
     p_blob->str[end] = '\0';
 
