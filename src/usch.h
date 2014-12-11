@@ -135,11 +135,11 @@ struct ustash_item
     char str[];
 };
 
-static int run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
-static int n = 0; /* number of calls to 'command' */
-static int command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
+static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
+static int n = 0; /* number of calls to 'priv_usch_command' */
+static int priv_usch_command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out);
 
-static int xcleanup(int n);
+static int priv_usch_waitforall(int n);
  
 #define READ  0
 #define WRITE 1
@@ -746,7 +746,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
                     last = 0;
                 j++;
             }
-			input = run(&pp_argv[i], input, first, last, &child_pid, pp_out);
+			input = priv_usch_run(&pp_argv[i], input, first, last, &child_pid, pp_out);
  
 			first = 0;
             while (i < argc && pp_argv[i] != NULL)
@@ -760,10 +760,10 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 		}
         if (pp_argv[i] == NULL && pp_out == NULL)
         {
-            input = run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
+            input = priv_usch_run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
         }
 
-		status = xcleanup(child_pid);
+		status = priv_usch_waitforall(child_pid);
 		n = 0;
     }
 end:
@@ -895,7 +895,7 @@ end:
 
 /*
  * Handle commands separatly
- * input: return value from previous command (useful for pipe file descriptor)
+ * input: return value from previous priv_usch_command (useful for pipe file descriptor)
  * first: 1 if first command in pipe-sequence (no input from previous pipe)
  * last: 1 if last command in pipe-sequence (no input from previous pipe)
  *
@@ -907,7 +907,7 @@ end:
  * So if 'command' returns a file descriptor, the next 'command' has this
  * descriptor as its 'input'.
  */
-static int command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out)
+static int priv_usch_command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out)
 {
     struct ustash_item *p_ustash_item = NULL;
 	int pipettes[2];
@@ -999,10 +999,15 @@ end:
 	return pipettes[READ];
 }
  
-/* Final xcleanup, 'wait' for processes to terminate.
- *  n : Number of times 'command' was invoked.
+
+/* @brief priv_usch_waitforall
+ *
+ * Wait for processes to terminate.
+ *
+ * @param  child_pid.
+ * @return child error status.
  */
-static int xcleanup(int child_pid)
+static int priv_usch_waitforall(int child_pid)
 {
     pid_t wpid;
     int status;
@@ -1048,11 +1053,11 @@ static int xcleanup(int child_pid)
 }
  
  
-static int run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out)
+static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct ustash_item **pp_out)
 {
 	if (pp_argv[0] != NULL) {
 		n += 1;
-		return command(pp_argv, input, first, last, p_child_pid, pp_out);
+		return priv_usch_command(pp_argv, input, first, last, p_child_pid, pp_out);
 	}
 	return 0;
 }

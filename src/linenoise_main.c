@@ -38,7 +38,6 @@ static void handle_sigint(int sig)
 }
 void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 {
-    fprintf(stderr, "space\n");
     char *p_full_completion = NULL;
     char *p_space_completion = NULL;
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -120,7 +119,6 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
         }
 
         p_dirarg = udirname(&tab_completion_stash, ustrtrim(&tab_completion_stash, p_cmdarg));
-        fprintf(stderr, "xarg: %s\n", p_dirarg);
         if (p_dirarg[0] == '/' || (p_dirarg[0] == '.' && p_dirarg[1] == '.'))
         {
             p_dir = opendir(p_dirarg);
@@ -131,11 +129,9 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
         }
 
         while ((p_dirent = readdir(p_dir)) != NULL) {
-            //fprintf(stderr, "ABC: %s %s\n", p_dirent->d_name, p_cmdarg);
             if (strncmp(p_cmdarg, p_dirent->d_name, arglen) == 0)
             {
                 char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen]);
-                //fprintf(stderr, "XYZ: %s\n", p_tab_completion);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }
