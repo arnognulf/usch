@@ -34,7 +34,7 @@ int tests_run = 0;
 static char * test_strsplit() {
     char *p_message = NULL;
     char *p_test1 = "foo bar baz";
-    ustash_t s = {NULL};
+    ustash s = {NULL};
     {
         char **pp_out = NULL;
         pp_out = ustrsplit(&s, p_test1, " ");
@@ -51,7 +51,7 @@ cleanup:
 static char * test_strexp()
 {
     char *p_message = NULL;
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     {
         char **pp_out = ustrexp(&s, "foo", "bar", "baz");
@@ -148,7 +148,7 @@ static char *test_ustrout()
 {
     char *p_message = NULL;
     char *p_str = NULL;
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     p_str = ustrout(&s, "echo", "foo");
     mu_assert("error: ustrout(\"echo\", \"foo\") != 0", p_str != NULL);
@@ -162,7 +162,7 @@ static char *test_udirname()
 {
     char *p_message = NULL;
     char *p_str = NULL;
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     p_str = udirname(&s, "/foo/bar/baz.txt");
     mu_assert("error: udirname(\"/foo/bar/baz.txt\",) != 0", strcmp(p_str, "/foo/bar") == 0);
@@ -175,7 +175,7 @@ static char *test_ustrtrim()
 {
     char *p_message = NULL;
     char *p_str = NULL;
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     p_str = ustrtrim(&s, "   abc   ");
     mu_assert("error: ustrtrim(\"   abc   \",) != 0", strcmp(p_str, "abc") == 0);
@@ -445,7 +445,7 @@ cleanup:
 
 static char *test_ustrjoin()
 {
-    ustash_t s = {0};
+    ustash s = {0};
     char *p_message = NULL;
     mu_assert("error ustrjoin()", strcmp(ustrjoin(&s, "a", "b", "c"), "abc") == 0);
     mu_assert("error ustrjoin()", strcmp(ustrjoin(&s, "a"), "a") == 0);

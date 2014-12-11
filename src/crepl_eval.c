@@ -455,7 +455,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     char uschrc_h[] = "/.uschrc.h";
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";

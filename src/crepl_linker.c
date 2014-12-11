@@ -14,7 +14,7 @@ static int has_symbol(struct crepl_t *p_context, const char* p_sym);
 
 char **crepl_getldpath()
 {
-    ustash_t stash = {0};
+    ustash stash = {0};
     int i = 0;
     int j = 0;
     int ld_idx = 0;

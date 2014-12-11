@@ -91,7 +91,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     DIR *p_dir = NULL;
     struct dirent *p_dirent = NULL;
     int i;
-    static ustash_t tab_completion_stash = {0};
+    static ustash tab_completion_stash = {0};
     
     if (p_buf == NULL)
         return;
@@ -151,8 +151,8 @@ int main(int argc, char **argv) {
     struct crepl_t *p_crepl = NULL;
     char *p_history = NULL;
     crepl_create(&p_crepl);
-    ustash_t s = {0};
-    ustash_t prompt = {0};
+    ustash s = {0};
+    ustash prompt = {0};
     char *p_prompt = NULL;
     char *p_hostname = NULL;
 

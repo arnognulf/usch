@@ -49,18 +49,18 @@ extern "C" {
  * Forward declaration for private stash struct.
  */
 struct ustash_item;
-typedef struct ustash ustash_t;
+typedef struct ustash ustash;
 
 /**
  * @brief free allocated memory referenced by p_ustash.
  *  
- * Clear allocated memory referenced by an ustash_t structure.
- * uclear() can be called any number of times with the same ustash_t pointer.
+ * Clear allocated memory referenced by an ustash structure.
+ * uclear() can be called any number of times with the same ustash pointer.
  *   
- *   @param Pointer to an ustash_t (preferably on the stack)
+ *   @param Pointer to an ustash (preferably on the stack)
  *   */
 
-static inline void uclear(ustash_t *p_ustash);
+static inline void uclear(ustash *p_ustash);
 
 
 /**
@@ -76,7 +76,7 @@ static inline void uclear(ustash_t *p_ustash);
  *   @remarks return value must not be freed.
  *   @remarks return value is never NULL.
  *   */
-static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char* p_delims);
+static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p_delims);
 
 #define ustrout(p_ustash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_ustash), (cmd), ##__VA_ARGS__)
 #define ustrexp(p_ustash, item, ...) PRIV_USCH_STREXP_ARGS((p_ustash), (item), ##__VA_ARGS__)
@@ -99,20 +99,20 @@ static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char*
 typedef struct ustash
 {
     struct ustash_item *p_list;
-} ustash_t;
+} ustash;
 
 
-struct uglob_list_t;
+struct uglob_list;
 
-static inline int priv_usch_stash(ustash_t *p_ustash, struct ustash_item *p_stashitem);
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct uglob_list_t **pp_glob_list);
-static inline void   priv_usch_free_globlist(struct uglob_list_t *p_glob_list);
+static inline int priv_usch_stash(ustash *p_ustash, struct ustash_item *p_stashitem);
+static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct uglob_list **pp_glob_list);
+static inline void   priv_usch_free_globlist(struct uglob_list *p_glob_list);
 static inline int    priv_usch_cmd_arr(struct ustash_item **pp_in, 
                                struct ustash_item **pp_out,
                                struct ustash_item **pp_err,
                                size_t num_args,
                                char **pp_orig_argv);
-static inline char **priv_usch_strexp_impl(ustash_t *p_ustash, size_t num_args, char *p_str, ...);
+static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, char *p_str, ...);
 static inline int    priv_usch_cmd_impl(size_t num_args, char *p_name, ...);
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest);
 #define PRIV_USCH_ARGC(...) PRIV_USCH_ARGC_IMPL(__VA_ARGS__, 10, 9, 8, 7, 6, 5,4,3,2,1)
@@ -122,11 +122,11 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
 #define PRIV_USCH_STRJOIN_ARGS(p_ustash, ...) priv_usch_strjoin_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_CMD_ARGS(...) priv_usch_cmd_impl(PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
-struct uglob_list_t
+struct uglob_list
 {
-    struct uglob_list_t *p_next;
+    struct uglob_list *p_next;
     glob_t glob_data;
-} uglob_list_t;
+} uglob_list;
 
 struct ustash_item
 {
@@ -146,7 +146,7 @@ static int priv_usch_waitforall(int n);
  
 /******************************* implementations **********************************/
 
-static inline int priv_usch_stash(ustash_t *p_ustash, struct ustash_item *p_stashitem)
+static inline int priv_usch_stash(ustash *p_ustash, struct ustash_item *p_stashitem)
 {
     int status = 0;
 
@@ -159,7 +159,7 @@ static inline int priv_usch_stash(ustash_t *p_ustash, struct ustash_item *p_stas
     return status;
 }
 
-static inline void uclear(ustash_t *p_ustash)
+static inline void uclear(ustash *p_ustash)
 {
     struct ustash_item *p_current = NULL;
     if (p_ustash == NULL)
@@ -178,7 +178,7 @@ static inline void uclear(ustash_t *p_ustash)
     p_ustash->p_list = NULL;
 }
 
-static inline char **ustrsplit(ustash_t *p_ustash, const char* p_in, const char* p_delims)
+static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p_delims)
 {
     struct ustash_item *p_stashitem = NULL;
     char** pp_out = NULL;
@@ -241,7 +241,7 @@ end:
     return pp_out;
 }
 
-static inline char **priv_usch_strexp_impl(ustash_t *p_ustash, size_t num_args, char *p_str, ...)
+static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, char *p_str, ...)
 {
     char **pp_strexp = NULL;
     va_list p_ap;
@@ -250,7 +250,7 @@ static inline char **priv_usch_strexp_impl(ustash_t *p_ustash, size_t num_args, 
     char *p_actual_format = NULL;
     struct ustash_item *p_blob = NULL;
     static char* emptyarr[1];
-	struct uglob_list_t *p_glob_list = NULL;
+	struct uglob_list *p_glob_list = NULL;
     size_t total_len = 0;
     char **pp_strexp_copy = NULL;
     char **pp_strexp_extmem = NULL;
@@ -340,7 +340,7 @@ end:
     return pp_strexp;
 }
 
-static inline char *udirname(ustash_t *p_ustash, const char *p_str)
+static inline char *udirname(ustash *p_ustash, const char *p_str)
 {
     static char emptystr[] = "\0";
     char *p_dirname = emptystr;
@@ -373,7 +373,7 @@ end:
     return p_dirname;
 }
 
-static inline char *ustrtrim(ustash_t *p_ustash, const char *p_str)
+static inline char *ustrtrim(ustash *p_ustash, const char *p_str)
 {
     static char emptystr[] = "\0";
     char *p_trim = emptystr;
@@ -413,7 +413,7 @@ end:
     return p_trim;
 }
 
-static inline char *priv_usch_strjoin_impl(ustash_t *p_ustash, size_t num_args, char *p_str1, ...)
+static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, char *p_str1, ...)
 {
     static char emptystr[1];
     char *p_strjoin_retval = emptystr;
@@ -594,7 +594,7 @@ static inline int uwhereis(char* p_item, char** pp_dest)
     char **pp_path = NULL;
     int status = 0;
     int num_items = 0;
-    ustash_t s = {NULL};
+    ustash s = {NULL};
 
     ustrsplit(&s, getenv("PATH"), ":", &pp_path);
 
@@ -609,11 +609,11 @@ end:
     return status;
 }
 #endif // 0
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, struct uglob_list_t **pp_glob_list)
+static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, struct uglob_list **pp_glob_list)
 {
     char **pp_expanded_argv = NULL;
-	struct uglob_list_t *p_glob_list = NULL;
-	struct uglob_list_t *p_current_glob_item = NULL;
+	struct uglob_list *p_glob_list = NULL;
+	struct uglob_list *p_current_glob_item = NULL;
 	size_t i, j;
 	int orig_arg_idx = 0;
 	int num_glob_items = 0;
@@ -628,14 +628,14 @@ static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, 
 
 		if (p_current_glob_item == NULL)
 		{
-			p_current_glob_item = calloc(1, sizeof(uglob_list_t));
+			p_current_glob_item = calloc(1, sizeof(uglob_list));
 			if (p_current_glob_item == NULL)
 				goto end;
 			p_glob_list = p_current_glob_item;
 		}
 		else
 		{
-			p_current_glob_item->p_next = calloc(1, sizeof(uglob_list_t));
+			p_current_glob_item->p_next = calloc(1, sizeof(uglob_list));
 			if (p_current_glob_item->p_next == NULL)
 				goto end;
 			p_current_glob_item = p_current_glob_item->p_next;
@@ -671,14 +671,14 @@ static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, 
 end:
     return pp_expanded_argv;
 }
-static inline void priv_usch_free_globlist(struct uglob_list_t *p_glob_list)
+static inline void priv_usch_free_globlist(struct uglob_list *p_glob_list)
 {
     if (p_glob_list)
     {
-        struct uglob_list_t *p_current_glob_item = p_glob_list;
+        struct uglob_list *p_current_glob_item = p_glob_list;
         while (p_current_glob_item != NULL)
         {
-            struct uglob_list_t *p_free_glob_item = p_current_glob_item;
+            struct uglob_list *p_free_glob_item = p_current_glob_item;
 
             p_current_glob_item = p_current_glob_item->p_next;
 
@@ -696,7 +696,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 {
     (void)pp_in;
     (void)pp_err;
-	struct uglob_list_t *p_glob_list = NULL;
+	struct uglob_list *p_glob_list = NULL;
 	char **pp_argv = NULL;
     int argc = 0;
     int status = 0;
@@ -824,7 +824,7 @@ end:
 
     return status;
 }
-static inline char* priv_usch_strout_impl(ustash_t *p_ustash, size_t num_args, char *p_name, ...)
+static inline char* priv_usch_strout_impl(ustash *p_ustash, size_t num_args, char *p_name, ...)
 {
     (void)p_ustash;
     (void)num_args;
