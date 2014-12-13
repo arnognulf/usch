@@ -454,7 +454,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     // use macro to call the real function
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
-    char uschrc_h[] = "/.uschrc.h";
     ustash s = {NULL};
 
     char expr_c_filename[] = "expr.c";
@@ -465,7 +464,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     size_t tempdir_len = 0;
     char *p_pre_assign = NULL;
     char *p_post_assign = NULL;
-    bufstr_t stmt_c = {0, 0};
+    char *p_stmt = NULL;
     crepl_state_t state;
 
     if (p_context == NULL || p_input_line == NULL)
@@ -476,9 +475,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
 
-    stmt_c.p_str = calloc(1024, 1);
-    FAIL_IF(stmt_c.p_str == NULL);
-    stmt_c.len = 1024;
     pp_path = ustrsplit(&s, getenv("PATH"), ":");
     FAIL_IF(pp_path[0] == NULL);
     p_tempdir = p_context->tmpdir;
@@ -587,26 +583,28 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
     FAIL_IF(parse_line(input.p_str, &definition) < 1);
 
-    bufstradd(&stmt_c, "struct crepl_t;\n");
-    bufstradd(&stmt_c, "#include <usch.h>\n");
-    bufstradd(&stmt_c, "#include \"includes.h\"\n");
-    bufstradd(&stmt_c, "#include \"definitions.h\"\n");
-    bufstradd(&stmt_c, "#include \"trampolines.h\"\n");
+    p_stmt = ustrjoin(&s, "struct crepl_t;\n", \
+                          "#include <usch.h>\n", \
+                          "#include \"includes.h\"\n", \
+                          "#include \"definitions.h\"\n", \
+                          "#include \"trampolines.h\"\n");
 
-    p_fullpath_uschrc_h = calloc(sizeof(getenv("HOME")) + sizeof(uschrc_h) + 2, 1);
-    FAIL_IF(p_fullpath_uschrc_h == NULL);
-    strcpy(p_fullpath_uschrc_h, getenv("HOME"));
-    strcpy(p_fullpath_uschrc_h + sizeof(getenv("HOME")) + 2, uschrc_h);
+    p_fullpath_uschrc_h = ustrjoin(&s, getenv("HOME"), "/.uschrc.h");
 
     if (stat(p_fullpath_uschrc_h, &sb) != -1)
     {
-        bufstradd(&stmt_c, "#include \"");
-        bufstradd(&stmt_c, getenv("HOME"));
-        bufstradd(&stmt_c, "/.uschrc.h\"\n");
+        p_stmt = ustrjoin(&s, p_stmt,
+                              "#include \"",
+                              getenv("HOME"),
+                              "/.uschrc.h\"\n");
     }
 
-    bufstradd(&stmt_c, "static struct crepl_t *p_crepl_context = NULL;\n");
-    bufstradd(&stmt_c, "void crepl_set_context(struct crepl_t *p_context)\n{\n\tp_crepl_context = p_context;\t\n}\n");
+    p_stmt = ustrjoin(&s, p_stmt,
+            "static struct crepl_t *p_crepl_context = NULL;\n",
+            "void crepl_set_context(struct crepl_t *p_context)\n"
+            "{\n",
+            "\tp_crepl_context = p_context;\n",
+            "}\n");
 
     if (pp_cmds != NULL)
     {
@@ -614,26 +612,28 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
         {
             if (strcmp(pp_cmds[i], "cd") != 0)
             {
-                bufstradd(&stmt_c, "#define ");
-                bufstradd(&stmt_c, definition.p_symname);
-                bufstradd(&stmt_c, "(...) ucmd(\"");
-                bufstradd(&stmt_c, definition.p_symname);
-                bufstradd(&stmt_c, "\", ##__VA_ARGS__)\n");
+                p_stmt = ustrjoin(&s, p_stmt,
+                                      "#define ",
+                                      definition.p_symname,
+                                      "(...) ucmd(\"",
+                                      definition.p_symname,
+                                      "\", ##__VA_ARGS__)\n");
             }
         }
     }
 
-    bufstradd(&stmt_c, "int ");
-    bufstradd(&stmt_c, CREPL_DYN_FUNCNAME);
-    bufstradd(&stmt_c, "(struct crepl_t *p_context)\n{\n\t");
-    bufstradd(&stmt_c, input.p_str);
+    p_stmt = ustrjoin(&s, p_stmt,
+                          "int ",
+                          CREPL_DYN_FUNCNAME,
+                          "(struct crepl_t *p_context)\n{\n\t",
+                          input.p_str,
+                          ";\n\treturn 0;\n}\n");
 
-    bufstradd(&stmt_c, ";\n\treturn 0;\n}\n");
-
-    FAIL_IF(!fwrite_ok(stmt_c.p_str, p_stmt_c));
+    FAIL_IF(!fwrite_ok(p_stmt, p_stmt_c));
 
     fclose(p_stmt_c);
     p_stmt_c = NULL;
+    p_stmt = NULL;
 //    ucmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
@@ -678,8 +678,6 @@ end:
     free(p_tempfile);
     free(p_pre_assign);
     free(p_post_assign);
-    free(p_fullpath_uschrc_h);
-    free(stmt_c.p_str);
     free(input.p_str);
     free(p_context->p_nodef_line);
     p_context->p_nodef_line = NULL;
