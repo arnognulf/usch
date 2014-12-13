@@ -36,6 +36,7 @@ static void handle_sigint(int sig)
     (void)sig;
     return;
 }
+
 void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 {
     char *p_full_completion = NULL;
@@ -91,6 +92,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     DIR *p_dir = NULL;
     struct dirent *p_dirent = NULL;
     int i;
+    int dirlen = 0;
     static ustash tab_completion_stash = {0};
     
     if (p_buf == NULL)
@@ -106,7 +108,10 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     {
         const char *p_cmdarg = NULL;
         const char *p_dirarg = NULL;
+        const char empty[0] = "";
         size_t arglen = 0;
+
+        p_dirarg = empty;
 
         for (i = len-1; i >= 0; i--)
         {
@@ -119,6 +124,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
         }
 
         p_dirarg = udirname(&tab_completion_stash, ustrtrim(&tab_completion_stash, p_cmdarg));
+        dirlen = strlen(p_dirarg);
         if (p_dirarg[0] == '/' || (p_dirarg[0] == '.' && p_dirarg[1] == '.'))
         {
             p_dir = opendir(p_dirarg);
@@ -129,14 +135,23 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
         }
 
         while ((p_dirent = readdir(p_dir)) != NULL) {
-            if (strncmp(p_cmdarg, p_dirent->d_name, arglen) == 0)
+            if (p_cmdarg == NULL)
+                goto end;
+            if (p_dirent == NULL)
+                goto end;
+            if (p_dirent->d_name == NULL)
+                goto end;
+
+            if (strncmp(&p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen) == 0)
             {
-                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen]);
+                fprintf(stderr, "%s, %s\n", p_dirarg, p_dirent->d_name);
+                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[dirlen]);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }
 
     }
+end:
     if (p_dir)
         closedir(p_dir);
     uclear(&tab_completion_stash);

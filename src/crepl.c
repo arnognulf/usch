@@ -220,6 +220,7 @@ void crepl_destroy(crepl_t *p_context)
         (void)remove_directory(p_context->tmpdir);
         free(p_context->p_nodef_line);
         free(p_context->p_defs_line);
+        free(p_context->pp_ldpath);
     }
     free(p_context);
     return;

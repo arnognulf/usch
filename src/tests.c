@@ -392,6 +392,8 @@ static char *test_crepl_finalize()
     int error;
     struct crepl_t *p_context = NULL;
     error = crepl_create(&p_context);
+    if (error)
+        goto cleanup;
     char *p_finalized = NULL;
 
     error = crepl_finalize("foo(((", &p_finalized);

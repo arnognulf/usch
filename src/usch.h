@@ -760,7 +760,7 @@ static inline int priv_usch_cmd_arr(struct ustash_item **pp_in,
 		}
         if (pp_argv[i] == NULL && pp_out == NULL)
         {
-            input = priv_usch_run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
+            priv_usch_run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
         }
 
 		status = priv_usch_waitforall(child_pid);
