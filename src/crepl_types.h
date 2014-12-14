@@ -58,6 +58,7 @@ typedef struct crepl_t
     crepl_sym_t *p_syms;
     crepl_dyfn_t *p_dyfns;
     crepl_inc_t *p_incs;
+    int verbosity;
     char tmpdir[];
 } crepl_t;
 

@@ -47,6 +47,7 @@ int crepl_pathhash(struct crepl_t *p_crepl);
 int crepl_is_cmd(struct crepl_t *p_crepl, char *p_item);
 int crepl_lib(struct crepl_t *p_crepl, char *p_dynlib);
 int crepl_include(struct crepl_t *p_crepl, char *p_header);
+void crepl_set_verbosity(struct crepl_t *p_crepl, int level);
 char **crepl_getldpath();
 
 typedef enum {

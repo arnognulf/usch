@@ -42,8 +42,13 @@
 #include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
+#ifndef USCH_INSTALL_PREFIX
+#define USCH_INSTALL_PREFIX "/usr/local"
+#endif
 
 #define CREPL_DYN_FUNCNAME "usch_dyn_func"
+
+static char* find_uschrc(ustash *p_stash);
 
 // TODO: DUPE of crepl_vars.c
 // this function is a naive parser and should probably not be used anyway
@@ -452,7 +457,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
-    struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     ustash s = {NULL};
 
@@ -589,15 +593,12 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
                           "#include \"definitions.h\"\n", \
                           "#include \"trampolines.h\"\n");
 
-    p_fullpath_uschrc_h = ustrjoin(&s, getenv("HOME"), "/.uschrc.h");
+    p_fullpath_uschrc_h = find_uschrc(&s);
 
-    if (stat(p_fullpath_uschrc_h, &sb) != -1)
-    {
-        p_stmt = ustrjoin(&s, p_stmt,
-                              "#include \"",
-                              getenv("HOME"),
-                              "/.uschrc.h\"\n");
-    }
+    p_stmt = ustrjoin(&s, p_stmt,
+                          "#include \"",
+                          p_fullpath_uschrc_h,
+                          "\"\n");
 
     p_stmt = ustrjoin(&s, p_stmt,
             "static struct crepl_t *p_crepl_context = NULL;\n",
@@ -693,4 +694,34 @@ end:
     return status;
 }
 
+static char* find_uschrc(ustash *p_stash)
+{
+    int error = 0;
+    struct stat sb;
+    char *p_fullpath_uschrc_h = NULL;
+    char *p_uschrc_cand = NULL;
+    p_uschrc_cand = ustrjoin(p_stash, getenv("HOME"), "/.uschrc.h");
+    if (stat(p_fullpath_uschrc_h, &sb) != -1)
+    {
+        p_fullpath_uschrc_h = p_uschrc_cand;
+    }
+    else
+    {
+        p_uschrc_cand = ustrjoin(p_stash, USCH_INSTALL_PREFIX, "/etc/uschrc.h");
+        if (stat(p_fullpath_uschrc_h, &sb) != -1)
+        {
+            p_fullpath_uschrc_h = p_uschrc_cand;
+        }
+        else
+        {
+            p_uschrc_cand = ustrjoin(p_stash, "/etc/uschrc.h");
+            if (stat(p_fullpath_uschrc_h, &sb) == -1)
+            {
+                error = 1;
+            }
+
+        }
+    }
+    return p_fullpath_uschrc_h;
+}
 

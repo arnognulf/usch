@@ -225,4 +225,10 @@ void crepl_destroy(crepl_t *p_context)
     free(p_context);
     return;
 }
+void crepl_set_verbosity(crepl_t *p_context, int level)
+{
+    if (!p_context)
+        return;
+    p_context->verbosity = level;
+}
 

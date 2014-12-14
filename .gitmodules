@@ -4,3 +4,6 @@
 [submodule "external/linenoise"]
 	path = external/linenoise
 	url = https://github.com/arnognulf/linenoise.git
+[submodule "external/commander"]
+	path = external/commander
+	url = https://github.com/arnognulf/commander.git

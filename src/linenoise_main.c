@@ -29,6 +29,7 @@
 #include "usch.h"
 #include "crepl.h"
 #include "../external/linenoise/linenoise.h"
+#include "../external/commander/src/commander.h"
 
 static struct crepl_t *p_global_context = NULL;
 static void handle_sigint(int sig)
@@ -44,6 +45,7 @@ void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
     crepl_state_t state = CREPL_STATE_CPARSER;
     size_t len = 0;
     const char space_completion[] = " ";
+    ustash s = {0};
 
     len = strlen(p_buf);
 
@@ -85,6 +87,7 @@ void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 end:
     free(p_full_completion);
     free(p_space_completion);
+    uclear(&s);
 }
 
 void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
@@ -173,10 +176,14 @@ end:
 }
 
 
+static void verbose(command_t *self)
+{
+    (void)self;
+    crepl_set_verbosity(p_global_context, 11);
+}
 
-int main(int argc, char **argv) {
+int main(int argc, char **pp_argv) {
     (void)argc;
-    (void)argv;
     char *p_line = NULL;
     struct crepl_t *p_crepl = NULL;
     char *p_history = NULL;
@@ -185,6 +192,13 @@ int main(int argc, char **argv) {
     ustash prompt = {0};
     char *p_prompt = NULL;
     char *p_hostname = NULL;
+    command_t cmd;
+
+    command_init(&cmd, pp_argv[0], "0.0.1");
+    command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);
+    //command_option(&cmd, "-r", "--required <arg>", "required arg", required);
+    //command_option(&cmd, "-o", "--optional [arg]", "optional arg", optional);
+    command_parse(&cmd, argc, pp_argv);
 
     p_global_context = p_crepl;
 
@@ -206,7 +220,7 @@ int main(int argc, char **argv) {
         uclear(&prompt);
         if (p_line[0] != '\0') {
             crepl_eval(p_crepl, p_line);
-            
+
             linenoiseHistoryAdd(p_line); /* Add to the history. */
             linenoiseHistorySave(p_history); /* Save the history on disk. */
         }
@@ -215,5 +229,6 @@ int main(int argc, char **argv) {
     }
     crepl_destroy(p_crepl);
     uclear(&s);
+    command_free(&cmd);
     return 0;
 }
