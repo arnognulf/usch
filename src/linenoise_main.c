@@ -94,6 +94,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     int i;
     int dirlen = 0;
     static ustash tab_completion_stash = {0};
+    struct stat sb;
     
     if (p_buf == NULL)
         return;
@@ -108,10 +109,9 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     {
         const char *p_cmdarg = NULL;
         const char *p_dirarg = NULL;
-        const char empty[0] = "";
+        const char emptystr[] = "";
+        const char *p_trailing_slash = emptystr;
         size_t arglen = 0;
-
-        p_dirarg = empty;
 
         for (i = len-1; i >= 0; i--)
         {
@@ -133,6 +133,8 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
         {
             p_dir = opendir(".");
         }
+        if (p_dir == NULL)
+            goto end;
 
         while ((p_dirent = readdir(p_dir)) != NULL) {
             if (p_cmdarg == NULL)
@@ -144,8 +146,21 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
 
             if (strncmp(&p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen) == 0)
             {
-                fprintf(stderr, "%s, %s\n", p_dirarg, p_dirent->d_name);
-                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[dirlen]);
+                if (stat(ustrjoin(&tab_completion_stash, p_dirarg, "/", p_dirent->d_name), &sb) != -1)
+                {
+                    switch (sb.st_mode & S_IFMT) {
+                        case S_IFDIR:
+                        {
+                            p_trailing_slash = "/";
+                        break;
+                        }
+
+                        // case S_IFLNK:  printf("symlink\n");                 break;
+                        default:
+                             break;
+                    }
+                }
+                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[dirlen], p_trailing_slash);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }
