@@ -148,9 +148,8 @@ int crepl_store(crepl_t *p_context, char *p_defname, void *p_data)
             }
 
             memcpy(p_def->data, p_data, p_def->size);
-            if (is_updated)
+            if (is_updated && p_context->verbosity)
                 print_updated_variables(p_defname, p_data);
-        //}
     }
     else
     {

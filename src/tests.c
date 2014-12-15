@@ -62,7 +62,6 @@ static char * test_strexp()
     }
     {
         char **pp_out = ustrexp(&s, "crepl_ev*.c");
-        printf("%s\n", pp_out[0]);
         mu_assert("error: pp_out[0] != crepl_eval.c", strcmp(pp_out[0], "crepl_eval.c") == 0);
         mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
     }
@@ -368,6 +367,7 @@ cleanup:
     return p_message;
 }
 
+#if 0
 static char *test_crepl_parsedefs()
 {
     char *p_message = NULL;
@@ -383,7 +383,7 @@ cleanup:
     crepl_destroy(p_context);
     return p_message;
 }
-
+#endif // 0
 
 static char *test_crepl_finalize()
 {
@@ -405,25 +405,6 @@ cleanup:
     free(p_finalized);
     crepl_destroy(p_context);
     return p_message;
-}
-
-static char *test_crepl_parent()
-{
-#if 0
-    char *p_message = NULL;
-    char* p_parent = NULL;
-
-    p_parent = crepl_parent_identifier("foo(bar(), baz(), ");
-    printf("XXX: %s\n", p_parent);
-    mu_assert("parent_pos != 0", strncmp(p_parent, "foo", strlen("foo")) == 0);
-    p_parent = crepl_parent_identifier("foo(bar(baz()");
-    printf("XXX: %s\n", p_parent);
-    mu_assert("parent_pos != 5", strncmp(p_parent, "bar", strlen("bar")) == 0);
-
-cleanup:
-    return p_message;
-#endif // 0
-    return NULL;
 }
 
 static char *test_parserutils()
@@ -460,14 +441,13 @@ static char * all_tests()
     mu_run_test(test_strexp);
     mu_run_test(test_strsplit);
     mu_run_test(test_ucmd);
-    //mu_run_test(test_ucmd_pipe);
-    //mu_run_test(test_uchdir);
-    //mu_run_test(test_crepl_vars);
-    //mu_run_test(test_crepl_dyld);
-    //mu_run_test(test_parserutils);
-    //mu_run_test(test_crepl_parse);
-    //mu_run_test(test_crepl_finalize);
-    //mu_run_test(test_crepl_parent);
+    mu_run_test(test_ucmd_pipe);
+    mu_run_test(test_uchdir);
+    mu_run_test(test_crepl_vars);
+    mu_run_test(test_crepl_dyld);
+    mu_run_test(test_parserutils);
+    mu_run_test(test_crepl_parse);
+    mu_run_test(test_crepl_finalize);
     mu_run_test(test_ustrout);
     mu_run_test(test_udirname);
     mu_run_test(test_ustrtrim);

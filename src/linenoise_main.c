@@ -20,11 +20,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <signal.h>
 #include <dirent.h>
+#include <stddef.h>                     // for size_t
+#include <sys/stat.h>                   // for stat, S_IFDIR, S_IFMT
 
 #include "usch.h"
 #include "crepl.h"
@@ -193,6 +194,8 @@ int main(int argc, char **pp_argv) {
     char *p_prompt = NULL;
     char *p_hostname = NULL;
     command_t cmd;
+
+    crepl_set_verbosity(p_crepl, 1);
 
     command_init(&cmd, pp_argv[0], "0.0.1");
     command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);

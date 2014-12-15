@@ -594,6 +594,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
                           "#include \"trampolines.h\"\n");
 
     p_fullpath_uschrc_h = find_uschrc(&s);
+    FAIL_IF(p_fullpath_uschrc_h == NULL);
 
     p_stmt = ustrjoin(&s, p_stmt,
                           "#include \"",
@@ -696,32 +697,33 @@ end:
 
 static char* find_uschrc(ustash *p_stash)
 {
-    int error = 0;
     struct stat sb;
     char *p_fullpath_uschrc_h = NULL;
     char *p_uschrc_cand = NULL;
     p_uschrc_cand = ustrjoin(p_stash, getenv("HOME"), "/.uschrc.h");
-    if (stat(p_fullpath_uschrc_h, &sb) != -1)
+    if (stat(p_uschrc_cand, &sb) != -1)
     {
         p_fullpath_uschrc_h = p_uschrc_cand;
     }
     else
     {
         p_uschrc_cand = ustrjoin(p_stash, USCH_INSTALL_PREFIX, "/etc/uschrc.h");
-        if (stat(p_fullpath_uschrc_h, &sb) != -1)
+        if (stat(p_uschrc_cand, &sb) != -1)
         {
             p_fullpath_uschrc_h = p_uschrc_cand;
         }
         else
         {
             p_uschrc_cand = ustrjoin(p_stash, "/etc/uschrc.h");
-            if (stat(p_fullpath_uschrc_h, &sb) == -1)
+            if (stat(p_uschrc_cand, &sb) == -1)
             {
-                error = 1;
+                goto error;
             }
 
         }
     }
     return p_fullpath_uschrc_h;
+error:
+    return NULL;
 }
 
