@@ -1,6 +1,7 @@
 #include <ctype.h>
 #include "../external/uthash/src/uthash.h"
-
+#include "usch.h"
+#include "crepl.h"
 #define CREPL_DYN_FUNCNAME "usch_dyn_func"
 #define CREPL_DEFINE_SIZE 8
 typedef struct crepl_def_t
@@ -58,7 +59,10 @@ typedef struct crepl_t
     crepl_sym_t *p_syms;
     crepl_dyfn_t *p_dyfns;
     crepl_inc_t *p_incs;
-    int verbosity;
+    char *p_prompt;
+    ustash prompt_stash;
+    char is_initialized;
+    crepl_options options;
     char tmpdir[];
 } crepl_t;
 
@@ -70,8 +74,8 @@ struct usch_ids
 
 typedef struct 
 {
-char *p_cur_id;
-int found_cur_id;
+    char *p_cur_id;
+    int found_cur_id;
 } preparse_userdata_t;
 
 

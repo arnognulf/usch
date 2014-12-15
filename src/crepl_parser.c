@@ -810,81 +810,39 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
     p_line = stripwhite(p_line_copy);
     
     status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
-    FAIL_IF(status != 0 || num_identifiers == 0);
-
-    pp_cmds = calloc((num_identifiers + 1)* sizeof(char*) + (strlen(p_line) + 1) * sizeof(char), 1);
-    FAIL_IF(pp_cmds == NULL);
-    memcpy((char*)&pp_cmds[num_identifiers + 1], p_line, strlen(p_line));
-    // NULL terminate vector before it's content
-    pp_cmds[num_identifiers] = NULL;
-
-    filecontent.p_str = calloc(1, 1024);
-    FAIL_IF(filecontent.p_str == NULL);
-    filecontent.len = 1024;
-
-    p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
-    FAIL_IF(p_parsefile_fullname == NULL);
-    strcpy(p_parsefile_fullname, p_context->tmpdir);
-    p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
-    strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
-    
-    for (i = 0; pp_identifiers[i] != NULL; i++)
+    FAIL_IF(status != 0);
+    if (num_identifiers)
     {
-        state = CREPL_STATE_CPARSER;
 
-        userdata.p_cur_id = pp_identifiers[i];
-        userdata.found_cur_id = 0;
+        pp_cmds = calloc((num_identifiers + 1)* sizeof(char*) + (strlen(p_line) + 1) * sizeof(char), 1);
+        FAIL_IF(pp_cmds == NULL);
+        memcpy((char*)&pp_cmds[num_identifiers + 1], p_line, strlen(p_line));
+        // NULL terminate vector before it's content
+        pp_cmds[num_identifiers] = NULL;
 
-        FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL));
+        filecontent.p_str = calloc(1, 1024);
+        FAIL_IF(filecontent.p_str == NULL);
+        filecontent.len = 1024;
 
-        // identifier is not defined
-        if (userdata.found_cur_id == 0)
+        p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
+        FAIL_IF(p_parsefile_fullname == NULL);
+        strcpy(p_parsefile_fullname, p_context->tmpdir);
+        p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
+        strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
+
+        for (i = 0; pp_identifiers[i] != NULL; i++)
         {
-            if (is_builtin_cmd(userdata.p_cur_id))
+            state = CREPL_STATE_CPARSER;
+
+            userdata.p_cur_id = pp_identifiers[i];
+            userdata.found_cur_id = 0;
+
+            FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL));
+
+            // identifier is not defined
+            if (userdata.found_cur_id == 0)
             {
-                if (pp_cmds[0] == NULL)
-                {
-                    p_cmds = (char*)&pp_cmds[num_identifiers + 1];
-                    FAIL_IF(p_cmds == NULL);
-                }
-                FAIL_IF(pp_identifiers[i] == NULL);
-                strcpy(p_cmds, pp_identifiers[i]);
-                pp_cmds[cmdidx] = p_cmds;
-                p_cmds += strlen(pp_identifiers[i]) + 1;
-                cmdidx++;
-
-                if (has_trailing_closed_parenthesis(p_line))
-                {
-                    state = CREPL_STATE_CPARSER;
-                }
-                else if (has_trailing_open_parenthesis(p_line))
-                {
-                    state = CREPL_STATE_CMDARG;
-                } 
-                else
-                {
-                    state = CREPL_STATE_CMDSTART;
-                }
-                break;
-            }
-            else if (is_system_cmd(userdata.p_cur_id))
-            {
-                // the identifier is available as a system command
-                // try to define the identifier as a function
-
-                userdata.found_cur_id = 0;
-                FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
-
-                // unknown error
-                if (userdata.found_cur_id == 0)
-                {
-                        state = CREPL_STATE_ERROR;
-                        break;
-                }
-                // TODO: if prevchar identifer is a system command, we probably are in some parameter unless...
-                // 
-                // ... there is a nested command (ARGH!)
-                else if (pp_identifiers[i+1] == NULL)
+                if (is_builtin_cmd(userdata.p_cur_id))
                 {
                     if (pp_cmds[0] == NULL)
                     {
@@ -911,15 +869,60 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
                     }
                     break;
                 }
+                else if (is_system_cmd(userdata.p_cur_id))
+                {
+                    // the identifier is available as a system command
+                    // try to define the identifier as a function
+
+                    userdata.found_cur_id = 0;
+                    FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
+
+                    // unknown error
+                    if (userdata.found_cur_id == 0)
+                    {
+                        state = CREPL_STATE_ERROR;
+                        break;
+                    }
+                    // TODO: if prevchar identifer is a system command, we probably are in some parameter unless...
+                    // 
+                    // ... there is a nested command (ARGH!)
+                    else if (pp_identifiers[i+1] == NULL)
+                    {
+                        if (pp_cmds[0] == NULL)
+                        {
+                            p_cmds = (char*)&pp_cmds[num_identifiers + 1];
+                            FAIL_IF(p_cmds == NULL);
+                        }
+                        FAIL_IF(pp_identifiers[i] == NULL);
+                        strcpy(p_cmds, pp_identifiers[i]);
+                        pp_cmds[cmdidx] = p_cmds;
+                        p_cmds += strlen(pp_identifiers[i]) + 1;
+                        cmdidx++;
+
+                        if (has_trailing_closed_parenthesis(p_line))
+                        {
+                            state = CREPL_STATE_CPARSER;
+                        }
+                        else if (has_trailing_open_parenthesis(p_line))
+                        {
+                            state = CREPL_STATE_CMDARG;
+                        } 
+                        else
+                        {
+                            state = CREPL_STATE_CMDSTART;
+                        }
+                        break;
+                    }
+                }
+                else
+                {
+                    // the identifier could not be resolved, nor is it a system command
+                    state = CREPL_STATE_ERROR;
+                    break;
+                }
             }
-            else
-            {
-                // the identifier could not be resolved, nor is it a system command
-                state = CREPL_STATE_ERROR;
-                break;
-            }
+            state = CREPL_STATE_CPARSER;
         }
-        state = CREPL_STATE_CPARSER;
     }
     *p_state = state;
     free(p_context->pp_cmds);

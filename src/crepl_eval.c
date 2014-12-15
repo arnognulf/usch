@@ -448,6 +448,8 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     int (*set_context)(crepl_t*);
     int (*crepl_store_vars)(crepl_t*);
     int (*crepl_load_vars)(crepl_t*);
+    char* (*uschrc_prompt)(ustash*);
+    void (*uschrc_init)(ustash*);
     char *p_error = NULL;
     char **pp_path = NULL;
     char **pp_cmds = NULL;
@@ -471,8 +473,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     char *p_stmt = NULL;
     crepl_state_t state;
 
-    if (p_context == NULL || p_input_line == NULL)
-        return -1;
+    FAIL_IF(p_context == NULL || p_input_line == NULL);
 
     input.p_str = NULL;
     FAIL_IF(crepl_finalize(p_input_line, &input.p_str));
@@ -615,11 +616,11 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             if (strcmp(pp_cmds[i], "cd") != 0)
             {
                 p_stmt = ustrjoin(&s, p_stmt,
-                                      "#define ",
-                                      definition.p_symname,
-                                      "(...) ucmd(\"",
-                                      definition.p_symname,
-                                      "\", ##__VA_ARGS__)\n");
+                                      "#ifndef ", definition.p_symname,"\n"
+                                      "#define ", definition.p_symname,
+                                      "(...) ucmd(\"", definition.p_symname, "\", ##__VA_ARGS__)\n",
+                                      "#endif\n");
+
             }
         }
     }
@@ -631,12 +632,17 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
                           input.p_str,
                           ";\n\treturn 0;\n}\n");
 
+    p_stmt = ustrjoin(&s, p_stmt, \
+            "const char* uschrc_prompt(ustash *p_stash) { return prompt(p_stash);}\n");
+
+    p_stmt = ustrjoin(&s, p_stmt, \
+            "void uschrc_init(ustash *p_stash) { return uschrc(p_stash);}\n");
+
     FAIL_IF(!fwrite_ok(p_stmt, p_stmt_c));
 
     fclose(p_stmt_c);
     p_stmt_c = NULL;
     p_stmt = NULL;
-//    ucmd("cat", p_tempfile);
     dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
     p_tempdylib = malloc(dylib_length);
     FAIL_IF(p_tempdylib == NULL);
@@ -664,6 +670,14 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF((p_error = dlerror()) != NULL);
     (*set_context)(p_context);
 
+    if (!p_context->is_initialized && p_context->options.interactive)
+    {
+        *(void **) (&uschrc_init) = dlsym(p_handle, "uschrc_init");
+        FAIL_IF((p_error = dlerror()) != NULL);
+        (*uschrc_init)(&p_context->prompt_stash);
+        p_context->is_initialized = 1;
+    }
+
     *(void **) (&dyn_func) = dlsym(p_handle, CREPL_DYN_FUNCNAME);
     FAIL_IF((p_error = dlerror()) != NULL);
     (*dyn_func)(p_context);
@@ -671,6 +685,12 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     *(void **) (&crepl_store_vars) = dlsym(p_handle, "crepl_store_vars");
     FAIL_IF((p_error = dlerror()) != NULL);
     (*crepl_store_vars)(p_context);
+
+    uclear(&p_context->prompt_stash);
+    p_context->p_prompt = NULL;
+    *(void **) (&uschrc_prompt) = dlsym(p_handle, "uschrc_prompt");
+    FAIL_IF((p_error = dlerror()) != NULL);
+    p_context->p_prompt = (*uschrc_prompt)(&p_context->prompt_stash);
 
 end:
     pp_path = NULL; // stashed

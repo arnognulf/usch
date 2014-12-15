@@ -32,6 +32,7 @@
 #include "../external/linenoise/linenoise.h"
 #include "../external/commander/src/commander.h"
 
+crepl_options options = {0};
 static struct crepl_t *p_global_context = NULL;
 static void handle_sigint(int sig)
 {
@@ -145,8 +146,6 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
                 goto end;
             if (p_dirent == NULL)
                 goto end;
-            if (p_dirent->d_name == NULL)
-                goto end;
 
             if (strncmp(&p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen) == 0)
             {
@@ -180,7 +179,7 @@ end:
 static void verbose(command_t *self)
 {
     (void)self;
-    crepl_set_verbosity(p_global_context, 11);
+    options.verbosity = 11;
 }
 
 int main(int argc, char **pp_argv) {
@@ -188,20 +187,20 @@ int main(int argc, char **pp_argv) {
     char *p_line = NULL;
     struct crepl_t *p_crepl = NULL;
     char *p_history = NULL;
-    crepl_create(&p_crepl);
     ustash s = {0};
-    ustash prompt = {0};
-    char *p_prompt = NULL;
-    char *p_hostname = NULL;
+    const char *p_prompt = NULL;
     command_t cmd;
 
-    crepl_set_verbosity(p_crepl, 1);
+    options.verbosity = 1;
+    options.interactive = 1;
 
     command_init(&cmd, pp_argv[0], "0.0.1");
     command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);
     //command_option(&cmd, "-r", "--required <arg>", "required arg", required);
     //command_option(&cmd, "-o", "--optional [arg]", "optional arg", optional);
     command_parse(&cmd, argc, pp_argv);
+    
+    crepl_create(&p_crepl, options);
 
     p_global_context = p_crepl;
 
@@ -216,19 +215,17 @@ int main(int argc, char **pp_argv) {
     linenoiseSetSpaceCompletionCallback(spaceCompletion);
     linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
-    p_hostname = ustrout(&s, "hostname", "-s");
-    p_prompt = ustrjoin(&prompt, getenv("USER"), "@", p_hostname, ":", ustrout(&prompt, "pwd"), "% ");
+    p_prompt = crepl_getprompt(p_crepl);
     while((p_line = linenoise(p_prompt)) != NULL) 
     {
-        uclear(&prompt);
-        if (p_line[0] != '\0') {
-            crepl_eval(p_crepl, p_line);
+        crepl_eval(p_crepl, p_line);
 
+        if (p_line[0] != '\0') {
             linenoiseHistoryAdd(p_line); /* Add to the history. */
             linenoiseHistorySave(p_history); /* Save the history on disk. */
         }
         free(p_line);
-        p_prompt = ustrjoin(&prompt, getenv("USER"), "@", p_hostname, ":", ustrout(&prompt, "pwd"), "% ");
+        p_prompt = crepl_getprompt(p_crepl);
     }
     crepl_destroy(p_crepl);
     uclear(&s);

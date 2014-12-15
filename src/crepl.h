@@ -31,7 +31,14 @@ extern "C" {
 #include <stdlib.h>
 
 struct crepl_t;
-int crepl_create(struct crepl_t **p_crepl);
+
+typedef struct
+{
+    int interactive;
+    int verbosity;
+} crepl_options;
+
+int crepl_create(struct crepl_t **p_crepl, crepl_options options);
 int crepl_eval(struct crepl_t *p_crepl, char *p_input);
 void crepl_destroy(struct crepl_t *p_crepl);
 
@@ -47,8 +54,8 @@ int crepl_pathhash(struct crepl_t *p_crepl);
 int crepl_is_cmd(struct crepl_t *p_crepl, char *p_item);
 int crepl_lib(struct crepl_t *p_crepl, char *p_dynlib);
 int crepl_include(struct crepl_t *p_crepl, char *p_header);
-void crepl_set_verbosity(struct crepl_t *p_crepl, int level);
 char **crepl_getldpath();
+const char* crepl_getprompt(struct crepl_t *p_crepl);
 
 typedef enum {
 CREPL_STATE_ERROR = 0,

@@ -270,7 +270,7 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
 
     if (priv_usch_stash(p_ustash, p_stashitem) != 0)
     {
-        printf("stash failed, ohnoes!\n");
+        fprintf(stderr, "stash failed, ohnoes!\n");
         goto end;
     }
     p_stashitem = NULL;
@@ -357,7 +357,7 @@ static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, ch
     }
     if (priv_usch_stash(p_ustash, p_blob) != 0)
     {
-        printf("stash failed, ohnoes!\n");
+        fprintf(stderr, "stash failed, ohnoes!\n");
         goto end;
     }
 
@@ -370,7 +370,6 @@ end:
     }
     priv_usch_free_globlist(p_glob_list);
 
-    fflush(stdout);
     free(pp_orig_argv);
     free(p_actual_format);
     free(pp_strexp_extmem);
@@ -521,7 +520,7 @@ static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, ch
 
     if (priv_usch_stash(p_ustash, p_blob) != 0)
     {
-        printf("stash failed, ohnoes!\n");
+        fprintf(stderr, "stash failed, ohnoes!\n");
         goto end;
     }
 
@@ -609,7 +608,6 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
 
         status = 1;
         // TODO: discard if not executable
-        //printf("%s %lo\n", new_path, sb.st_mode);
         p_dest = (char*)malloc(dir_length + 1 + item_length + 1);
         if (p_dest == NULL)
         {
@@ -767,12 +765,6 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
 	{
 		int input = 0;
 		int first = 1;
-#if 0
-        for (i = 0;  i < argc; i++)
-        {
-            printf("argv[%d] = %s\n", i, pp_argv[i]);
-        }
-#endif // 0
         i = 0;
         int j = 0;
         int last = 0;
@@ -858,7 +850,6 @@ end:
         va_end(p_ap);
     }
 
-    fflush(stdout);
     free(pp_orig_argv);
     free(p_actual_format);
 
@@ -913,7 +904,7 @@ static inline char* priv_usch_strout_impl(ustash *p_ustash, size_t num_args, cha
     (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num_args, pp_orig_argv);
     if (priv_usch_stash(p_ustash, p_out) != 0)
     {
-        printf("stash failed, ohnoes!\n");
+        fprintf(stderr, "stash failed, ohnoes!\n");
         goto end;
     }
 
@@ -925,7 +916,6 @@ end:
         va_end(p_ap);
     }
 
-    fflush(stdout);
     free(pp_orig_argv);
     free(p_actual_format);
     free(p_out);
@@ -979,7 +969,7 @@ static int priv_usch_command(char **pp_argv, int input, int first, int last, int
  
 		if (execvp(pp_argv[0], pp_argv) == -1)
         {
-            printf("execv failed!\n");
+            fprintf(stderr, "execv failed!\n");
 			_exit(EXIT_FAILURE); // If child fails
         }
 	}

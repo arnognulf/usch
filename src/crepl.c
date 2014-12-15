@@ -47,7 +47,9 @@
 #include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
-int crepl_create(crepl_t **pp_context)
+static void copy_options(crepl_t* p_context, crepl_options *p_options);
+
+int crepl_create(crepl_t **pp_context, crepl_options options)
 {
     int status = 0;
     crepl_t *p_context = NULL;
@@ -88,6 +90,12 @@ int crepl_create(crepl_t **pp_context)
     FAIL_IF(pp_ldpath == NULL);
     p_context->pp_ldpath = pp_ldpath;
 
+    copy_options(p_context, &options);
+
+    if (p_context->options.interactive)
+    {
+        FAIL_IF(crepl_eval(p_context, "") != 0);
+    }
     *pp_context = p_context;
     pp_ldpath = NULL;
     p_context = NULL;
@@ -167,7 +175,6 @@ static int remove_directory(const char *p_path)
 }
 void crepl_destroy(crepl_t *p_context)
 {
-
     if (p_context)
     {
         crepl_lib_t *p_current_lib = NULL;
@@ -223,14 +230,33 @@ void crepl_destroy(crepl_t *p_context)
         free(p_context->p_nodef_line);
         free(p_context->p_defs_line);
         free(p_context->pp_ldpath);
+        uclear(&p_context->prompt_stash);
     }
     free(p_context);
     return;
 }
-void crepl_set_verbosity(crepl_t *p_context, int level)
+
+const char* crepl_getprompt(crepl_t *p_context)
 {
+    char *p_prompt = NULL;
+    static char prompt[1];
+    memset(prompt, 1, 0x00);
+
     if (!p_context)
-        return;
-    p_context->verbosity = level;
+        return prompt;
+    if (p_context->p_prompt)
+    {
+        p_prompt = p_context->p_prompt;
+    }
+    else
+    {
+        p_prompt = prompt;
+    }
+    return p_prompt;
+}
+
+static void copy_options(crepl_t* p_context, crepl_options *p_options)
+{
+    p_context->options = *p_options;
 }
 

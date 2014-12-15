@@ -196,8 +196,9 @@ static char *test_crepl_vars()
     char wrong_str[] = "wrong";
     char *p_str = NULL;
     struct crepl_t *p_context = NULL;
+    crepl_options options = {0};
 
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
     mu_assert("error: crepl_create(&p_context) != 0", error == 0);
     error = crepl_define(p_context, sizeof(int_test), "int int_test");
     mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
@@ -255,8 +256,9 @@ static char *test_crepl_dyld()
     char *p_message = NULL;
     int error = 0;
     struct crepl_t *p_context = NULL;
+    crepl_options options = {0};
 
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
     mu_assert("error: crepl_create(&p_context) != 0", error == 0);
 #ifdef __x86_64__
     error = crepl_lib(p_context, "/usr/lib/x86_64-linux-gnu/libm.so"); // "m"
@@ -269,7 +271,7 @@ static char *test_crepl_dyld()
     crepl_destroy(p_context);
     p_context = NULL;
 
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
     error = crepl_lib(p_context, "m");
     mu_assert("error: crepl_lib() != 0", error == 0);
     error = crepl_include(p_context, "<math.h>");
@@ -278,7 +280,7 @@ static char *test_crepl_dyld()
     crepl_destroy(p_context);
     p_context = NULL;
 
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
     error = crepl_lib(p_context, "xapian");
     mu_assert("error: crepl_lib() != 0", error == 0);
     crepl_destroy(p_context);
@@ -299,8 +301,9 @@ static char *test_crepl_parse()
     int status;
     char *p_message = NULL;
     int error;
+    crepl_options options = {0};
     struct crepl_t *p_context = NULL;
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
     crepl_state_t state = CREPL_STATE_CPARSER;
 #if 0
     int num_ids = 0;
@@ -390,11 +393,13 @@ static char *test_crepl_finalize()
     int status;
     char *p_message = NULL;
     int error;
+    crepl_options options = {0};
+
     struct crepl_t *p_context = NULL;
-    error = crepl_create(&p_context);
+    error = crepl_create(&p_context, options);
+    char *p_finalized = NULL;
     if (error)
         goto cleanup;
-    char *p_finalized = NULL;
 
     error = crepl_finalize("foo(((", &p_finalized);
     mu_assert("error != 0", error == 0);
