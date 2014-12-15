@@ -2,8 +2,14 @@ USCH - C shell which uses the C language
 ========================================
 
 USCH is a shell where C is the command language.
+
+
 Executables not colliding with definitions will be declared as variable argument macros with 0-n parameters.
+
+
 USCH allows for "aliases", running a function at startup, and prompt customization in /etc/uschrc.h or ~/.uschrc.h .
+
+
 There is also support for dynamically loading libraries and including headers.
 
 About
