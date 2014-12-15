@@ -42,6 +42,8 @@ int crepl_create(struct crepl_t **p_crepl, crepl_options options);
 int crepl_eval(struct crepl_t *p_crepl, char *p_input);
 void crepl_destroy(struct crepl_t *p_crepl);
 
+crepl_options crepl_getoptions(struct crepl_t *p_crepl);
+
 int crepl_define(struct crepl_t *p_crepl, size_t var_size, char *p_defname);
 void crepl_undef(struct crepl_t *p_crepl, char *p_defname);
 int crepl_load(struct crepl_t *p_crepl, char *p_defname, void *p_data);

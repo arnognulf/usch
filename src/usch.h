@@ -380,33 +380,53 @@ end:
 static inline char *udirname(ustash *p_ustash, const char *p_str)
 {
     static char emptystr[] = "";
+    static char dotstr[] = ".";
     char *p_dirname = emptystr;
     struct priv_usch_stash_item* p_blob = NULL;
     int i = 0;
-    int end = 0;
+    int last_slash = -1;
 
     if (p_str[0] == '\0')
         goto end;
+
     while (p_str[i] != '\0')
     {
         if (p_str[i] == '/')
-            end = i;
+            last_slash = i;
         i++;
     }
-    if (end == 0)
-    {
-        end = i - 1;
-    }
-    p_blob = calloc(end + 1 + sizeof(struct priv_usch_stash_item), 1);
-    memcpy(p_blob->str, p_str, end);
-    p_blob->str[end] = '\0';
 
-    if (priv_usch_stash(p_ustash, p_blob) != 0)
+    if (last_slash == 0)
     {
-        goto end;
+        p_blob = calloc(2 + sizeof(struct priv_usch_stash_item), 1);
+        p_blob->str[0] = '/';
+        p_blob->str[1] = '\0';
+
+        if (priv_usch_stash(p_ustash, p_blob) != 0)
+        {
+            goto end;
+        }
+        p_dirname = p_blob->str;
+        p_blob = NULL;
     }
-    p_dirname = p_blob->str;
-    p_blob = NULL;
+    else if (last_slash > 0)
+    {
+        p_blob = calloc(last_slash + sizeof(struct priv_usch_stash_item), 1);
+
+        memcpy(p_blob->str, p_str, last_slash);
+        p_blob->str[last_slash] = '\0';
+
+        if (priv_usch_stash(p_ustash, p_blob) != 0)
+        {
+            goto end;
+        }
+        p_dirname = p_blob->str;
+        p_blob = NULL;
+    }
+    else
+    {
+        p_dirname = dotstr;
+    }
 end:
     free(p_blob);
     return p_dirname;

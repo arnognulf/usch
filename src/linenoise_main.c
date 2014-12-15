@@ -128,16 +128,19 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
             }
         }
 
-        p_dirarg = udirname(&tab_completion_stash, ustrtrim(&tab_completion_stash, p_cmdarg));
+        p_dirarg = udirname(&tab_completion_stash, p_cmdarg);
         dirlen = strlen(p_dirarg);
-        if (p_dirarg[0] == '/' || (p_dirarg[0] == '.' && p_dirarg[1] == '.'))
+        if (p_dirarg[0] == '.')
         {
-            p_dir = opendir(p_dirarg);
+            if (p_dirarg[1] == '\0')
+            {
+                dirlen = 0;
+            }
         }
-        else
-        {
-            p_dir = opendir(".");
-        }
+        if (crepl_getoptions(p_global_context).verbosity >= 11)
+            fprintf(stderr, "p_dirarg = %s\n", p_dirarg);
+
+        p_dir = opendir(p_dirarg);
         if (p_dir == NULL)
             goto end;
 
@@ -146,7 +149,8 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
                 goto end;
             if (p_dirent == NULL)
                 goto end;
-
+            if (crepl_getoptions(p_global_context).verbosity >= 11)
+                fprintf(stderr, "&p_cmdarg[dirlen] (%s) == p_dirent->d_name (%s), len = %d\n", &p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen);
             if (strncmp(&p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen) == 0)
             {
                 if (stat(ustrjoin(&tab_completion_stash, p_dirarg, "/", p_dirent->d_name), &sb) != -1)
@@ -163,7 +167,8 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
                              break;
                     }
                 }
-                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[dirlen], p_trailing_slash);
+
+                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen - dirlen], p_trailing_slash);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }
@@ -196,8 +201,6 @@ int main(int argc, char **pp_argv) {
 
     command_init(&cmd, pp_argv[0], "0.0.1");
     command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);
-    //command_option(&cmd, "-r", "--required <arg>", "required arg", required);
-    //command_option(&cmd, "-o", "--optional [arg]", "optional arg", optional);
     command_parse(&cmd, argc, pp_argv);
     
     crepl_create(&p_crepl, options);

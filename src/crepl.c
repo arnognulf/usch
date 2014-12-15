@@ -255,6 +255,14 @@ const char* crepl_getprompt(crepl_t *p_context)
     return p_prompt;
 }
 
+crepl_options crepl_getoptions(crepl_t *p_context)
+{
+    crepl_options options = {0};
+    if (p_context == NULL)
+        return options;
+
+    return p_context->options;
+}
 static void copy_options(crepl_t* p_context, crepl_options *p_options)
 {
     p_context->options = *p_options;

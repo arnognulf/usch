@@ -165,7 +165,18 @@ static char *test_udirname()
 
     p_str = udirname(&s, "/foo/bar/baz.txt");
     mu_assert("error: udirname(\"/foo/bar/baz.txt\",) != 0", strcmp(p_str, "/foo/bar") == 0);
+
+    p_str = udirname(&s, "/foo");
+    mu_assert("error: udirname(\"/foo\",) != 0", strcmp(p_str, "/") == 0);
+
+    p_str = udirname(&s, "foo/bar/baz.txt");
+    mu_assert("error: udirname(\"foo/bar/baz.txt\",) != 0", strcmp(p_str, "foo/bar") == 0);
+
+    p_str = udirname(&s, "baz.txt");
+    mu_assert("error: udirname(\"baz.txt\",) != 0", strcmp(p_str, ".") == 0);
+
     uclear(&s);
+
 cleanup:
     return p_message;
 }
