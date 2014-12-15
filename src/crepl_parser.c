@@ -530,15 +530,6 @@ static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp
     bufstradd(p_bufstr, "}\n");
 }
 
-char* crepl_parent_identifier(char *p_str)
-{
-    char* p_parent = NULL;
-
-    (void)p_str;
-
-    //find_parent_identifier(p_str, &p_parent);
-    return p_parent;
-}
 static int resolve_identifier(char *p_parsefile_fullname,
                  bufstr_t *p_filecontent,
                  char *p_line,
@@ -808,6 +799,8 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
     p_line = stripwhite(p_line_copy);
+    if (p_context->options.verbosity >= 11)
+        fprintf(stderr, "crepl_preparse(): p_line=%s\n", p_line);
     
     status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
     FAIL_IF(status != 0);
@@ -925,6 +918,8 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
         }
     }
     *p_state = state;
+    if (p_context->options.verbosity >= 11)
+        fprintf(stderr, "crepl_preparse(): state=%d\n", (unsigned int)state);
     free(p_context->pp_cmds);
     p_context->pp_cmds = pp_cmds;
     pp_cmds = NULL;
@@ -939,21 +934,33 @@ end:
     free(filecontent.p_str);
     return status;
 }
-size_t find_matching(char end, char *p_incomplete)
+static size_t find_matching(struct crepl_t *p_context, char end, char *p_incomplete)
 {
     // TODO: why 1?
     size_t i = 1;
     int found = 0;
     int escaped = 0;
 
+    if (p_context->options.verbosity >= 11)
+        fprintf(stderr, "find_matching(): p_incomplete=%s\n", p_incomplete);
+
     while (p_incomplete[i] != '\0')
     {
-        if (p_incomplete[i] == '\\')
+        if (p_incomplete[i] == '\\'
+            && p_incomplete[i+1] != 'u'
+            && p_incomplete[i+1] != 'r'
+            && p_incomplete[i+1] != 'n')
         {
             escaped = !escaped;
             i++;
             continue;
         }
+        if (p_incomplete[i] == '\n')
+        {
+            i++;
+            continue;
+        }
+
         if (escaped)
         {
             i++;
@@ -970,27 +977,27 @@ size_t find_matching(char end, char *p_incomplete)
         {
             case '{':
                 {
-                    i += find_matching('}', &p_incomplete[i]);
+                    i += find_matching(p_context, '}', &p_incomplete[i]);
                     break;
                 }
             case '(':
                 {
-                    i += find_matching(')', &p_incomplete[i]);
+                    i += find_matching(p_context, ')', &p_incomplete[i]);
                     break;
                 }
             case '[':
                 {
-                    i += find_matching(']', &p_incomplete[i]);
+                    i += find_matching(p_context, ']', &p_incomplete[i]);
                     break;
                 }
             case '"':
                 {
-                    i += find_matching('"', &p_incomplete[i]);
+                    i += find_matching(p_context, '"', &p_incomplete[i]);
                     break;
                 }
             case '\'':
                 {
-                    i += find_matching('\'', &p_incomplete[i]);
+                    i += find_matching(p_context, '\'', &p_incomplete[i]);
                     break;
                 }
             default:
@@ -1007,17 +1014,23 @@ size_t find_matching(char end, char *p_incomplete)
     }
     return i;
 }
-int crepl_finalize(char *p_unfinalized, char **pp_finalized)
+int crepl_finalize(struct crepl_t *p_context, char *p_unfinalized, char **pp_finalized)
 {
     int status = 0;
-    size_t i = 0;
     char *p_finalized = NULL;
+
+    if (p_context->options.verbosity >= 11)
+        fprintf(stderr, "crepl_finalize(): p_unfinalized = %s\n", p_unfinalized);
+
 
     p_finalized = calloc(strlen(p_unfinalized) * 2, 1);
     FAIL_IF(p_finalized == NULL);
     memcpy(p_finalized, p_unfinalized, strlen(p_unfinalized));
 
-    find_matching('\0', &p_finalized[i]);
+    find_matching(p_context, '\0', p_finalized);
+
+    if (p_context->options.verbosity >= 11)
+        fprintf(stderr, "crepl_finalize(): p_finalized = %s\n", p_finalized);
 
     *pp_finalized = p_finalized;
     p_finalized = NULL;

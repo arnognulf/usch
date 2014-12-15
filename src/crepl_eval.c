@@ -476,7 +476,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF(p_context == NULL || p_input_line == NULL);
 
     input.p_str = NULL;
-    FAIL_IF(crepl_finalize(p_input_line, &input.p_str));
+    FAIL_IF(crepl_finalize(p_context, p_input_line, &input.p_str));
     FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
 

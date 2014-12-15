@@ -401,7 +401,7 @@ static char *test_crepl_finalize()
     if (error)
         goto cleanup;
 
-    error = crepl_finalize("foo(((", &p_finalized);
+    error = crepl_finalize(p_context, "foo(((", &p_finalized);
     mu_assert("error != 0", error == 0);
     mu_assert("crepl_finalized(p_context, \"foo(((\") != \"foo((()))\"", strcmp("foo((()))", p_finalized) == 0);
     free(p_finalized);p_finalized = NULL;
