@@ -1,31 +1,21 @@
-USCH - The (permutated) tcsh successor
-======================================
+USCH - C shell which uses the C language
+========================================
 
-UNDER CONSTRUCTION
-==================
-Things are not working even at a basic level, take any code and docs with a grain of salt :(
-
-TL;DR
------
-
-USCH is a shell where C is the command language. It has nothing to do with the harmfully considered csh or tcsh.
+USCH is a shell where C is the command language.
+Executables not colliding with definitions will be declared as variable argument macros with 0-n parameters.
+USCH allows for "aliases", running a function at startup, and prompt customization in /etc/uschrc.h or ~/.uschrc.h .
+There is also support for dynamically loading libraries and including headers.
 
 About
 -----
 
 USCH is a shell in early stages that aims to be a C Read-Evaluate-Print-Loop interpreter, useful enough for day-to-day use so the user can use a modern language like C instead of some deprecated oddjobb syntax from the sixties.
 
-Commands are entered as-is with the REPL filling out the blanks (or more correct paranthesis).
+
+Commands are entered as-is with the REPL filling out the blanks and any unclosed paranthesis.
 
 
 What differs USCH from other C REPL implementations is that it's fully Free Software and has a fun little hackable codebase with portable C99 syntax.
-
-Related C interpreters
-----------------------
-
-Cling: http://root.cern.ch/drupal/content/cling (no shell, C++ only, non-trivial to build last time I tried)
-
-Ch: http://www.softintegration.com/ (no source for inspection but free to use, uses C99 superset)
 
 Usage
 -----
@@ -44,7 +34,30 @@ For any identifiers that have not yet been defined, the command path is searched
 The command will then be defined as a variadic macro with zero or more arguments, where each argument is passed as a string.
 
 
-Paranthesises and quotation marks will be inserted after such varadic macro when the spacebar is pressed, this is referred to as space-completion (in contrast to tab-completion), if a space character is required, press space twice.
+Paranthesises and quotation marks will be inserted after such varadic macro when the spacebar is pressed, this is referred to as space-completion (in contrast to tab-completion), if a space character is required, press space twice:
+
+    ls<SPACE>-al<SPACE>*.h
+
+Will produce the following function in your REPL:
+
+    ls("-al", "*.h
+
+Pressing Return will complete the statement and fill in any unbalanced quotes and paranthesis.
+
+
+Stashed memory
+--------------
+Usch introduces the concept of stashed memory (ustash), a linked list of allocations which may be cleared when the strings are out of scope.
+
+
+Saving the strings in the stash gives the benefit of not having to store all returned strings from string functions, which gives cleaner code and is simpler to use in a REPL.
+
+    ustash s = {0};
+    char myfile[] = "my_stuffs.txt";
+
+    cat((ustrjoin(&s, "/tmp/", myfile));
+    
+    uclear(&s);
 
 Available commands
 -------------------
@@ -55,11 +68,16 @@ Within the REPL, all commands not colliding with C functions or macros are decla
 Within the REPL and when including usch.h in a standalone .c file the following functions/MACROs are declared:
 
     int cd("pwd");
-    char** usch_strsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
-    char** usch_strexp(usch_stash_t *p_memstash, char *p_item1, ...)
-    char** usch_strexp_arr(usch_stash_t *p_memstash, char **pp_items)
-    char*  usch_strjoin(usch_stash_t *p_memstash, char *p_item1, ...)
-    char*  usch_strjoin_arr(usch_stash_t *p_memstash, char **pp_items)
+    // join 1-n strings into one buffer
+    char*  ustrjoin(usch_stash_t *p_memstash, char *p_item1, ...)
+    // split a string by delimeters, into an array
+    char** ustrsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
+    // create an array from 1-n strings with glob expansion (eg. *.h)
+    char** ustrexp(usch_stash_t *p_memstash, char *p_item1, ...)
+    // dirname version
+    char* udirname(usch_stash_t *p_memstash, char *p_dir)
+    // run a command, and return stdout as a buffer
+    char* ustrout(usch_stash_t *p_memstash, char *p_item1, ...)
 
 Using USCH as a scripting language
 ----------------------------------
@@ -86,15 +104,22 @@ BUGS
 ----
 Usch cannot be compiled with -pedantic. This is a limitation of the 0-n arg macro.
 
-* entering cd("/home <ENTER> in the interpreter causes invalid read
-
 Report bugs at: https://github.com/arnognulf/usch/issues
 
 Contributing
 ------------
 Create a fork, and send a pull request or patch either via Github or from your public git server.
 
+Related C interpreters
+----------------------
+
+Cling: http://root.cern.ch/drupal/content/cling (no shell, C++ only, non-trivial to build last time I tried)
+
+Ch: http://www.softintegration.com/ (no source for inspection but free to use, uses C99 superset)
+
 License
 -------
 USCH is licensed under the MIT/X11 license. See LICENSE for more information.
+
+<script src="js/jr.js"></script>
 
