@@ -50,6 +50,42 @@ Will produce the following function in your REPL:
 
 Pressing Return will complete the statement and fill in any unbalanced quotes and paranthesis.
 
+Variables
+---------
+A variable can be declared at the prompt:
+
+    float a = 42.0;
+
+If no initial value is given, the variable gets zero as it's value.
+
+
+If the variable has been updated, the value gets printed as follows:
+
+    a = 32
+    %a = 32.000000
+
+However, writing the same value to the variable, does not cause an update write:
+
+    a = 32
+    
+
+Loading dynamic libraries and headers
+-------------------------------------
+Dynamic libraries can be loaded at the command prompt, with the #lib preprocessor directive:
+
+    #lib m
+
+After a library has been successfully loaded, it's header can be loaded:
+    #include <math.h>
+
+After the header has been loaded, all symbols will be resolved and trampoline functions calling into the dynamic library will be defined.
+
+After this, you can do stuff like:
+
+    float a = 0
+    a = cos(0.5)
+    // and recieve the updated variable reply:
+    %a = 0.877583
 
 Stashed memory
 --------------

@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <stdlib.h>
 #include "crepl_types.h"
 #include "crepl_debug.h"
 
@@ -24,6 +24,11 @@ int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
         FAIL_IF(p_alloc_data == NULL);
         p_def->p_alloc_data = p_alloc_data;
     }
+    else
+    {
+        memset(p_def->data, 0xff, CREPL_DEFINE_SIZE);
+    }
+
     p_def->size = var_size;
     strcpy(p_def->defname, p_defname);
 
