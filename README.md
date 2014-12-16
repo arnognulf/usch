@@ -56,7 +56,7 @@ A variable can be declared at the prompt:
 
     float a = 42.0;
 
-If no initial value is given, the variable gets zero as it's value.
+If no initial value is given, the variable gets zero as its value.
 
 
 If the variable has been updated, the value gets printed as follows:
@@ -75,7 +75,7 @@ Dynamic libraries can be loaded at the command prompt, with the #lib preprocesso
 
     #lib m
 
-After a library has been successfully loaded, it's header can be loaded:
+After a library has been successfully loaded, its header can be loaded:
     #include <math.h>
 
 After the header has been loaded, all symbols will be resolved and trampoline functions calling into the dynamic library will be defined.
