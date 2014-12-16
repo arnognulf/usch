@@ -1,5 +1,5 @@
 # mkdtemp requires _BSD_SOURCE
-LLVM_DIR=/usr/lib/llvm-3.4
+LLVM_DIR = $(shell llvm-config --prefix 2>/dev/null || llvm-config-3.6 --prefix 2>/dev/null|| llvm-config-3.5 --prefix 2>/dev/null|| llvm-config-3.4 --prefix 2>/dev/null)
 # -fsanitize=address -fsanitize=undefined 
 PREFIX=/usr/local
 CFLAGS=-O0 -D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -g3 -fno-builtin -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"
@@ -27,6 +27,7 @@ clean:
 		rm -rf *o usch
 
 install: usch tests run_tests
+	install -m 0644 usch.h $(PREFIX)/include
 	install -m 0755 usch $(PREFIX)/bin
 	install -m 0644 uschrc.h $(PREFIX)/etc
 
