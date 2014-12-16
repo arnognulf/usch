@@ -103,8 +103,8 @@ Similar to "for" in bash, iterating over a file matching pattern can be done as 
     }
     // clear allocations in stash list
     uclear(&s);
-    // pp_exp is now already free'd 
-    pp_exp = NULL;
+    // hdrs is now already free'd 
+    hdrs = NULL;
 
 BUGS
 ----
