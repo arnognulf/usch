@@ -76,6 +76,7 @@ typedef struct
 {
     char *p_cur_id;
     int found_cur_id;
+    struct crepl_t *p_context;
 } preparse_userdata_t;
 
 

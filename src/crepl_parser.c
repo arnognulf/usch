@@ -454,15 +454,22 @@ static enum CXChildVisitResult clang_preparseVisitor(
     CXString cxstr = {NULL, 0};
     CXString cxparstr = {NULL, 0};
     preparse_userdata_t *p_userdata = NULL;
+    struct crepl_t *p_context = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
     cxparstr = clang_getCursorSpelling(parent);
     p_userdata = (preparse_userdata_t*)p_client_data;
     FAIL_IF(p_userdata == NULL);
+    FAIL_IF(p_userdata->p_context == NULL);
+    p_context = p_userdata->p_context ;
+
     switch (cursor.kind) 
     {
         case CXCursor_FunctionDecl:
             {
+                if (crepl_getoptions(p_context).verbosity >= 11)
+                    fprintf(stderr, "clang_preparseVisitor: clang_getCString(cxstr): \"%s\"\n", clang_getCString(cxstr));
+
                 if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
                 {
                     p_userdata->found_cur_id = 1;
@@ -562,6 +569,8 @@ static int resolve_identifier(struct crepl_t *p_context,
     FAIL_IF(p_idx == NULL);
     p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
     FAIL_IF(p_tu == NULL);
+
+    p_userdata->p_context = p_context;
 
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
@@ -832,12 +841,13 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
 
         for (i = 0; pp_identifiers[i] != NULL; i++)
         {
+            char *p_null_identifier[1] = {NULL};
             state = CREPL_STATE_CPARSER;
 
             userdata.p_cur_id = pp_identifiers[i];
             userdata.found_cur_id = 0;
 
-            FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, NULL));
+            FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, p_null_identifier));
 
             // identifier is not defined
             if (userdata.found_cur_id == 0)
