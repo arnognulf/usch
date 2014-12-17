@@ -150,7 +150,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
             if (p_dirent == NULL)
                 goto end;
             if (crepl_getoptions(p_global_context).verbosity >= 11)
-                fprintf(stderr, "&p_cmdarg[dirlen] (%s) == p_dirent->d_name (%s), len = %d\n", &p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen);
+                fprintf(stderr, "&p_cmdarg[dirlen] (%s) == p_dirent->d_name (%s), len = %d\n", &p_cmdarg[dirlen], p_dirent->d_name, (int)(arglen - dirlen));
             if (strncmp(&p_cmdarg[dirlen], p_dirent->d_name, arglen - dirlen) == 0)
             {
                 if (stat(ustrjoin(&tab_completion_stash, p_dirarg, "/", p_dirent->d_name), &sb) != -1)

@@ -240,7 +240,7 @@ const char* crepl_getprompt(crepl_t *p_context)
 {
     char *p_prompt = NULL;
     static char prompt[1];
-    memset(prompt, 1, 0x00);
+    memset(prompt, 0x00, 1);
 
     if (!p_context)
         return prompt;
