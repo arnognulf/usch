@@ -1,0 +1,15 @@
+Source: usch
+Section: shells
+Priority: optional
+Maintainer: Thomas Eriksson <thomas.eriksson@gmail.com>
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.5
+Homepage: https://github.com/arnognulf/usch
+Vcs-Git: https://github.com/arnognulf/usch.git
+#Vcs-Browser: http://anonscm.debian.org/?p=collab-maint/usch.git;a=summary
+
+Package: usch
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: C shell done right.
+ A C shell which compiles all statements, and load them as dynamic libraries.

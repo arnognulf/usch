@@ -1,6 +1,6 @@
 /*
  * USCH - The (permutated) tcsh successor
- * Copyright (c) 2013 Thomas Eriksson 
+ * Copyright (c) 2014 Thomas Eriksson 
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -472,6 +472,9 @@ end:
     return p_trim;
 }
 
+static inline char **ufiletostr(ustash *p_ustash, char *p_delim)
+{
+}
 static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, char *p_str1, ...)
 {
     static char emptystr[1];

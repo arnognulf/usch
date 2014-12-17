@@ -1,7 +1,8 @@
 # mkdtemp requires _BSD_SOURCE
 LLVM_DIR = $(shell llvm-config --prefix 2>/dev/null || llvm-config-3.6 --prefix 2>/dev/null|| llvm-config-3.5 --prefix 2>/dev/null|| llvm-config-3.4 --prefix 2>/dev/null)
 # -fsanitize=address -fsanitize=undefined 
-PREFIX=/usr/local
+DESTIDR=/usr/local
+PREFIX=$(DESTDIR)
 CFLAGS=-O0 -D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -g3 -fno-builtin -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"
 
 ## uncomment this line to get sparkles!
