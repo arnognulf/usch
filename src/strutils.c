@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int fwrite_ok(char* p_str, FILE *p_file)
+int fwrite_ok(const char* p_str, FILE *p_file)
 {
     size_t bytes_written;
     size_t bytes_to_write;

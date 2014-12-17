@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <usch.h>
 
 // this file is included in all statements that are evaluated by usch

@@ -1,2 +1,2 @@
-int fwrite_ok(char* p_str, FILE *p_file);
+int fwrite_ok(const char* p_str, FILE *p_file);
 

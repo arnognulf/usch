@@ -638,6 +638,11 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_stmt = ustrjoin(&s, p_stmt, \
             "void uschrc_init(ustash *p_stash) { return uschrc(p_stash);}\n");
 
+    if (crepl_getoptions(p_context).verbosity >= 11)
+        fprintf(stderr, "p_stmt = \\\n%s\n", p_stmt);
+
+ 
+
     FAIL_IF(!fwrite_ok(p_stmt, p_stmt_c));
 
     fclose(p_stmt_c);

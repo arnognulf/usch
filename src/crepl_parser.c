@@ -29,7 +29,6 @@
 #include <stdlib.h>                     // for NULL, free, calloc, getenv
 #include <string.h>                     // for strlen, strcpy, strncmp, etc
 #include <sys/stat.h>                   // for stat
-#include "bufstr.h"                     // for bufstradd, bufstr_t
 #include "crepl.h"                      // for ::CREPL_STATE_CPARSER, etc
 #include "crepl_debug.h"                // for FAIL_IF
 #include "crepl_types.h"                // for preparse_userdata_t, etc
@@ -448,7 +447,6 @@ static enum CXChildVisitResult clang_preparseVisitor(
         CXClientData p_client_data)
 {
     (void)parent;
-    bufstr_t bufstr = {NULL, 0};
     int status = 0;
     char *p_fnstr = NULL;
     crepl_dyfn_t *p_dyfn = NULL;
@@ -485,53 +483,55 @@ end:
     clang_disposeString(cxstr);
     clang_disposeString(cxparstr);
     (void)status;
-    free(bufstr.p_str);
     free(p_fnstr);
     free(p_dyfn);
     return res;
 }
 
-static void set_preparsefile_content(bufstr_t *p_bufstr, char* p_line, char **pp_identifiers)
+static const char* set_preparsefile_content(ustash *p_s, char* p_line, char **pp_identifiers)
 {
     int i;
-    p_bufstr->p_str[0] = '\0';
-    bufstradd(p_bufstr, "#ifndef CREPL_PARSER\n");
-    bufstradd(p_bufstr, "#define CREPL_PARSER\n");
-    bufstradd(p_bufstr, "#endif // CREPL_PARSER\n");
-    bufstradd(p_bufstr, "struct crepl_t;\n");
-    bufstradd(p_bufstr, "#include <usch.h>\n");
-    bufstradd(p_bufstr, "#include \"includes.h\"\n");
-    bufstradd(p_bufstr, "#include \"definitions.h\"\n");
-    bufstradd(p_bufstr, "#include \"trampolines.h\"\n");
+    const char *p_content = ustrjoin(p_s, "#ifndef CREPL_PARSER\n",
+                                   "#define CREPL_PARSER\n",
+                                   "#endif // CREPL_PARSER\n",
+                                   "struct crepl_t;\n",
+                                   "#include <usch.h>\n",
+                                   "#include \"includes.h\"\n",
+                                   "#include \"definitions.h\"\n",
+                                   "#include \"trampolines.h\"\n");
 
     for (i = 0; pp_identifiers[i] != NULL; i++)
     {
         // clang doesn't parse preprocessor #defines
         // define a function instead
-        bufstradd(p_bufstr, "void ");
-        bufstradd(p_bufstr, pp_identifiers[i]);
-        bufstradd(p_bufstr, "(...) {};\n");
+        p_content = ustrjoin(p_s, p_content,
+                                 "void ",
+                                 pp_identifiers[i],
+                                 "(...) {};\n");
     }
-    bufstradd(p_bufstr, "int ");
-    bufstradd(p_bufstr, CREPL_DYN_FUNCNAME);
-    bufstradd(p_bufstr, "()\n");
-    bufstradd(p_bufstr, "{\n");
-    bufstradd(p_bufstr, "\t");
-    bufstradd(p_bufstr, p_line);
+    p_content = ustrjoin(p_s, p_content,
+                             "int ",
+                             CREPL_DYN_FUNCNAME,
+                             "()\n",
+                             "{\n",
+                             "\t",
+                             p_line);
     if (has_trailing_identifier(p_line, pp_identifiers))
     {
-        bufstradd(p_bufstr, "()");
+        p_content = ustrjoin(p_s, p_content, "()");
     }
     else if (has_trailing_open_parenthesis(p_line))
     {
-        bufstradd(p_bufstr, ")");
+        p_content = ustrjoin(p_s, p_content, ")");
     }
-    bufstradd(p_bufstr, ";\n\treturn 0;\n");
-    bufstradd(p_bufstr, "}\n");
+    p_content = ustrjoin(p_s, p_content,
+                             ";\n\treturn 0;\n",
+                             "}\n");
+    return p_content;
 }
 
-static int resolve_identifier(char *p_parsefile_fullname,
-                 bufstr_t *p_filecontent,
+static int resolve_identifier(struct crepl_t *p_context,
+                 char *p_parsefile_fullname,
                  char *p_line,
                  preparse_userdata_t *p_userdata,
                  char **pp_definitions)
@@ -540,17 +540,22 @@ static int resolve_identifier(char *p_parsefile_fullname,
     CXTranslationUnit p_tu = NULL;
     CXIndex p_idx = NULL;
     unsigned int visitorstatus = 0;
+    ustash s = {0};
+    const char *p_filecontent = "";
 
     FILE *p_parsefile = NULL;
+
     if (pp_definitions != NULL)
     {
-        set_preparsefile_content(p_filecontent, p_line, pp_definitions);
+        p_filecontent = set_preparsefile_content(&s, p_line, pp_definitions);
     }
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
     FAIL_IF(p_parsefile == NULL);
+    if (crepl_getoptions(p_context).verbosity >= 11)
+        fprintf(stderr, "resolve_identifier: p_filecontent: \"%s\"\n", p_filecontent);
 
-    FAIL_IF(!fwrite_ok(p_filecontent->p_str, p_parsefile));
+    FAIL_IF(!fwrite_ok(p_filecontent, p_parsefile));
     fclose(p_parsefile);
     p_parsefile = NULL;
     p_idx = clang_createIndex(0, 0);
@@ -569,7 +574,12 @@ static int resolve_identifier(char *p_parsefile_fullname,
     p_tu = NULL;
     p_idx = NULL;
 
+    if (crepl_getoptions(p_context).verbosity >= 11)
+        fprintf(stderr, "resolve_identifier: p_parsefile_fullname: \"%s\" found: %d\n", p_userdata->p_cur_id, p_userdata->found_cur_id);
+
+
 end:
+    uclear(&s);
     if (p_parsefile)
         fclose(p_parsefile);
     return status;
@@ -759,6 +769,8 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
         }
         i++;
     }
+    if (crepl_getoptions(p_context).verbosity >= 11)
+        fprintf(stderr, "crepl_parsedefs(): p_defs: \"%s\n\"", p_defs);
     p_context->p_nodef_line = p_line;
     p_line = NULL;
     p_context->p_defs_line = p_defs;
@@ -775,7 +787,6 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
     crepl_state_t state = CREPL_STATE_CPARSER;
     preparse_userdata_t userdata;
     int status = 0;
-    bufstr_t filecontent = {0,0};
     char preparse_filename[] = "preparse.c";
     char *p_parsefile_fullname = NULL;
     char *p_line_copy = NULL;
@@ -813,10 +824,6 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
         // NULL terminate vector before it's content
         pp_cmds[num_identifiers] = NULL;
 
-        filecontent.p_str = calloc(1, 1024);
-        FAIL_IF(filecontent.p_str == NULL);
-        filecontent.len = 1024;
-
         p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
         FAIL_IF(p_parsefile_fullname == NULL);
         strcpy(p_parsefile_fullname, p_context->tmpdir);
@@ -830,7 +837,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
             userdata.p_cur_id = pp_identifiers[i];
             userdata.found_cur_id = 0;
 
-            FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, NULL));
+            FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, NULL));
 
             // identifier is not defined
             if (userdata.found_cur_id == 0)
@@ -868,7 +875,8 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
                     // try to define the identifier as a function
 
                     userdata.found_cur_id = 0;
-                    FAIL_IF(resolve_identifier(p_parsefile_fullname, &filecontent, p_line, &userdata, pp_identifiers));
+                    FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, pp_identifiers));
+                    
 
                     // unknown error
                     if (userdata.found_cur_id == 0)
@@ -931,7 +939,6 @@ end:
     free(p_line_copy);
     free(pp_cmds);
 
-    free(filecontent.p_str);
     return status;
 }
 static size_t find_matching(struct crepl_t *p_context, char end, char *p_incomplete)
