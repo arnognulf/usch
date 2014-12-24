@@ -1108,6 +1108,48 @@ static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_
 	return 0;
 }
  
+static inline char **ufiletostrv(ustash *p_ustash, const char *p_file, char *p_delims)
+{
+(void)p_ustash;
+(void)p_file;
+(void)p_delims;
+
+return NULL;
+}
+
+static inline char **ufiletostrv(ustash *p_ustash, const char *p_file)
+{
+	FILE *p_file = NULL;
+	static char *p_strv[1] = NULL;
+	char **pp_strv = p_strv;
+	size_t len = 0;
+	struct stat st;
+	if (!p_file || !p_ustash)
+		goto cleanup;
+	if (stat(p_file, &st) == 0)
+		len = st.st_size;
+	else
+		goto cleanup;
+
+	p_file = fopen(p_file, "rb");
+	if (!p_file)
+		goto cleanup;
+	// alloc file
+	// count Newlines
+	// alloc array
+cleanup:
+	if (p_file) fclose(p_file);
+	return pp_strv;
+}
+
+static inline int ustrvtofile(ustash *p_ustash, const char **pp_strv, const char *p_file)
+{
+(void)p_ustash;
+(void)pp_strv;
+(void)p_file;
+
+return 0;
+}
 
 #if NEED_VIM_WORKAROUND
 {

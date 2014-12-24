@@ -452,6 +452,21 @@ cleanup:
     uclear(&s);
     return p_message;
 }
+
+static char *test_ustrvtofile()
+{
+    ustash s = {0};
+    char *p_message = NULL;
+    char **pp_strv = ufiletostrv(&s, "testdir/a");
+    mu_assert("error ustrvtofile()", strcmp(pp_strv[0], "abc") == 0);
+    mu_assert("error ustrvtofile()", strcmp(pp_strv[1], "def") == 0);
+    mu_assert("error ustrvtofile()", strcmp(pp_strv[2], "ghj") == 0);
+    mu_assert("error ustrvtofile()", pp_strv[3] != NULL);
+
+cleanup:
+    uclear(&s);
+    return p_message;
+}
 static char * all_tests()
 {
     mu_run_test(test_strexp);
@@ -468,6 +483,7 @@ static char * all_tests()
     mu_run_test(test_udirname);
     mu_run_test(test_ustrtrim);
     mu_run_test(test_ustrjoin);
+    mu_run_test(test_ufiletostrv);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }
