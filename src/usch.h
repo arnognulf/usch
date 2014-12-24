@@ -472,9 +472,6 @@ end:
     return p_trim;
 }
 
-static inline char **ufiletostr(ustash *p_ustash, char *p_delim)
-{
-}
 static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, char *p_str1, ...)
 {
     static char emptystr[1];

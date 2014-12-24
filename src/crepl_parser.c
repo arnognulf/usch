@@ -424,6 +424,8 @@ static int has_trailing_identifier(char *p_line, char **pp_identifiers)
     int trailing_identifier;
     size_t len = strlen(p_line);
     size_t identifier_len;
+    if (pp_identifiers[0] == NULL)
+        return 0;
 
     for (i = 0; pp_identifiers[i] != NULL; i++)
         ;
@@ -957,6 +959,9 @@ static size_t find_matching(struct crepl_t *p_context, char end, char *p_incompl
     size_t i = 1;
     int found = 0;
     int escaped = 0;
+
+    if (p_incomplete[0] == '\0')
+	return 0;
 
     if (p_context->options.verbosity >= 11)
         fprintf(stderr, "find_matching(): p_incomplete=%s\n", p_incomplete);

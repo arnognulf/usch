@@ -53,7 +53,10 @@ static char* find_uschrc(ustash *p_stash);
 // TODO: DUPE of crepl_vars.c
 // this function is a naive parser and should probably not be used anyway
 static char *get_symname(char *p_defname)
-{
+{    
+    if (p_defname[0] == '\0')
+        return p_defname;
+
     int len = (int)strlen(p_defname);
     int i = len - 1;
     char *p_symname = p_defname;
