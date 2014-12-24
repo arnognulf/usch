@@ -606,6 +606,11 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
                           "\"\n");
 
     p_stmt = ustrjoin(&s, p_stmt,
+                          "#ifndef cd\n",
+	                  "#define cd(...) ucmd(\"cd\", ##__VA_ARGS__)\n",
+                          "#endif // cd\n");
+
+    p_stmt = ustrjoin(&s, p_stmt,
             "static struct crepl_t *p_crepl_context = NULL;\n",
             "void crepl_set_context(struct crepl_t *p_context)\n"
             "{\n",

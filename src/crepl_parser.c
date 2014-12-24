@@ -1049,7 +1049,7 @@ int crepl_finalize(struct crepl_t *p_context, char *p_unfinalized, char **pp_fin
         fprintf(stderr, "crepl_finalize(): p_unfinalized = %s\n", p_unfinalized);
 
 
-    p_finalized = calloc(strlen(p_unfinalized) * 2, 1);
+    p_finalized = calloc(strlen(p_unfinalized) * 2 + 1, 1);
     FAIL_IF(p_finalized == NULL);
     memcpy(p_finalized, p_unfinalized, strlen(p_unfinalized));
 
