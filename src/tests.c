@@ -135,7 +135,7 @@ static char *test_uchdir()
 {
     char *p_message = NULL;
     int error;
-    error = cd(".");
+    error = ucmd("cd", ".");
     mu_assert("error: cd(\".\") != 0", error == 0);
     error = test_upwd();
     mu_assert("error: test_upwd() != 0", error == 0);

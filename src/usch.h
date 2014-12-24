@@ -134,10 +134,6 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  */
 #define ucmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
 
-#ifndef CREPL_PARSER
-#define cd(...) ucmd("cd", ##__VA_ARGS__)
-#endif // CREPL_PARSER
-
 /*** private APIs below, may change without notice  ***/
 
 struct priv_usch_glob_list;

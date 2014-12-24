@@ -36,6 +36,7 @@ typedef struct
 {
     int interactive;
     int verbosity;
+    int single_instance;
 } crepl_options;
 
 int crepl_create(struct crepl_t **p_crepl, crepl_options options);

@@ -507,7 +507,11 @@ static const char* set_preparsefile_content(ustash *p_s, char* p_line, char **pp
                                    "#include <usch.h>\n",
                                    "#include \"includes.h\"\n",
                                    "#include \"definitions.h\"\n",
-                                   "#include \"trampolines.h\"\n");
+                                   "#include \"trampolines.h\"\n",
+				   "#ifndef cd\n",
+				   "#define cd(...) ucmd(\"cd\", ##__VA_ARGS__)\n",
+				   "#endif // cd\n")
+;
 
     for (i = 0; pp_identifiers[i] != NULL; i++)
     {

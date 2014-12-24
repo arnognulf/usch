@@ -187,6 +187,13 @@ static void verbose(command_t *self)
     options.verbosity = 11;
 }
 
+static void single_instance(command_t *self)
+{
+    (void)self;
+    options.single_instance = 1;
+}
+
+
 int main(int argc, char **pp_argv) {
     (void)argc;
     char *p_line = NULL;
@@ -201,36 +208,44 @@ int main(int argc, char **pp_argv) {
 
     command_init(&cmd, pp_argv[0], "0.0.1");
     command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);
+    command_option(&cmd, "-s", "--single-instance", "enable single instance (for debugging)", single_instance);
     command_parse(&cmd, argc, pp_argv);
-    
-    crepl_create(&p_crepl, options);
 
-    p_global_context = p_crepl;
-
-    signal(SIGQUIT, handle_sigint);
-    signal(SIGINT, handle_sigint);
-
-    p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
-
-    linenoiseSetMultiLine(1);
-    linenoiseHistorySetMaxLen(100);
-    linenoiseSetCompletionCallback(tabCompletion);
-    linenoiseSetSpaceCompletionCallback(spaceCompletion);
-    linenoiseHistoryLoad(p_history); /* Load the history at startup */
-
-    p_prompt = crepl_getprompt(p_crepl);
-    while((p_line = linenoise(p_prompt)) != NULL) 
+    if (options.single_instance)
     {
-        crepl_eval(p_crepl, p_line);
+	crepl_create(&p_crepl, options);
 
-        if (p_line[0] != '\0') {
-            linenoiseHistoryAdd(p_line); /* Add to the history. */
-            linenoiseHistorySave(p_history); /* Save the history on disk. */
-        }
-        free(p_line);
-        p_prompt = crepl_getprompt(p_crepl);
+	p_global_context = p_crepl;
+
+	signal(SIGQUIT, handle_sigint);
+	signal(SIGINT, handle_sigint);
+
+	p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
+
+	linenoiseSetMultiLine(1);
+	linenoiseHistorySetMaxLen(100);
+	linenoiseSetCompletionCallback(tabCompletion);
+	linenoiseSetSpaceCompletionCallback(spaceCompletion);
+	linenoiseHistoryLoad(p_history); /* Load the history at startup */
+
+	p_prompt = crepl_getprompt(p_crepl);
+	while((p_line = linenoise(p_prompt)) != NULL) 
+	{
+	    crepl_eval(p_crepl, p_line);
+
+	    if (p_line[0] != '\0') {
+	        linenoiseHistoryAdd(p_line); /* Add to the history. */
+	        linenoiseHistorySave(p_history); /* Save the history on disk. */
+	    }
+	    free(p_line);
+	    p_prompt = crepl_getprompt(p_crepl);
+	}
+	crepl_destroy(p_crepl);
     }
-    crepl_destroy(p_crepl);
+    else
+    {
+	while (ucmd(pp_argv[0], "--single-instance") != 0) ;
+    }
     uclear(&s);
     command_free(&cmd);
     return 0;
