@@ -453,15 +453,16 @@ cleanup:
     return p_message;
 }
 
-static char *test_ustrvtofile()
+static char *test_ufiletostrv()
 {
     ustash s = {0};
     char *p_message = NULL;
-    char **pp_strv = ufiletostrv(&s, "testdir/a");
+    char **pp_strv = ufiletostrv(&s, "testdir/a", "\n");
+
     mu_assert("error ustrvtofile()", strcmp(pp_strv[0], "abc") == 0);
     mu_assert("error ustrvtofile()", strcmp(pp_strv[1], "def") == 0);
     mu_assert("error ustrvtofile()", strcmp(pp_strv[2], "ghj") == 0);
-    mu_assert("error ustrvtofile()", pp_strv[3] != NULL);
+    mu_assert("error ustrvtofile()", pp_strv[3] == NULL);
 
 cleanup:
     uclear(&s);

@@ -244,7 +244,10 @@ int main(int argc, char **pp_argv) {
     }
     else
     {
-	while (ucmd(pp_argv[0], "--single-instance") != 0) ;
+	while (ucmd(pp_argv[0], "--single-instance") != 0)
+	{
+		fprintf(stderr, "%s: CREPL crashed, all memory cleared\n", pp_argv[0]);
+	}
     }
     uclear(&s);
     command_free(&cmd);

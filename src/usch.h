@@ -1108,37 +1108,62 @@ static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_
 	return 0;
 }
  
-static inline char **ufiletostrv(ustash *p_ustash, const char *p_file, char *p_delims)
-{
-(void)p_ustash;
-(void)p_file;
-(void)p_delims;
-
-return NULL;
-}
-
-static inline char **ufiletostrv(ustash *p_ustash, const char *p_file)
+static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char *p_delims)
 {
 	FILE *p_file = NULL;
-	static char *p_strv[1] = NULL;
-	char **pp_strv = p_strv;
+	static char *p_strv[1] = {NULL};
+	char **pp_strv = NULL;
+        char *p_str = NULL;
 	size_t len = 0;
 	struct stat st;
-	if (!p_file || !p_ustash)
+	size_t i, j;
+        size_t delims_len = 0;
+	size_t num_delims = 0;
+	size_t vpos = 0;
+	if (!p_filename || !p_ustash || !p_delims)
 		goto cleanup;
-	if (stat(p_file, &st) == 0)
+	if (stat(p_filename, &st) == 0)
 		len = st.st_size;
 	else
 		goto cleanup;
 
-	p_file = fopen(p_file, "rb");
+	p_file = fopen(p_filename, "rb");
 	if (!p_file)
 		goto cleanup;
-	// alloc file
-	// count Newlines
-	// alloc array
+	p_str = malloc(len+1);
+        if (!p_str) goto cleanup;
+	//if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
+
+        if (fread(p_str, 1, len, p_file) != len) goto cleanup;
+	delims_len = strlen(p_delims);
+	for (i = 0; i < len; i++)
+	{
+		for (j = 0; j < delims_len; j++)
+		{
+			if (p_str[i] == p_delims[j])
+			{
+				p_str[i] = '\0';
+				num_delims++;
+			}
+		}
+	}
+	pp_strv = malloc((num_delims+1)*sizeof(char*));
+	if (!pp_strv) goto cleanup;
+	//if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
+
+	pp_strv[vpos++] = p_str;
+	for (i = 0; i < len; i++)
+	{
+		if (p_str[i] == '\0' && i + 1 != len)
+		{
+			pp_strv[vpos++] = &p_str[i+1];
+		}
+	}
+	pp_strv[vpos] = NULL;
 cleanup:
 	if (p_file) fclose(p_file);
+	if (!pp_strv)
+		pp_strv = p_strv;
 	return pp_strv;
 }
 
