@@ -183,8 +183,9 @@ void crepl_destroy(crepl_t *p_context)
         crepl_sym_t *p_syms = p_context->p_syms;
         HASH_ITER(hh, p_syms, p_sym, p_tmpsym) {
             HASH_DEL(p_syms, p_sym);
+            free(p_sym);
         }
-        free(p_context->p_syms);
+        p_context->p_syms = NULL;
 
         crepl_def_t *p_tmpdef = NULL;
         crepl_def_t *p_def = NULL;
@@ -195,8 +196,9 @@ void crepl_destroy(crepl_t *p_context)
             free(p_def->p_alloc_data);
 
             HASH_DEL(p_defs, p_def);
+            free(p_def);
         }
-        free(p_context->p_defs);
+        p_context->p_defs = NULL;
 
         crepl_inc_t *p_tmpinc = NULL;
         crepl_inc_t *p_inc = NULL;
@@ -204,8 +206,9 @@ void crepl_destroy(crepl_t *p_context)
 
         HASH_ITER(hh, p_incs, p_inc, p_tmpinc) {
             HASH_DEL(p_incs, p_inc);
+            free(p_inc);
         }
-        free(p_context->p_incs);
+        p_context->p_incs = NULL;
 
         crepl_dyfn_t *p_tmpdyfn = NULL;
         crepl_dyfn_t *p_dyfn = NULL;
@@ -213,8 +216,9 @@ void crepl_destroy(crepl_t *p_context)
 
         HASH_ITER(hh, p_dyfns, p_dyfn, p_tmpdyfn) {
             HASH_DEL(p_dyfns, p_dyfn);
+            free(p_dyfn);
         }
-        free(p_context->p_dyfns);
+        p_context->p_dyfns = NULL;
 
         p_current_lib = p_context->p_libs;
         while (p_current_lib != NULL)

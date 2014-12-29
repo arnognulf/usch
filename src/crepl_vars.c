@@ -54,6 +54,11 @@ void crepl_undef(crepl_t *p_context, char *p_defname)
         free(p_def->p_body_data);
         p_def->p_body_data = NULL;
         HASH_DEL(p_defs, p_def);
+        if (p_context->p_defs == p_def)
+        {
+            p_context->p_defs = NULL;
+        }
+        free(p_def);
     }
     return;
 }

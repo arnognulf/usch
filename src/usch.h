@@ -1119,6 +1119,9 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
     size_t delims_len = 0;
     size_t num_delims = 0;
     size_t vpos = 0;
+    struct priv_usch_stash_item *p_content_stash = NULL;
+    struct priv_usch_stash_item *p_vector_stash = NULL;
+
     if (!p_filename || !p_ustash || !p_delims)
         goto cleanup;
     if (stat(p_filename, &st) == 0)
@@ -1129,9 +1132,10 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
     p_file = fopen(p_filename, "rb");
     if (!p_file)
         goto cleanup;
-    p_str = malloc(len+1);
-    if (!p_str) goto cleanup;
-    //if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
+    p_content_stash = calloc(len+1+sizeof(struct priv_usch_stash_item), 1);
+    if (!p_content_stash)
+        goto cleanup;
+    p_str = p_content_stash->str;
 
     if (fread(p_str, 1, len, p_file) != len) goto cleanup;
     delims_len = strlen(p_delims);
@@ -1146,10 +1150,10 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
             }
         }
     }
-    pp_strv = malloc((num_delims+1)*sizeof(char*));
-    if (!pp_strv) goto cleanup;
-    //if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
-
+    p_vector_stash = calloc((num_delims+1)*sizeof(char*)+sizeof(struct priv_usch_stash_item), 1);
+    if (!p_vector_stash)
+        goto cleanup;
+    pp_strv = (char **)p_vector_stash->str;
     pp_strv[vpos++] = p_str;
     for (i = 0; i < len; i++)
     {
@@ -1159,7 +1163,14 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
         }
     }
     pp_strv[vpos] = NULL;
+    if (priv_usch_stash(p_ustash, p_content_stash)) goto cleanup;
+    if (priv_usch_stash(p_ustash, p_vector_stash)) goto cleanup;
+
+    p_content_stash = NULL;
+    p_vector_stash = NULL;
 cleanup:
+    free(p_content_stash);
+    free(p_vector_stash);
     if (p_file) fclose(p_file);
     if (!pp_strv)
         pp_strv = p_strv;
