@@ -125,7 +125,7 @@ Using USCH as a scripting language
 ----------------------------------
 Creating an "alias" or enabling to call a command from a C99 file can be done as follows:
 
-    #define cmd(...) ucmd("cmd", __VA_ARGS__);
+    #define myaliascmd(...) ucmd("mycmd", __VA_ARGS__);
 
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
