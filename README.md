@@ -4,7 +4,7 @@ USCH - The (permutated) tcsh successor
 USCH is a shell which uses C as its command language.
 
 
-All executables are available as pre-processor defined __VA_ARGS__ macros with 0-n arguments in a nifty C REPL.
+All executables (which doesn't collide with C functions or keywords) are available as pre-processor defined __VA_ARGS__ macros with 0-n arguments in a nifty C REPL.
 
 
 Supports loading of header files, and dynamic libraries at the prompt.
@@ -28,7 +28,7 @@ Usage
 USCH consists of the usch.h shell API and the REPL interpreter crepl.
 The USCH shell is started by entering:
 
-    ./usch
+    usch
 
 At the shell prompt.
 
@@ -97,7 +97,7 @@ Saving the strings in the stash gives the benefit of not having to store all ret
     ustash s = {0};
     char myfile[] = "my_stuffs.txt";
 
-    cat((ustrjoin(&s, "/tmp/", myfile));
+    ucmd("cat", ustrjoin(&s, "/tmp/", myfile));
     
     uclear(&s);
 
@@ -111,28 +111,29 @@ Within the REPL and when including usch.h in a standalone .c file the following 
 
     int cd("pwd");
     // join 1-n strings into one buffer
-    char*  ustrjoin(usch_stash_t *p_memstash, char *p_item1, ...)
+    char*  ustrjoin(ustash *p_ustash, char *p_item1, ...)
     // split a string by delimeters, into an array
-    char** ustrsplit(usch_stash_t *p_memstash, const char* p_in, const char* p_delims)
+    char** ustrsplit(ustash *p_ustash, const char* p_in, const char* p_delims)
     // create an array from 1-n strings with glob expansion (eg. *.h)
-    char** ustrexp(usch_stash_t *p_memstash, char *p_item1, ...)
+    char** ustrexp(ustash *p_ustash, char *p_item1, ...)
     // dirname version
-    char* udirname(usch_stash_t *p_memstash, char *p_dir)
+    char* udirname(ustash *p_ustash, char *p_dir)
     // run a command, and return stdout as a buffer
-    char* ustrout(usch_stash_t *p_memstash, char *p_item1, ...)
+    char* ustrout(ustash *p_ustash, char *p_item1, ...)
 
 Using USCH as a scripting language
 ----------------------------------
 Creating an "alias" or enabling to call a command from a C99 file can be done as follows:
 
-    #define cmd(...) usch_cmd("cmd", __VA_ARGS__);
+    #define cmd(...) ucmd("cmd", __VA_ARGS__);
 
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
-    // usch_stash_t is a linked list where allocations are stashed
-    ustash_t s = {NULL};
+    // ustash is a linked list where allocations are stashed
+    // always start with an empty stash
+    ustash s = {0};
     char **hdrs;
-    // usch_strexp will never return NULL
+    // ustrexp will never return NULL
     for (hdrs = ustrexp(&s, "*.h"); *hdrs != NULL; hdrs++)
     {
         printf("%s\n", hdrs[i]);
