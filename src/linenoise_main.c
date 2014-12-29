@@ -32,7 +32,7 @@
 #include "../external/linenoise/linenoise.h"
 #include "../external/commander/src/commander.h"
 
-crepl_options options = {0};
+static crepl_options options;
 static struct crepl_t *p_global_context = NULL;
 static void handle_sigint(int sig)
 {
@@ -196,6 +196,7 @@ static void single_instance(command_t *self)
 
 int main(int argc, char **pp_argv) {
     (void)argc;
+    memset(&options, 0, sizeof(crepl_options));
     char *p_line = NULL;
     struct crepl_t *p_crepl = NULL;
     char *p_history = NULL;

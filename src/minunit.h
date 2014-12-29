@@ -25,7 +25,8 @@
 #define MINUNIT_H
 // this version of minunit is a slightly modified version as obtained:
 // from http://www.jera.com/techinfo/jtns/jtn002.html
-#define mu_assert(message, test) do { if (!(test)) { p_message = message; goto cleanup;}} while (0)
+#include <assert.h>
+#define mu_assert(message, test) do { if (!(test)) { assert(0);p_message = message; goto cleanup;}} while (0)
 #define mu_run_test(test) do { char *p_message = test(); tests_run++; if (p_message) return  p_message;} while (0)
 extern int tests_run;
 #endif // MINUNIT_H

@@ -257,7 +257,8 @@ const char* crepl_getprompt(crepl_t *p_context)
 
 crepl_options crepl_getoptions(crepl_t *p_context)
 {
-    crepl_options options = {0};
+    crepl_options options;
+    memset(&options, 0x0, sizeof(crepl_options));
     if (p_context == NULL)
         return options;
 

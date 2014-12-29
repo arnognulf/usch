@@ -49,7 +49,6 @@ extern "C" {
  * Forward declaration for private stash struct.
  */
 struct priv_usch_stash_item;
-typedef struct ustash ustash;
 
 /**
  * @brief A structure that holds a pointer to a linked list of allocations
@@ -1167,13 +1166,13 @@ cleanup:
 	return pp_strv;
 }
 
-static inline int ustrvtofile(ustash *p_ustash, const char **pp_strv, const char *p_file)
+static inline int ustrvtofile(const char **pp_strv, const char *p_file, const char *p_delims)
 {
-(void)p_ustash;
 (void)pp_strv;
 (void)p_file;
+(void)p_delims;
 
-return 0;
+return -42;
 }
 
 #if NEED_VIM_WORKAROUND

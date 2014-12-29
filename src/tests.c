@@ -207,7 +207,8 @@ static char *test_crepl_vars()
     char wrong_str[] = "wrong";
     char *p_str = NULL;
     struct crepl_t *p_context = NULL;
-    crepl_options options = {0};
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
 
     error = crepl_create(&p_context, options);
     mu_assert("error: crepl_create(&p_context) != 0", error == 0);
@@ -267,7 +268,8 @@ static char *test_crepl_dyld()
     char *p_message = NULL;
     int error = 0;
     struct crepl_t *p_context = NULL;
-    crepl_options options = {0};
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
 
     error = crepl_create(&p_context, options);
     mu_assert("error: crepl_create(&p_context) != 0", error == 0);
@@ -312,7 +314,9 @@ static char *test_crepl_parse()
     int status;
     char *p_message = NULL;
     int error;
-    crepl_options options = {0};
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
+
     struct crepl_t *p_context = NULL;
     error = crepl_create(&p_context, options);
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -404,7 +408,8 @@ static char *test_crepl_finalize()
     int status;
     char *p_message = NULL;
     int error;
-    crepl_options options = {0};
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
 
     struct crepl_t *p_context = NULL;
     error = crepl_create(&p_context, options);
@@ -459,10 +464,37 @@ static char *test_ufiletostrv()
     char *p_message = NULL;
     char **pp_strv = ufiletostrv(&s, "testdir/a", "\n");
 
-    mu_assert("error ustrvtofile()", strcmp(pp_strv[0], "abc") == 0);
-    mu_assert("error ustrvtofile()", strcmp(pp_strv[1], "def") == 0);
-    mu_assert("error ustrvtofile()", strcmp(pp_strv[2], "ghj") == 0);
-    mu_assert("error ustrvtofile()", pp_strv[3] == NULL);
+    mu_assert("error ufiletostrv()", strcmp(pp_strv[0], "abc") == 0);
+    mu_assert("error ufiletostrv()", strcmp(pp_strv[1], "def") == 0);
+    mu_assert("error ufiletostrv()", strcmp(pp_strv[2], "ghj") == 0);
+    mu_assert("error ufiletostrv()", pp_strv[3] == NULL);
+
+cleanup:
+    uclear(&s);
+    return p_message;
+}
+
+static char *test_ustrvtofile()
+{
+    ustash s = {0};
+    char dir_template[] = "/tmp/test-XXXXXX";
+    char *p_message = NULL;
+    char *p_tempdir = mkdtemp(dir_template);
+    mu_assert("p_tempdir == NULL", p_tempdir != NULL);
+
+    char *p_tempfile = ustrjoin(&s, p_tempdir, "/tempfile.txt");
+    char *p_strv[] = {"abc", "def", "ghj", NULL};
+    if (ustrvtofile((const char**)p_strv, p_tempfile, "\n") != 0)
+        mu_assert("ustrvtofile() failed\n", 0);
+    char **pp_verify = ufiletostrv(&s, p_tempfile, "\n");
+
+    mu_assert("error ustrvtofile()", strcmp(pp_verify[0], "abc") == 0);
+    mu_assert("error ustrvtofile()", strcmp(pp_verify[1], "def") == 0);
+    mu_assert("error ustrvtofile()", strcmp(pp_verify[2], "ghj") == 0);
+    mu_assert("error ustrvtofile()", pp_verify[3] == NULL);
+
+    ucmd("rm", "-f", p_tempfile);
+    ucmd("rm", "-d", p_tempdir);
 
 cleanup:
     uclear(&s);
@@ -485,6 +517,7 @@ static char * all_tests()
     mu_run_test(test_ustrtrim);
     mu_run_test(test_ustrjoin);
     mu_run_test(test_ufiletostrv);
+    mu_run_test(test_ustrvtofile);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }
@@ -503,5 +536,5 @@ int main()
      printf(" Tests run: %d\n", tests_run);
  
      return result != 0;
- }
+}
 

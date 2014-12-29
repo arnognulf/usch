@@ -4,8 +4,7 @@ LLVM_DIR = $(shell llvm-config-3.6 --prefix 2>/dev/null|| shell llvm-config-3.5 
 DESTDIR=/usr/local
 PREFIX=$(DESTDIR)
 
-#CFLAGS=-O0 -fsanitize=address -fsanitize=undefined -D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"
-CFLAGS=-O0 -D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"
+CFLAGS=-O0 -D_BSD_SOURCE -std=gnu99 -I$(LLVM_DIR)/include/ -I../external/linenoise/ -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"
 LIBS=$(LLVM_DIR)/lib/libclang.so.1 -ldl
 COMMON_SOURCES=../external/commander/src/commander.c ../external/linenoise/linenoise.c crepl.c bufstr.c crepl_parser.c crepl_linker.c crepl_vars.c strutils.c crepl_eval.c
 TEST_SOURCES=tests.c $(COMMON_SOURCES)
