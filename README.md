@@ -1,16 +1,16 @@
-USCH - C shell which uses the C language
-========================================
+USCH - The (permutated) tcsh successor
+======================================
 
-USCH is a shell where C is the command language.
-
-
-Executables not colliding with definitions will be declared as variable argument macros with 0-n parameters.
+USCH is a shell which uses C as its command language.
 
 
-USCH allows for "aliases", running a function at startup, and prompt customization in /etc/uschrc.h or ~/.uschrc.h .
+All executables are available as pre-processor defined __VA_ARGS__ macros with 0-n arguments in a nifty C REPL.
 
 
-There is also support for dynamically loading libraries and including headers.
+Supports loading of header files, and dynamic libraries at the prompt.
+
+
+Uses dlopen/dlsym to compile-and-run your code, so you may re-use your old rusty compiler.
 
 About
 -----
