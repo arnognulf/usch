@@ -96,6 +96,16 @@ int crepl_create(crepl_t **pp_context, crepl_options options)
     {
         FAIL_IF(crepl_eval(p_context, "") != 0);
     }
+    if (options.language == CREPL_LANG_C)
+    {
+        strcpy(p_context->source_ext, "c");
+        strcpy(p_context->header_ext, "h");
+    }
+    else if (options.language == CREPL_LANG_CXX)
+    {
+        strcpy(p_context->header_ext, "hpp");
+        strcpy(p_context->source_ext, "cpp");
+    }
     *pp_context = p_context;
     pp_ldpath = NULL;
     p_context = NULL;

@@ -30,7 +30,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-// /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "usch.h"
 #include "crepl_debug.h"
 #include "bufstr.h"
@@ -438,7 +437,6 @@ end:
     return status;
 }
 #endif // 0
-#define usch_shell_cc(...) ucmd("gcc", ##__VA_ARGS__)
 
 int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
@@ -456,16 +454,14 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     char *p_error = NULL;
     char **pp_path = NULL;
     char **pp_cmds = NULL;
-    size_t filename_length;
     size_t dylib_length;
     bufstr_t input;
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
-    char *p_fullpath_uschrc_h = NULL;
+    char *p_fullpath_uschrc = NULL;
     ustash s = {NULL};
 
-    char expr_c_filename[] = "expr.c";
     char dylib_filename[] = "dyn_stmt";
     char *p_tempdir = NULL;
     char *p_tempfile = NULL;
@@ -477,6 +473,11 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     crepl_state_t state;
 
     FAIL_IF(p_context == NULL || p_input_line == NULL);
+    FAIL_IF(p_context->options.language != CREPL_LANG_C &&
+            p_context->options.language != CREPL_LANG_CXX);
+
+    char *p_source_ext = p_context->source_ext;
+    char *p_header_ext = p_context->header_ext;
 
     input.p_str = NULL;
     FAIL_IF(crepl_finalize(p_context, p_input_line, &input.p_str));
@@ -488,13 +489,9 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_tempdir = p_context->tmpdir;
     FAIL_IF(p_tempdir == NULL);
     tempdir_len = strlen(p_tempdir);
-    filename_length = tempdir_len + 1 + strlen(expr_c_filename) + 1;
-    p_tempfile = malloc(filename_length);
-    FAIL_IF(p_tempfile == NULL);
-    strcpy(p_tempfile, p_tempdir);
-    p_tempfile[tempdir_len] = '/';
-    strcpy(&p_tempfile[tempdir_len + 1], expr_c_filename);
-    p_tempfile[filename_length-1] = '\0';
+
+    p_tempfile = ustrjoin(&s, p_tempdir, "/expr.", p_source_ext);
+
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
@@ -593,16 +590,16 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
     p_stmt = ustrjoin(&s, "struct crepl_t;\n", \
                           "#include <usch.h>\n", \
-                          "#include \"includes.h\"\n", \
-                          "#include \"definitions.h\"\n", \
-                          "#include \"trampolines.h\"\n");
+                          "#include \"includes.",    p_header_ext, "\"\n", \
+                          "#include \"definitions.", p_header_ext, "\"\n", \
+                          "#include \"trampolines.", p_header_ext, "\"\n");
 
-    p_fullpath_uschrc_h = find_uschrc(&s);
-    FAIL_IF(p_fullpath_uschrc_h == NULL);
+    p_fullpath_uschrc = find_uschrc(&s);
+    FAIL_IF(p_fullpath_uschrc == NULL);
 
     p_stmt = ustrjoin(&s, p_stmt,
                           "#include \"",
-                          p_fullpath_uschrc_h,
+                          p_fullpath_uschrc,
                           "\"\n");
 
     p_stmt = ustrjoin(&s, p_stmt,
@@ -663,7 +660,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_tempdylib[tempdir_len] = '/';
     strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
     p_tempdylib[dylib_length-1] = '\0';
-    if (usch_shell_cc("-I/home/arno/Workspace/usch2/src", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
+    if (ucmd("gcc", "-I/home/arno/Workspace/usch2/src", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
         ENDOK_IF(1);
@@ -731,19 +728,19 @@ end:
 static char* find_uschrc(ustash *p_stash)
 {
     struct stat sb;
-    char *p_fullpath_uschrc_h = NULL;
+    char *p_fullpath_uschrc = NULL;
     char *p_uschrc_cand = NULL;
     p_uschrc_cand = ustrjoin(p_stash, getenv("HOME"), "/.uschrc.h");
     if (stat(p_uschrc_cand, &sb) != -1)
     {
-        p_fullpath_uschrc_h = p_uschrc_cand;
+        p_fullpath_uschrc = p_uschrc_cand;
     }
     else
     {
         p_uschrc_cand = ustrjoin(p_stash, USCH_INSTALL_PREFIX, "/etc/uschrc.h");
         if (stat(p_uschrc_cand, &sb) != -1)
         {
-            p_fullpath_uschrc_h = p_uschrc_cand;
+            p_fullpath_uschrc = p_uschrc_cand;
         }
         else
         {
@@ -755,7 +752,7 @@ static char* find_uschrc(ustash *p_stash)
 
         }
     }
-    return p_fullpath_uschrc_h;
+    return p_fullpath_uschrc;
 error:
     return NULL;
 }
