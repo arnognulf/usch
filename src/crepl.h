@@ -32,8 +32,8 @@ extern "C" {
 
 struct crepl_t;
 
-#define CREPL_LANG_C   0x1
-#define CREPL_LANG_CXX 0x2
+#define CREPL_LANG_C   0x0
+#define CREPL_LANG_CXX 0x1
 
 typedef struct
 {

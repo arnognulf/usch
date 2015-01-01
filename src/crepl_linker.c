@@ -419,24 +419,21 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
 {
     int status = 0;
     char *p_tmpheader = NULL;
-    char tmp_h[] = "tmp.h";
     FILE *p_includefile = NULL;
-    char *p_tmpdir = NULL;
     crepl_inc_t *p_inc = NULL;
     crepl_inc_t *p_incs = NULL;
+    ustash s = {0};
+
 
     FAIL_IF(p_context == NULL || p_header == NULL);
 
+    char *p_header_ext = p_context->header_ext;
+
     p_incs = p_context->p_incs;
-    p_tmpdir = p_context->tmpdir;
-    p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_h) + 1, 1);
     HASH_FIND_STR(p_incs, p_header, p_inc);
     FAIL_IF(p_inc != NULL);
     
-    strcpy(p_tmpheader, p_tmpdir);
-    p_tmpheader[strlen(p_tmpheader)] = '/';
-    strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_h);
-    //printf("header: %s\n", p_tmpheader);
+    p_tmpheader = ustrjoin(&s, p_context->tmpdir, "/tmp.", p_header_ext);
 
     p_includefile = fopen(p_tmpheader, "w");
     FAIL_IF(p_includefile == NULL);
@@ -464,7 +461,7 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     p_inc = NULL;
 end:
     free(p_inc);
-    free(p_tmpheader);
+    uclear(&s);
     if (p_includefile)
         fclose(p_includefile);
     return status;

@@ -62,9 +62,9 @@ typedef struct crepl_t
     char *p_prompt;
     ustash prompt_stash;
     char is_initialized;
-    crepl_options options;
     char source_ext[4]; // c || cpp
     char header_ext[4]; // h || hpp
+    crepl_options options;
     char tmpdir[];
 } crepl_t;
 
