@@ -133,6 +133,15 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  */
 #define ucmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
 
+/* @brief run a NULL terminated command argument vector
+ *
+ * Run a NULL terminated command argument vector, expand globbing on arguments.
+ *
+ * @param  pp_argv argument vector, must be NULL terminated.
+ * @return status -1 to 255 where 0 means success, -1 parameter failure, or 1-255 specific command error.
+ */
+static inline int ucmdv(char **pp_argv);
+
 /*** private APIs below, may change without notice  ***/
 
 struct priv_usch_glob_list;
@@ -880,6 +889,18 @@ end:
     free(pp_argv);
 
     return status;
+}
+
+static inline int ucmdv(char **pp_argv)
+{
+    if (!pp_argv)
+        return -1;
+
+    int count = 0;
+    while (pp_argv[count] != NULL)
+        count++;
+
+    return priv_usch_cmd_arr(NULL, NULL, NULL, count, pp_argv);
 }
 
 static inline int priv_usch_cmd_impl(size_t num_args, char *p_name, ...)

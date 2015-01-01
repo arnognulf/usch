@@ -4,6 +4,9 @@
 #include "crepl.h"
 #define CREPL_DYN_FUNCNAME "usch_dyn_func"
 #define CREPL_DEFINE_SIZE 8
+#define CREPL_CC_FALLBACK "gcc"
+#define CREPL_CXX_FALLBACK "g++"
+
 typedef struct crepl_def_t
 {
     UT_hash_handle hh;
