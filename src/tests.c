@@ -181,6 +181,34 @@ cleanup:
     return p_message;
 }
 
+static char *test_ubasename()
+{
+    char *p_message = NULL;
+    char *p_str = NULL;
+    ustash s = {NULL};
+
+    p_str = ubasename(&s, "baz.txt");
+    mu_assert("error: ubasename(\"baz.txt\",) != 0", strcmp(p_str, "baz.txt") == 0);
+
+    p_str = ubasename(&s, "/foo");
+    mu_assert("error: ubasename(\"/foo\",) != 0", strcmp(p_str, "foo") == 0);
+
+    p_str = ubasename(&s, "/foo/bar/baz.txt");
+    mu_assert("error: ubasename(\"/foo/bar/baz.txt\") != 0", strcmp(p_str, "baz.txt") == 0);
+
+    p_str = ubasename(&s, "foo/bar/baz.txt");
+    mu_assert("error: ubasename(\"foo/bar/baz.txt\",) != 0", strcmp(p_str, "baz.txt") == 0);
+
+    p_str = ubasename(&s, "/");
+    mu_assert("error: ubasename(\"baz.txt\",) != 0", strcmp(p_str, "/") == 0);
+
+    uclear(&s);
+
+cleanup:
+    return p_message;
+}
+
+
 static char *test_ustrtrim()
 {
     char *p_message = NULL;
@@ -514,6 +542,7 @@ static char * all_tests()
     mu_run_test(test_crepl_finalize);
     mu_run_test(test_ustrout);
     mu_run_test(test_udirname);
+    mu_run_test(test_ubasename);
     mu_run_test(test_ustrtrim);
     mu_run_test(test_ustrjoin);
     mu_run_test(test_ufiletostrv);

@@ -31,6 +31,8 @@ clean:
 install: usch tests run_tests
 	install -m 0644 usch.h $(PREFIX)/include
 	install -m 0755 usch $(PREFIX)/bin
+	ln -s $(PREFIX)/bin/usch $(PREFIX)/bin/usch++
+	ln -s $(PREFIX)/bin/usch $(PREFIX)/bin/uschxx
 	install -m 0644 uschrc.h $(PREFIX)/etc
 
 .PHONY: install

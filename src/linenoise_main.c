@@ -32,6 +32,10 @@
 #include "../external/linenoise/linenoise.h"
 #include "../external/commander/src/commander.h"
 
+#define USCH_NAME "usch"
+#define USCHXX_NAME1 "usch++"
+#define USCHXX_NAME2 "uschxx"
+
 static crepl_options options;
 static struct crepl_t *p_global_context = NULL;
 static void handle_sigint(int sig)
@@ -203,6 +207,19 @@ int main(int argc, char **pp_argv) {
     ustash s = {0};
     const char *p_prompt = NULL;
     command_t cmd;
+
+    if (strncmp(ubasename(&s, pp_argv[0]), USCHXX_NAME1, strlen(USCHXX_NAME1)) == 0)
+    {
+        options.language = CREPL_LANG_CXX;
+    }
+    else if (strncmp(ubasename(&s, pp_argv[0]), USCHXX_NAME2, strlen(USCHXX_NAME2)) == 0)
+    {
+        options.language = CREPL_LANG_CXX;
+    }
+    else if (strncmp(ubasename(&s, pp_argv[0]), USCH_NAME, strlen(USCH_NAME)) == 0)
+    {
+        options.language = CREPL_LANG_C;
+    }
 
     options.verbosity = 1;
     options.interactive = 1;
