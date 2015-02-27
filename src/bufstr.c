@@ -24,11 +24,8 @@
 #include <string.h>
 #include <unistd.h>
 #include "crepl_debug.h"
-#include "malloc.h"
-#define MAX(a,b) \
-    ({ __typeof__ (a) _a = (a); \
-     __typeof__ (b) _b = (b); \
-     _a > _b ? _a : _b; })
+#include <malloc.h>
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 int bufstradd(bufstr_t *p_bufstr, const char *p_addstr)
 {
