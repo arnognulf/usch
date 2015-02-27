@@ -453,8 +453,8 @@ static enum CXChildVisitResult clang_preparseVisitor(
     char *p_fnstr = NULL;
     crepl_dyfn_t *p_dyfn = NULL;
     enum CXChildVisitResult res = CXChildVisit_Recurse;
-    CXString cxstr = {NULL, 0};
-    CXString cxparstr = {NULL, 0};
+    CXString cxstr;
+    CXString cxparstr;
     preparse_userdata_t *p_userdata = NULL;
     struct crepl_t *p_context = NULL;
 

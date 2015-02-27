@@ -381,6 +381,8 @@ static inline char *udirname(ustash *p_ustash, const char *p_str)
     int i = 0;
     int last_slash = -1;
 
+    if (p_str == NULL)
+        goto end;
     if (p_str[0] == '\0')
         goto end;
 
