@@ -1,5 +1,5 @@
 # mkdtemp requires _BSD_SOURCE
-LLVM_DIR = $(shell llvm-config-3.6 --prefix 2>/dev/null|| shell llvm-config-3.5 --prefix 2>/dev/null|| shell llvm-config-3.4 --prefix 2>/dev/null || shell llvm-config --prefix 2>/dev/null)
+LLVM_DIR = $(shell llvm-config-3.6 --prefix 2>/dev/null)
 
 DESTDIR=/usr/local
 PREFIX=$(DESTDIR)
