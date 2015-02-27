@@ -152,6 +152,7 @@ struct priv_usch_glob_list;
 static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item *p_stashitem);
 static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct priv_usch_glob_list **pp_glob_list);
 static inline void   priv_usch_free_globlist(struct priv_usch_glob_list *p_glob_list);
+static inline int ustreq(char *p_a, char *p_b);
 static inline int    priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in, 
         struct priv_usch_stash_item **pp_out,
         struct priv_usch_stash_item **pp_err,
@@ -796,7 +797,7 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
         argc++;
     }
 
-    if (strcmp(pp_argv[0], "cd") == 0)
+    if (ustreq(pp_argv[0], "cd"))
     {
         if (pp_argv[1] == NULL)
             chdir(getenv("HOME"));
@@ -1183,6 +1184,12 @@ cleanup:
     return res;
 }
 
+static inline int ustreq(char *p_a, char *p_b)
+{
+    if (p_a == NULL || p_b == NULL)
+        return 0;
+    return !strcmp(p_a, p_b);
+}
 #if NEED_VIM_WORKAROUND
 {
 #endif // NEED_VIM_WORKAROUND

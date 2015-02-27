@@ -848,7 +848,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
         for (i = 0; pp_identifiers[i] != NULL; i++)
         {
             char *p_null_identifier[1] = {NULL};
-            state = CREPL_STATE_CPARSER;
+            //state = CREPL_STATE_CPARSER;
 
             userdata.p_cur_id = pp_identifiers[i];
             userdata.found_cur_id = 0;
@@ -866,6 +866,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
                         FAIL_IF(p_cmds == NULL);
                     }
                     FAIL_IF(pp_identifiers[i] == NULL);
+                    FAIL_IF(p_cmds == NULL);
                     strcpy(p_cmds, pp_identifiers[i]);
                     pp_cmds[cmdidx] = p_cmds;
                     p_cmds += strlen(pp_identifiers[i]) + 1;
@@ -908,8 +909,8 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
                         if (pp_cmds[0] == NULL)
                         {
                             p_cmds = (char*)&pp_cmds[num_identifiers + 1];
-                            FAIL_IF(p_cmds == NULL);
                         }
+                        FAIL_IF(p_cmds == NULL);
                         FAIL_IF(pp_identifiers[i] == NULL);
                         strcpy(p_cmds, pp_identifiers[i]);
                         pp_cmds[cmdidx] = p_cmds;

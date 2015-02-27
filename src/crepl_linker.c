@@ -102,7 +102,7 @@ static enum CXChildVisitResult clang_visitor(
     //crepl_dyfn_t *p_dyfn = NULL;
     CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
-    CXString cxstr = {NULL, 0};
+    CXString cxstr;
     CXString cxid = {NULL, 0}; 
     crepl_t *p_context = NULL;
 
@@ -137,8 +137,8 @@ static enum CXChildVisitResult clang_visitor(
                 num_args = clang_Cursor_getNumArguments(cursor);
                 for (i = 0; i < num_args; i++)
                 {
-                    CXString cxkindstr = {NULL, 0};
-                    CXString cxargstr = {NULL, 0};
+                    CXString cxkindstr;
+                    CXString cxargstr;
                     CXCursor argCursor;
                     CXType argType;
 
@@ -163,8 +163,8 @@ static enum CXChildVisitResult clang_visitor(
                 bufstradd(&bufstr, " (*handle)(");
                 for (i = 0; i < num_args; i++)
                 {
-                    CXString cxkindstr = {NULL, 0};
-                    CXString cxargstr = {NULL, 0};
+                    CXString cxkindstr;
+                    CXString cxargstr;
                     CXCursor argCursor;
                     CXType argType;
 
@@ -188,7 +188,7 @@ static enum CXChildVisitResult clang_visitor(
                 bufstradd(&bufstr, "\treturn handle(");
                 for (i = 0; i < num_args; i++)
                 {
-                    CXString cxargstr = {NULL, 0};
+                    CXString cxargstr;
                     CXCursor argCursor;
 
                     argCursor = clang_Cursor_getArgument(cursor, i);
