@@ -62,6 +62,18 @@ typedef struct ustash
     struct priv_usch_stash_item *p_list;
 } ustash;
 
+typedef enum
+{
+    E_USCH_WAT = INT_MIN;
+    E_USCH_PARAM = -2;
+    E_USCH_ALLOC_FAILURE = -1;
+    E_USCH_UNDEFINED = 0;
+    E_USCH_OK = INT_MAX;
+} E_USCH;
+
+#define E_USCH_HANDLE_NOP    0x0
+#define E_USCH_HANDLE_WARN   0x1
+#define E_USCH_HANDLE_ASSERT 0x2
 
 /**
  * @brief free allocated memory referenced by p_ustash.
