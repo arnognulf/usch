@@ -64,11 +64,11 @@ typedef struct ustash
 
 typedef enum
 {
-    E_USCH_WAT = INT_MIN;
-    E_USCH_PARAM = -2;
-    E_USCH_ALLOC_FAILURE = -1;
-    E_USCH_UNDEFINED = 0;
-    E_USCH_OK = INT_MAX;
+    E_USCH_WAT = -3,
+    E_USCH_PARAM = -2,
+    E_USCH_ALLOC_FAILURE = -1,
+    E_USCH_UNDEFINED = 0,
+    E_USCH_OK = 1,
 } E_USCH;
 
 #define E_USCH_HANDLE_NOP    0x0
@@ -143,7 +143,7 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  * @param  arguments 0-n arguments to the function.
  * @return status 0-255 where 0 means success, or 1-255 specific command error.
  */
-#define ucmd(cmd, ...) PRIV_USCH_CMD_ARGS(cmd, ##__VA_ARGS__)
+#define ucmd(...) priv_ucmd_impl(sizeof((char*[]){NULL, ##__VA_ARGS__})/sizeof(char*), (char*[]){NULL, ##__VA_ARGS__})
 
 /*** private APIs below, may change without notice  ***/
 
@@ -158,14 +158,13 @@ static inline int    priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
         size_t num_args,
         char **pp_orig_argv);
 static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, char *p_str, ...);
-static inline int    priv_usch_cmd_impl(size_t num_args, char *p_name, ...);
+//static inline int    priv_usch_cmd_impl(size_t num_args, char *p_name, ...);
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest);
 #define PRIV_USCH_ARGC(...) PRIV_USCH_ARGC_IMPL(__VA_ARGS__,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,N,...) N
 #define PRIV_USCH_STROUT_ARGS(p_ustash, ...) priv_usch_strout_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_STREXP_ARGS(p_ustash, ...) priv_usch_strexp_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_STRJOIN_ARGS(p_ustash, ...) priv_usch_strjoin_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
-#define PRIV_USCH_CMD_ARGS(...) priv_usch_cmd_impl(PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
 struct priv_usch_glob_list
 {
@@ -201,6 +200,19 @@ static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item 
     p_stashitem->p_next = p_ustash->p_list;
     p_ustash->p_list = p_stashitem;
 
+    return status;
+}
+static inline int priv_ucmd_impl(int num, char **pp_args)
+{
+    int i;
+    int status;
+    for (i=0; i < (num - 1); i++)
+    {
+        pp_args[i] = pp_args[i+1]; 
+    }
+    pp_args[num-1] = NULL;
+
+    status = priv_usch_cmd_arr(NULL, NULL, NULL, num - 1, pp_args);
     return status;
 }
 
@@ -568,6 +580,7 @@ end:
     return p_strjoin_retval;
 }
 
+
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest)
 {
     int status = 0;
@@ -834,56 +847,6 @@ end:
     return status;
 }
 
-static inline int priv_usch_cmd_impl(size_t num_args, char *p_name, ...)
-{
-    va_list p_ap;
-    size_t i;
-    char **pp_orig_argv = NULL;
-    int status = 0;
-    char *p_actual_format = NULL;
-
-    if (p_name == NULL)
-    {
-        return -1;
-    }
-
-    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
-    if (pp_orig_argv == NULL)
-    {
-        status = -1;
-        goto end;
-    }
-
-    p_actual_format = calloc(num_args*2, sizeof(char));
-
-    for (i = 0; i < num_args * 2; i += 2)
-    {
-        p_actual_format[i + 0] = '%';
-        p_actual_format[i + 1] = 's';
-    }
-    p_name = p_actual_format;
-
-    va_start(p_ap, p_name);
-
-    for (i = 0; i < num_args; i++)
-    {
-        pp_orig_argv[i] = va_arg(p_ap, char *);
-    }
-
-
-    status = priv_usch_cmd_arr(NULL, NULL, NULL, num_args, pp_orig_argv);
-
-end:
-    if (num_args > 1)
-    {
-        va_end(p_ap);
-    }
-
-    free(pp_orig_argv);
-    free(p_actual_format);
-
-    return status;
-}
 static inline char* priv_usch_strout_impl(ustash *p_ustash, size_t num_args, char *p_name, ...)
 {
     (void)p_ustash;
