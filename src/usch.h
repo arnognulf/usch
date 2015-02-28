@@ -1186,10 +1186,15 @@ cleanup:
 
 static inline int ustreq(char *p_a, char *p_b)
 {
-    if (p_a == NULL || p_b == NULL)
-        return 0;
+    char empty[] = "";
+    if (p_a == NULL)
+        p_a = empty;
+    if (p_b == NULL)
+        p_b = empty;
+
     return !strcmp(p_a, p_b);
 }
+
 #if NEED_VIM_WORKAROUND
 {
 #endif // NEED_VIM_WORKAROUND
