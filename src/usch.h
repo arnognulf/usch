@@ -168,7 +168,6 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,N,...) N
 #define PRIV_USCH_STROUT_ARGS(p_ustash, ...) priv_usch_strout_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 #define PRIV_USCH_STREXP_ARGS(p_ustash, ...) priv_usch_strexp_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
-#define PRIV_USCH_STRJOIN_ARGS(p_ustash, ...) priv_usch_strjoin_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
 struct priv_usch_glob_list
 {
