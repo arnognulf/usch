@@ -66,10 +66,12 @@ typedef enum
 {
     E_USCH_WAT = -3,
     E_USCH_PARAM = -2,
-    E_USCH_ALLOC_FAILURE = -1,
+    E_USCH_ALLOC_FAIL = -1,
     E_USCH_UNDEFINED = 0,
     E_USCH_OK = 1,
 } E_USCH;
+
+#define USCH_CLEANUP_IF((cond), (errcode)) { if (cond) { uerr = (errcode); goto cleanup;};}
 
 #define E_USCH_HANDLE_NOP    0x0
 #define E_USCH_HANDLE_WARN   0x1
@@ -133,7 +135,8 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  * @param  arguments to join into one string
  * @return p_joinedstr a combined string. Returns empty string on error.
  */
-#define ustrjoin(p_ustash, str1, ...) PRIV_USCH_STRJOIN_ARGS((p_ustash), (str1), ##__VA_ARGS__)
+static inline char *ustrjoinv(ustash *p_ustash, const char **pp_strings);
+#define ustrjoin(p_stash, ...) priv_ustrjoin_impl((p_stash), sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
 /* @brief run a command with 0-n arguments
  *
@@ -216,6 +219,22 @@ static inline int priv_ucmd_impl(int num, char **pp_args)
     status = priv_usch_cmd_arr(NULL, NULL, NULL, num - 1, pp_args);
     return status;
 }
+
+static inline char* priv_ustrjoin_impl(ustash *p_stash, int num, const char **pp_args)
+{
+    int i;
+    char *p_str;
+    char **pp_nonconst_args = (char **)pp_args;
+    for (i=0; i < (num - 1); i++)
+    {
+        pp_nonconst_args[i] = pp_nonconst_args [i+1]; 
+    }
+    pp_nonconst_args[num-1] = NULL;
+
+    p_str = ustrjoinv(p_stash, (const char **)pp_nonconst_args);
+    return p_str;
+}
+
 
 static inline void uclear(ustash *p_ustash)
 {
@@ -494,55 +513,27 @@ end:
     return p_trim;
 }
 
-static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, char *p_str1, ...)
+static inline char *ustrjoinv(ustash *p_ustash, const char **pp_strings)
 {
     static char emptystr[1];
     char *p_strjoin_retval = emptystr;
-    char *p_strjoin = NULL;
     char *p_dststr = NULL;
-    char **pp_orig_argv = NULL;
 
     emptystr[0] = '\0';
 
-    va_list p_ap;
     size_t i;
-    char *p_actual_format = NULL;
     struct priv_usch_stash_item *p_blob = NULL;
     size_t total_len = 0;
 
     p_strjoin_retval = emptystr;
 
-    if (p_str1 == NULL)
+    if (pp_strings == NULL)
     {
         goto end;
     }
-
-    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
-    if (pp_orig_argv == NULL)
+    for (i = 0; pp_strings[i] != NULL; i++)
     {
-        goto end;
-    }
-
-    p_actual_format = calloc(num_args*2, sizeof(char));
-    if (p_actual_format == NULL)
-        goto end;
-
-    for (i = 0; i < num_args * 2; i += 2)
-    {
-        p_actual_format[i + 0] = '%';
-        p_actual_format[i + 1] = 's';
-    }
-    p_str1 = p_actual_format;
-
-    va_start(p_ap, p_str1);
-
-    for (i = 0; i < num_args; i++)
-    {
-        pp_orig_argv[i] = va_arg(p_ap, char *);
-    }
-    for (i = 0; pp_orig_argv[i] != NULL; i++)
-    {
-        total_len += strlen(pp_orig_argv[i]);
+        total_len += strlen(pp_strings[i]);
     }
 
     p_blob = calloc(sizeof(struct priv_usch_stash_item) + sizeof(char) * total_len + 1, 1);
@@ -551,10 +542,10 @@ static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, ch
 
     p_dststr = p_blob->str; 
 
-    for (i = 0; pp_orig_argv[i] != NULL; i++)
+    for (i = 0; pp_strings[i] != NULL; i++)
     {
-        size_t len = strlen(pp_orig_argv[i]);
-        memcpy(p_dststr, pp_orig_argv[i], len);
+        size_t len = strlen(pp_strings[i]);
+        memcpy(p_dststr, pp_strings[i], len);
         p_dststr += len;
     }
 
@@ -567,17 +558,7 @@ static inline char *priv_usch_strjoin_impl(ustash *p_ustash, size_t num_args, ch
     }
 
     p_strjoin_retval = p_blob->str;
-    p_strjoin = NULL;
 end:
-    if (num_args > 1)
-    {
-        va_end(p_ap);
-    }
-
-    free(pp_orig_argv);
-    free(p_actual_format);
-    free(p_strjoin);
-
     return p_strjoin_retval;
 }
 
