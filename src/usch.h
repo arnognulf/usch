@@ -71,7 +71,7 @@ typedef enum
     E_USCH_OK = 1,
 } E_USCH;
 
-#define USCH_CLEANUP_IF((cond), (errcode)) { if (cond) { uerr = (errcode); goto cleanup;};}
+//#define USCH_CLEANUP_IF((cond), (errcode)) { if (cond) { uerr = (errcode); goto cleanup;};}
 
 #define E_USCH_HANDLE_NOP    0x0
 #define E_USCH_HANDLE_WARN   0x1
@@ -124,7 +124,8 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  * @param  arguments to perform globbing on 
  * @return pp_exp vector of expanded arguments. Never returns NULL.
  */
-#define ustrexp(p_ustash, item, ...) PRIV_USCH_STREXP_ARGS((p_ustash), (item), ##__VA_ARGS__)
+static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings);
+#define ustrexp(p_stash, ...) priv_ustrexp_impl((p_stash), sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
 /* @brief join 1-n strings to one string
  *
@@ -146,7 +147,7 @@ static inline char *ustrjoinv(ustash *p_ustash, const char **pp_strings);
  * @param  arguments 0-n arguments to the function.
  * @return status 0-255 where 0 means success, or 1-255 specific command error.
  */
-#define ucmd(...) priv_ucmd_impl(sizeof((char*[]){NULL, ##__VA_ARGS__})/sizeof(char*), (char*[]){NULL, ##__VA_ARGS__})
+#define ucmd(...) priv_ucmd_impl(sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
 /*** private APIs below, may change without notice  ***/
 
@@ -161,13 +162,10 @@ static inline int    priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
         struct priv_usch_stash_item **pp_err,
         size_t num_args,
         char **pp_orig_argv);
-static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, char *p_str, ...);
-//static inline int    priv_usch_cmd_impl(size_t num_args, char *p_name, ...);
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest);
 #define PRIV_USCH_ARGC(...) PRIV_USCH_ARGC_IMPL(__VA_ARGS__,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,N,...) N
 #define PRIV_USCH_STROUT_ARGS(p_ustash, ...) priv_usch_strout_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
-#define PRIV_USCH_STREXP_ARGS(p_ustash, ...) priv_usch_strexp_impl((p_ustash), PRIV_USCH_ARGC(__VA_ARGS__), "", ##__VA_ARGS__)
 
 struct priv_usch_glob_list
 {
@@ -233,6 +231,22 @@ static inline char* priv_ustrjoin_impl(ustash *p_stash, int num, const char **pp
     p_str = ustrjoinv(p_stash, (const char **)pp_nonconst_args);
     return p_str;
 }
+
+static inline const char* priv_ustrexp_impl(ustash *p_stash, int num, const char **pp_args)
+{
+    int i;
+    const char *p_str;
+    char **pp_nonconst_args = (char **)pp_args;
+    for (i=0; i < (num - 1); i++)
+    {
+        pp_nonconst_args[i] = pp_nonconst_args [i+1]; 
+    }
+    pp_nonconst_args[num-1] = NULL;
+
+    p_str = ustrexpv(p_stash, (const char **)pp_nonconst_args);
+    return p_str;
+}
+
 
 
 static inline void uclear(ustash *p_ustash)
@@ -317,13 +331,11 @@ end:
     return pp_out;
 }
 
-static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, char *p_str, ...)
+static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings)
 {
-    char **pp_strexp = NULL;
-    va_list p_ap;
+    const char **pp_strexp = NULL;
     size_t i;
     char **pp_orig_argv = NULL;
-    char *p_actual_format = NULL;
     struct priv_usch_stash_item *p_blob = NULL;
     static char* emptyarr[1];
     struct priv_usch_glob_list *p_glob_list = NULL;
@@ -333,40 +345,20 @@ static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, ch
     size_t pos = 0;
     size_t num_globbed_args = 0;
     char *p_strexp_data = NULL;
+    int num_args = 0;
 
-
-    emptyarr[0] = NULL;
+    for (i = 0; pp_strings[i] != NULL; i++)
+    {
+       num_args++; 
+    }
 
     pp_strexp = emptyarr;
 
-    if (p_str == NULL)
+    if (pp_strings == NULL)
     {
         goto end;
     }
 
-    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
-    if (pp_orig_argv == NULL)
-    {
-        goto end;
-    }
-
-    p_actual_format = calloc(num_args*2, sizeof(char));
-    if (p_actual_format == NULL)
-        goto end;
-
-    for (i = 0; i < num_args * 2; i += 2)
-    {
-        p_actual_format[i + 0] = '%';
-        p_actual_format[i + 1] = 's';
-    }
-    p_str = p_actual_format;
-
-    va_start(p_ap, p_str);
-
-    for (i = 0; i < num_args; i++)
-    {
-        pp_orig_argv[i] = va_arg(p_ap, char *);
-    }
     pp_strexp_extmem = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_strexp_extmem == NULL)
         goto end;
@@ -399,19 +391,11 @@ static inline char **priv_usch_strexp_impl(ustash *p_ustash, size_t num_args, ch
         goto end;
     }
 
-    pp_strexp = pp_strexp_copy;
+    pp_strexp = (const char**)pp_strexp_copy;
 end:
     pp_strexp_copy = NULL;
-    if (num_args > 1)
-    {
-        va_end(p_ap);
-    }
     priv_usch_free_globlist(p_glob_list);
-
-    free(pp_orig_argv);
-    free(p_actual_format);
     free(pp_strexp_extmem);
-
     return pp_strexp;
 }
 
