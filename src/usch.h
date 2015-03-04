@@ -29,7 +29,6 @@ extern "C" {
 }
 #endif // NEED_VIM_WORKAROUND
 
-#include <stdarg.h>
 #include <string.h>
 #include <malloc.h>
 #include <errno.h>
@@ -231,7 +230,7 @@ static inline char* priv_ustrout_impl(ustash *p_ustash, int num, const char **pp
     }
     pp_args[num-1] = NULL;
 
-    (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num, pp_args);
+    (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num - 1, pp_args);
     if (priv_usch_stash(p_ustash, p_out) != 0)
     {
         fprintf(stderr, "stash failed, ohnoes!\n");
@@ -835,74 +834,6 @@ end:
     free(pp_argv);
 
     return status;
-}
-
-static inline char* priv_usch_strout_impl(ustash *p_ustash, size_t num_args, char *p_name, ...)
-{
-    (void)p_ustash;
-    (void)num_args;
-    (void)p_name;
-
-
-    char *p_strout = NULL;
-    va_list p_ap;
-    size_t i;
-    const char **pp_orig_argv = NULL;
-    char *p_actual_format = NULL;
-    struct priv_usch_stash_item *p_out = NULL;
-    static char emptystr[1];
-
-    emptystr[0] = '\0';
-
-    p_strout = emptystr;
-
-
-    if (p_name == NULL)
-    {
-        goto end;
-    }
-
-    pp_orig_argv = calloc(num_args + 1, sizeof(char*));
-    if (pp_orig_argv == NULL)
-    {
-        goto end;
-    }
-
-    p_actual_format = calloc(num_args*2, sizeof(char));
-
-    for (i = 0; i < num_args * 2; i += 2)
-    {
-        p_actual_format[i + 0] = '%';
-        p_actual_format[i + 1] = 's';
-    }
-    p_name = p_actual_format;
-
-    va_start(p_ap, p_name);
-
-    for (i = 0; i < num_args; i++)
-    {
-        pp_orig_argv[i] = va_arg(p_ap, char *);
-    }
-    (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num_args, pp_orig_argv);
-    if (priv_usch_stash(p_ustash, p_out) != 0)
-    {
-        fprintf(stderr, "stash failed, ohnoes!\n");
-        goto end;
-    }
-
-    p_strout = p_out->str;
-    p_out = NULL;
-end:
-    if (num_args > 1)
-    {
-        va_end(p_ap);
-    }
-
-    free(pp_orig_argv);
-    free(p_actual_format);
-    free(p_out);
-
-    return p_strout;
 }
 
 /*
