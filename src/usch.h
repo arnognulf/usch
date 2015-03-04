@@ -124,7 +124,7 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  * @param  arguments to perform globbing on 
  * @return pp_exp vector of expanded arguments. Never returns NULL.
  */
-static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings);
+static inline char **ustrexpv(ustash *p_ustash, const char **pp_strings);
 #define ustrexp(p_stash, ...) priv_ustrexp_impl((p_stash), sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
 /* @brief join 1-n strings to one string
@@ -154,14 +154,14 @@ static inline char *ustrjoinv(ustash *p_ustash, const char **pp_strings);
 struct priv_usch_glob_list;
 
 static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item *p_stashitem);
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, /* out */ struct priv_usch_glob_list **pp_glob_list);
+static inline const char **priv_usch_globexpand(const char **pp_orig_argv, size_t num_args, /* out */ struct priv_usch_glob_list **pp_glob_list);
 static inline void   priv_usch_free_globlist(struct priv_usch_glob_list *p_glob_list);
-static inline int ustreq(char *p_a, char *p_b);
+static inline int ustreq(const char *p_a, const char *p_b);
 static inline int    priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in, 
         struct priv_usch_stash_item **pp_out,
         struct priv_usch_stash_item **pp_err,
         size_t num_args,
-        char **pp_orig_argv);
+        const char **pp_orig_argv);
 static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items, char* p_search_item, char** pp_dest);
 #define PRIV_USCH_ARGC(...) PRIV_USCH_ARGC_IMPL(__VA_ARGS__,33,32,31,30,29,28,27,26,25,24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1)
 #define PRIV_USCH_ARGC_IMPL(_1,_2,_3,_4,_5,_6,_7,_8,_9,_10,_11,_12,_13,_14,_15,_16,_17,_18,_19,_20,_21,_22,_23,_24,_25,_26,_27,_28,_29,_30,_31,_32,_33,N,...) N
@@ -180,9 +180,9 @@ struct priv_usch_stash_item
     char str[];
 };
 
-static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out);
+static int priv_usch_run(const char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out);
 static int n = 0; /* number of calls to 'priv_usch_command' */
-static int priv_usch_command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out);
+static int priv_usch_command(const char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out);
 
 static int priv_usch_waitforall(int n);
 
@@ -203,7 +203,7 @@ static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item 
 
     return status;
 }
-static inline int priv_ucmd_impl(int num, char **pp_args)
+static inline int priv_ucmd_impl(int num, const char **pp_args)
 {
     int i;
     int status;
@@ -232,10 +232,10 @@ static inline char* priv_ustrjoin_impl(ustash *p_stash, int num, const char **pp
     return p_str;
 }
 
-static inline const char* priv_ustrexp_impl(ustash *p_stash, int num, const char **pp_args)
+static inline char** priv_ustrexp_impl(ustash *p_stash, int num, const char **pp_args)
 {
     int i;
-    const char *p_str;
+    char **pp_strings;
     char **pp_nonconst_args = (char **)pp_args;
     for (i=0; i < (num - 1); i++)
     {
@@ -243,8 +243,8 @@ static inline const char* priv_ustrexp_impl(ustash *p_stash, int num, const char
     }
     pp_nonconst_args[num-1] = NULL;
 
-    p_str = ustrexpv(p_stash, (const char **)pp_nonconst_args);
-    return p_str;
+    pp_strings = ustrexpv(p_stash, (const char **)pp_nonconst_args);
+    return pp_strings;
 }
 
 
@@ -331,17 +331,16 @@ end:
     return pp_out;
 }
 
-static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings)
+static inline char **ustrexpv(ustash *p_ustash, const char **pp_strings)
 {
-    const char **pp_strexp = NULL;
+    char **pp_strexp = NULL;
     size_t i;
-    char **pp_orig_argv = NULL;
     struct priv_usch_stash_item *p_blob = NULL;
     static char* emptyarr[1];
     struct priv_usch_glob_list *p_glob_list = NULL;
     size_t total_len = 0;
     char **pp_strexp_copy = NULL;
-    char **pp_strexp_extmem = NULL;
+    const char **pp_strexp_extmem = NULL;
     size_t pos = 0;
     size_t num_globbed_args = 0;
     char *p_strexp_data = NULL;
@@ -359,7 +358,7 @@ static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings)
         goto end;
     }
 
-    pp_strexp_extmem = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
+    pp_strexp_extmem = priv_usch_globexpand(pp_strings, num_args, &p_glob_list);
     if (pp_strexp_extmem == NULL)
         goto end;
 
@@ -391,7 +390,7 @@ static inline const char *ustrexpv(ustash *p_ustash, const char **pp_strings)
         goto end;
     }
 
-    pp_strexp = (const char**)pp_strexp_copy;
+    pp_strexp = pp_strexp_copy;
 end:
     pp_strexp_copy = NULL;
     priv_usch_free_globlist(p_glob_list);
@@ -654,9 +653,9 @@ end:
     return status;
 }
 #endif // 0
-static inline char **priv_usch_globexpand(char **pp_orig_argv, size_t num_args, struct priv_usch_glob_list **pp_glob_list)
+static inline const char **priv_usch_globexpand(const char **pp_orig_argv, size_t num_args, struct priv_usch_glob_list **pp_glob_list)
 {
-    char **pp_expanded_argv = NULL;
+    const char **pp_expanded_argv = NULL;
     struct priv_usch_glob_list *p_glob_list = NULL;
     struct priv_usch_glob_list *p_current_glob_item = NULL;
     size_t i, j;
@@ -737,12 +736,12 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
         struct priv_usch_stash_item **pp_out,
         struct priv_usch_stash_item **pp_err,
         size_t num_args,
-        char **pp_orig_argv)
+        const char **pp_orig_argv)
 {
     (void)pp_in;
     (void)pp_err;
     struct priv_usch_glob_list *p_glob_list = NULL;
-    char **pp_argv = NULL;
+    const char **pp_argv = NULL;
     int argc = 0;
     int status = 0;
     int i = 0;
@@ -822,7 +821,7 @@ static inline char* priv_usch_strout_impl(ustash *p_ustash, size_t num_args, cha
     char *p_strout = NULL;
     va_list p_ap;
     size_t i;
-    char **pp_orig_argv = NULL;
+    const char **pp_orig_argv = NULL;
     char *p_actual_format = NULL;
     struct priv_usch_stash_item *p_out = NULL;
     static char emptystr[1];
@@ -894,7 +893,7 @@ end:
  * So if 'command' returns a file descriptor, the next 'command' has this
  * descriptor as its 'input'.
  */
-static int priv_usch_command(char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out)
+static int priv_usch_command(const char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out)
 {
     struct priv_usch_stash_item *p_priv_usch_stash_item = NULL;
     int pipettes[2];
@@ -924,7 +923,7 @@ STDIN --> O --> O --> O --> STDOUT
                 dup2(input, STDIN_FILENO);
         }
 
-        if (execvp(pp_argv[0], pp_argv) == -1)
+        if (execvp((const char*)(pp_argv[0]), (char**)pp_argv) == -1)
         {
             fprintf(stderr, "execv failed!\n");
             _exit(EXIT_FAILURE); // If child fails
@@ -1040,7 +1039,7 @@ static int priv_usch_waitforall(int child_pid)
 }
 
 
-static int priv_usch_run(char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out)
+static int priv_usch_run(const char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out)
 {
     if (pp_argv[0] != NULL) {
         n += 1;
@@ -1148,9 +1147,9 @@ cleanup:
     return res;
 }
 
-static inline int ustreq(char *p_a, char *p_b)
+static inline int ustreq(const char *p_a, const char *p_b)
 {
-    char empty[] = "";
+    const char empty[] = "";
     if (p_a == NULL)
         p_a = empty;
     if (p_b == NULL)
