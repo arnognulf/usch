@@ -113,7 +113,8 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
  * @param  cmd command to run
  * @return stdout contents
  */
-#define ustrout(p_ustash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_ustash), (cmd), ##__VA_ARGS__)
+//#define ustrout(p_ustash, cmd, ...) PRIV_USCH_STROUT_ARGS((p_ustash), (cmd), ##__VA_ARGS__)
+#define ustrout(p_ustash, ...) priv_ustrout_impl(p_ustash, sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
 /* @brief expand multiple strings with globbing to vector
  *
@@ -217,6 +218,31 @@ static inline int priv_ucmd_impl(int num, const char **pp_args)
     return status;
 }
 
+static inline char* priv_ustrout_impl(ustash *p_ustash, int num, const char **pp_args)
+{
+    int i;
+    static char emptystr[] = "";
+    char *p_strout = emptystr;
+    struct priv_usch_stash_item *p_out = NULL;
+
+    for (i=0; i < (num - 1); i++)
+    {
+        pp_args[i] = pp_args[i+1]; 
+    }
+    pp_args[num-1] = NULL;
+
+    (void)priv_usch_cmd_arr(NULL, &p_out, NULL, num, pp_args);
+    if (priv_usch_stash(p_ustash, p_out) != 0)
+    {
+        fprintf(stderr, "stash failed, ohnoes!\n");
+        goto end;
+    }
+end:
+    p_strout = p_out->str;
+    p_out = NULL;
+
+    return p_strout;
+}
 static inline char* priv_ustrjoin_impl(ustash *p_stash, int num, const char **pp_args)
 {
     int i;
