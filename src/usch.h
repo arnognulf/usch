@@ -29,18 +29,15 @@ extern "C" {
 }
 #endif // NEED_VIM_WORKAROUND
 
-#include <string.h>
-#include <malloc.h>
-#include <errno.h>
-#include <glob.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/unistd.h>
-#include <sys/wait.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <ctype.h>
+#include <glob.h>     // for glob_t, glob, globfree, etc
+#include <stddef.h>   // for size_t
+#include <stdio.h>    // for NULL, fprintf, stderr, etc
+#include <stdlib.h>   // for calloc, free, malloc, etc
+#include <string.h>   // for strlen, memcpy, strcmp, etc
+#include <sys/stat.h> // for stat
+#include <sys/wait.h> // for WCONTINUED, WIFCONTINUED, etc
+#include <unistd.h>   // for dup2, close, chdir, etc
+
 
 /******************************* public declarations **********************************/
 

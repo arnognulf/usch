@@ -5,7 +5,7 @@
 
 #include "crepl_types.h"
 #include "crepl_debug.h"
-#include "clang-c/Index.h"
+#include <clang-c/Index.h>
 #include "bufstr.h"
 #include "strutils.h"
 #include "usch.h"
