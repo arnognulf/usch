@@ -29,6 +29,7 @@ clean:
 		rm -rf $(MAIN_OBJECTS) $(TEST_OBJECTS) test_num_args tests
 
 install: usch tests run_tests
+	install -m 0644 crepl.h $(PREFIX)/include
 	install -m 0644 usch.h $(PREFIX)/include
 	install -m 0755 usch $(PREFIX)/bin
 	install -m 0644 uschrc.h $(PREFIX)/etc

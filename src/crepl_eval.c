@@ -593,6 +593,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
     p_stmt = ustrjoin(&s, "struct crepl_t;\n", \
                           "#include <usch.h>\n", \
+                          "#include <crepl.h>\n", \
                           "#include \"includes.h\"\n", \
                           "#include \"definitions.h\"\n", \
                           "#include \"trampolines.h\"\n");
@@ -621,7 +622,8 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     {
         for (i = 0; pp_cmds[i] != NULL; i++)
         {
-            if (strcmp(pp_cmds[i], "cd") != 0)
+            if (strcmp(pp_cmds[i], "cd") != 0 &&
+                strcmp(pp_cmds[i], "")   != 0) /* #include cmd leaves the definiton empty */
             {
                 p_stmt = ustrjoin(&s, p_stmt,
                                       "#ifndef ", definition.p_symname,"\n"
