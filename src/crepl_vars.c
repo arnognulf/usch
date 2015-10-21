@@ -3,7 +3,7 @@
 #include "crepl_types.h"
 #include "crepl_debug.h"
 
-int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
+int crepl_define_var(crepl_t *p_context, size_t var_size, char *p_defname)
 {
     int status = 0;
     if (p_context == NULL || p_defname == NULL)
@@ -40,7 +40,7 @@ end:
     free(p_def);
     return status;
 }
-void crepl_undef(crepl_t *p_context, char *p_defname)
+void crepl_undef_var(crepl_t *p_context, char *p_defname)
 {
     if (p_context == NULL || p_defname == NULL)
         return;
@@ -75,7 +75,7 @@ int crepl_load(crepl_t *p_context, char *p_defname, void *p_data)
     }
     return status;
 }
-size_t get_type_len(char *p_defname)
+static size_t get_type_len(char *p_defname)
 {
     size_t i;
     size_t last_type_pos = 0;
@@ -194,4 +194,43 @@ end:
     return status;
 }
 
+int crepl_define_macro(struct crepl_t *p_crepl,
+                       char *p_macro_name,
+                       char *p_macro_body)
+{
+    assert(0); // not done!
+    int status = 0;
+    if (p_crepl == NULL || p_macro_name == NULL || p_macro_body == NULL)
+        return -1;
+    crepl_def_t *p_defs = p_crepl->p_defs;
+    crepl_def_t *p_def = NULL;
+    void *p_body_data = NULL;
+    HASH_FIND_STR(p_defs, p_macro_name, p_def);
+
+    FAIL_IF(p_def != NULL);
+
+    p_def = calloc(sizeof(crepl_def_t) + strlen(p_macro_name) + 1, 1);
+    FAIL_IF(p_def == NULL);
+
+    p_body_data = calloc(strlen(p_macro_body) + 1, 1);
+
+    FAIL_IF(p_body_data == NULL);
+
+    p_def->p_body_data = p_body_data;
+    strcpy(p_def->defname, p_macro_name);
+
+    HASH_ADD_STR(p_crepl->p_defs, defname, p_def);
+    p_def = NULL;
+    p_body_data = NULL;
+end:
+    free(p_body_data);
+    free(p_def);
+    //return status;
+}
+
+int crepl_undef_macro(struct crepl_t *p_crepl, char *p_macro_name)
+{
+    // no implementation!
+    return -1;
+}
 

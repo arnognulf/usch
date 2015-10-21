@@ -15,6 +15,10 @@ static inline void uschrc(ustash *p_mem)
     
     // uncomment the following line to give a nice welcoming message upon shell start.
     //printf("Usch says Hello!\n")
+    //crepl_lib("git2");
+    crepl_lib(p_crepl_context, "git2");
+    crepl_include(p_crepl_context, "git2");
+    crepl_define(p_crepl_context, "HAS_LIBGIT2");
 }
 
 // the following function is run before each prompt is displayed

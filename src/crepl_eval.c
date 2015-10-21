@@ -128,7 +128,7 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
                 i++;
                 continue;
             }
-            bufstradd(p_bufstr, "(void)crepl_define(p_context, sizeof(");
+            bufstradd(p_bufstr, "(void)crepl_define_var(p_context, sizeof(");
             bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
             bufstradd(p_bufstr, "), \"");
             bufstradd(p_bufstr, &p_defs_line[start]);
@@ -138,7 +138,7 @@ static int append_definitions(crepl_t *p_context, bufstr_t *p_bufstr, char *p_de
     }
     if (!has_semicolons && strlen(get_symname(&p_defs_line[start])) > 0)
     {
-        bufstradd(p_bufstr, "(void)crepl_define(p_context, sizeof(");
+        bufstradd(p_bufstr, "(void)crepl_define_var(p_context, sizeof(");
         bufstradd(p_bufstr, get_symname(&p_defs_line[start]));
         bufstradd(p_bufstr, "), \"");
         bufstradd(p_bufstr, &p_defs_line[start]);

@@ -45,13 +45,16 @@ void crepl_destroy(struct crepl_t *p_crepl);
 
 crepl_options crepl_getoptions(struct crepl_t *p_crepl);
 
-int crepl_define(struct crepl_t *p_crepl, size_t var_size, char *p_defname);
-void crepl_undef(struct crepl_t *p_crepl, char *p_defname);
+int crepl_define_var(struct crepl_t *p_crepl, size_t var_size, char *p_defname);
+void crepl_undef_var(struct crepl_t *p_crepl, char *p_defname);
 int crepl_load(struct crepl_t *p_crepl, char *p_defname, void *p_data);
 int crepl_store(struct crepl_t *p_crepl, char *p_defname, void *p_data);
 
 int crepl_define_fn(struct crepl_t *p_crepl, char *p_fndefname, char *p_body);
 int crepl_undef_fn(struct crepl_t *p_crepl, char *p_fndefname);
+
+int crepl_define_macro(struct crepl_t *p_crepl, char *p_macro_name, char *p_macro_body);
+int crepl_undef_macro(struct crepl_t *p_crepl, char *p_macro_name);
 
 int crepl_pathhash(struct crepl_t *p_crepl);
 int crepl_is_cmd(struct crepl_t *p_crepl, char *p_item);
@@ -61,11 +64,11 @@ char **crepl_getldpath();
 const char* crepl_getprompt(struct crepl_t *p_crepl);
 
 typedef enum {
-CREPL_STATE_ERROR = 0,
-CREPL_STATE_CPARSER = 1,
-CREPL_STATE_CMDSTART = 2,
-CREPL_STATE_CMDARG = 3,
-CREPL_STATE_PREPROCESSOR = 4,
+    CREPL_STATE_ERROR = 0,
+    CREPL_STATE_CPARSER = 1,
+    CREPL_STATE_CMDSTART = 2,
+    CREPL_STATE_CMDARG = 3,
+    CREPL_STATE_PREPROCESSOR = 4,
 } crepl_state_t;
 int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line);
 

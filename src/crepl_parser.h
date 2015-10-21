@@ -9,11 +9,8 @@ typedef struct
 int get_identifiers(char *p_line, int *p_count, char ***ppp_identifiers_out);
 int identifier_pos(char *p_line);
 char* stripwhite(char *p_line);
-//size_t get_type_len(char *p_defname);
 int parse_line(char *p_input, usch_def_t *p_definition);
 char* crepl_parent_identifier(char *p_str);
-//int has_trailing_identifier(char *p_line, char **pp_identifiers);
-//int has_unclosed_parenthesis(char *p_line);
 int is_definition(char *p_input);
 int count_spaces(char *p_input);
 

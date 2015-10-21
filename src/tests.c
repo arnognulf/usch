@@ -25,7 +25,7 @@
 #include <stdlib.h>                     // for free
 #include <string.h>                     // for strcmp
 #include "../external/uthash/src/uthash.h"  // for UT_hash_handle
-#include "crepl.h"                      // for crepl_define, crepl_load, etc
+#include "crepl.h"                      // for crepl_define_var, crepl_load, etc
 #include "crepl_parser.h"               // for stripwhite, identifier_pos
 #include "minunit.h"                    // for mu_assert, mu_run_test
 #include "usch.h"                       // for ucmd, uclear, etc
@@ -212,14 +212,14 @@ static char *test_crepl_vars()
 
     error = crepl_create(&p_context, options);
     mu_assert("error: crepl_create(&p_context) != 0", error == 0);
-    error = crepl_define(p_context, sizeof(int_test), "int int_test");
-    mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
-    crepl_undef(p_context, "int int_test");
+    error = crepl_define_var(p_context, sizeof(int_test), "int int_test");
+    mu_assert("error: crepl_define_var(p_context, sizeof(int_test) != 0", error == 0);
+    crepl_undef_var(p_context, "int int_test");
     error = crepl_load(p_context, "int int_test", (void*)&int_test);
     mu_assert("error: crepl_load(p_context, \"int int_test\", (void*)&int_test) == 0", error != 0);
 
-    error = crepl_define(p_context, sizeof(int_test), "int int_test");
-    mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
+    error = crepl_define_var(p_context, sizeof(int_test), "int int_test");
+    mu_assert("error: crepl_define_var(p_context, sizeof(int_test) != 0", error == 0);
 
     int_test = 42;
     error = crepl_store(p_context, "int int_test", (void*)&int_test);
@@ -232,28 +232,28 @@ static char *test_crepl_vars()
     mu_assert("error: int_test != 42", int_test == 42);
 
     float_test = 3.14f;
-    crepl_define(p_context, sizeof(float_test), "float float_test");
+    crepl_define_var(p_context, sizeof(float_test), "float float_test");
     crepl_store(p_context, "float float_test", (void*)&float_test);
     float_test = 994.0f;
     crepl_load(p_context, "float float_test", (void*)&float_test);
     mu_assert("error: float_test != 3.14", float_test == 3.14f);
 
     p_str = right_str;
-    crepl_define(p_context, sizeof(p_str), "char *p_str");
+    crepl_define_var(p_context, sizeof(p_str), "char *p_str");
     crepl_store(p_context, "char *p_str", (void*)&p_str);
     p_str = wrong_str;
     crepl_load(p_context, "char *p_str", (void*)&p_str);
     mu_assert("error: p_str != right_str", strcmp(p_str, right_str) == 0);
 
     double_test = 3.14;
-    crepl_define(p_context, sizeof(double_test), "double double_test");
+    crepl_define_var(p_context, sizeof(double_test), "double double_test");
     crepl_store(p_context, "double double_test", (void*)&double_test);
     double_test = 994.0f;
     crepl_load(p_context, "double double_test", (void*)&double_test);
     mu_assert("error: double_test != 3.14", double_test == 3.14);
 
     char_test = 'a';
-    crepl_define(p_context, sizeof(char_test), "char char_test");
+    crepl_define_var(p_context, sizeof(char_test), "char char_test");
     crepl_store(p_context, "char char_test", (void*)&char_test);
     char_test = 'f';
     crepl_load(p_context, "char char_test", (void*)&char_test);
