@@ -10,7 +10,7 @@
 #include "strutils.h"
 #include "usch.h"
 
-static int has_symbol(struct crepl_t *p_context, const char* p_sym);
+static int validate_symbol(struct crepl_t *p_context, const char* p_sym);
 
 char **crepl_getldpath()
 {
@@ -99,7 +99,6 @@ static enum CXChildVisitResult clang_visitor(
     bufstr_t bufstr = {NULL, 0};
     int status = 0;
     char *p_fnstr = NULL;
-    //crepl_dyfn_t *p_dyfn = NULL;
     CXString cxretkindstr = {NULL, 0};
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr;
@@ -120,7 +119,7 @@ static enum CXChildVisitResult clang_visitor(
                 CXType return_type;
 
                 ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
-                ENDOK_IF(!has_symbol(p_context, clang_getCString(cxstr)));
+                FAIL_IF(validate_symbol(p_context, clang_getCString(cxstr)) == 1);
                 bufstr.p_str = calloc(1024, 1);
                 bufstr.len = 1024;
                 FAIL_IF(bufstr.p_str == NULL);
@@ -201,10 +200,6 @@ static enum CXChildVisitResult clang_visitor(
                     clang_disposeString(cxargstr);
                 }
                 bufstradd(&bufstr, ");\n}\n");
-                //p_dyfn = calloc(strlen(clang_getCString(cxid)) + 1 + sizeof(crepl_dyfn_t), 1);
-                //FAIL_IF(p_dyfn == NULL);
-                //strcpy(p_dyfn->dyfnname, clang_getCString(cxid));
-                //p_dyfn->p_dyfndef = bufstr.p_str;
                 free(bufstr.p_str);
                 bufstr.p_str = NULL;
 
@@ -216,21 +211,23 @@ static enum CXChildVisitResult clang_visitor(
                 break;
             }
     }
-    //p_dyfn = NULL;
     free(p_fnstr);
     p_fnstr = NULL;
 end:
+    if (status != 0)
+    {
+        res = CXChildVisit_Break;
+    }
     clang_disposeString(cxstr);
     clang_disposeString(cxid);
     clang_disposeString(cxretkindstr);
     (void)status;
     free(bufstr.p_str);
     free(p_fnstr);
-    //free(p_dyfn);
     return res;
 }
 
-static int has_symbol(struct crepl_t *p_context, const char* p_sym) 
+static int validate_symbol(struct crepl_t *p_context, const char* p_sym) 
 {
     int status = 0;
     int symbol_found = 0;
@@ -241,8 +238,14 @@ static int has_symbol(struct crepl_t *p_context, const char* p_sym)
 
     p_lib = p_context->p_libs;
     
+    if (p_lib == NULL)
+        fprintf(stderr, "usch: error: cannot resolve header symbols without at least one library added.\n");
     FAIL_IF(p_lib == NULL);
 
+    // check if intrinsic
+    ENDOK_IF(strlen(p_sym) > 1 &&
+             p_sym[0] == '_' &&
+             p_sym[1] == '_');
     do 
     {
         p_handle = p_lib->p_handle;
@@ -256,7 +259,10 @@ static int has_symbol(struct crepl_t *p_context, const char* p_sym)
     } while (p_lib != NULL);
 
 end:
-    (void)status;
+    if (symbol_found == 1)
+        fprintf(stderr, "usch: error: could not resolve: %s\n", p_sym);
+    if (status != 0)
+        symbol_found = 1;
     return symbol_found;
 }
 static char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
