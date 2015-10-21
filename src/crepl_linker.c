@@ -119,7 +119,7 @@ static enum CXChildVisitResult clang_visitor(
                 CXType return_type;
 
                 ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
-                FAIL_IF(validate_symbol(p_context, clang_getCString(cxstr)) == 1);
+                QUIET_FAIL_IF(validate_symbol(p_context, clang_getCString(cxstr)) == 1);
                 bufstr.p_str = calloc(1024, 1);
                 bufstr.len = 1024;
                 FAIL_IF(bufstr.p_str == NULL);
@@ -240,7 +240,7 @@ static int validate_symbol(struct crepl_t *p_context, const char* p_sym)
     
     if (p_lib == NULL)
         fprintf(stderr, "usch: error: cannot resolve header symbols without at least one library added.\n");
-    FAIL_IF(p_lib == NULL);
+    QUIET_FAIL_IF(p_lib == NULL);
 
     // check if intrinsic
     ENDOK_IF(strlen(p_sym) > 1 &&
@@ -260,7 +260,7 @@ static int validate_symbol(struct crepl_t *p_context, const char* p_sym)
 
 end:
     if (symbol_found == 1)
-        fprintf(stderr, "usch: error: could not resolve: %s\n", p_sym);
+        fprintf(stderr, "usch: error: could not resolve: %s, did you forget to add the corresponding library?\n", p_sym);
     if (status != 0)
         symbol_found = 1;
     return symbol_found;
@@ -344,7 +344,7 @@ static char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
     }
     if (p_foundlib == NULL)
     {
-        printf("lib not found\n");
+        fprintf(stderr, "usch: error: could not find library\n");
     }
 
 end:
@@ -365,7 +365,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
     FAIL_IF(p_context == NULL || p_libname_in == NULL);
    
     p_libname = get_fullname(p_context, p_libname_in);
-    FAIL_IF(p_libname == NULL);
+    QUIET_FAIL_IF(p_libname == NULL);
 
     p_handle = dlopen(p_libname, RTLD_LAZY);
     FAIL_IF(p_handle == NULL);
@@ -414,18 +414,33 @@ static int loadsyms_from_header_ok(crepl_t *p_context, char *p_includefile)
             clang_getTranslationUnitCursor(p_tu),
             clang_visitor,
             (void*)p_context);
-    FAIL_IF(visitorstatus != 0);
+    QUIET_FAIL_IF(visitorstatus != 0);
 end:
     clang_disposeTranslationUnit(p_tu);
     clang_disposeIndex(p_idx);
     return status;
 }
 
+static int compile_header_ok(crepl_t *p_context, char *p_includefile)
+{
+    (void)p_context;
+    int status = 0;
+    ustash s = {0};
+    char *p_tmp_s = ustrjoin(&s, p_context->tmpdir, "/tmp.s");
+
+    QUIET_FAIL_IF(ucmd("cc", "-S", "-pipe", p_includefile, "-o", p_tmp_s) != 0);
+    ucmd("rm", "-f", p_tmp_s);
+end:
+    uclear(&s);
+    return status;
+}
+
+
 int crepl_include(struct crepl_t *p_context, char *p_header)
 {
     int status = 0;
     char *p_tmpheader = NULL;
-    char tmp_h[] = "tmp.h";
+    char tmp_c[] = "tmp.c";
     FILE *p_includefile = NULL;
     char *p_tmpdir = NULL;
     crepl_inc_t *p_inc = NULL;
@@ -435,14 +450,13 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
 
     p_incs = p_context->p_incs;
     p_tmpdir = p_context->tmpdir;
-    p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_h) + 1, 1);
+    p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_c) + 1, 1);
     HASH_FIND_STR(p_incs, p_header, p_inc);
     FAIL_IF(p_inc != NULL);
-    
+
     strcpy(p_tmpheader, p_tmpdir);
     p_tmpheader[strlen(p_tmpheader)] = '/';
-    strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_h);
-    //printf("header: %s\n", p_tmpheader);
+    strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_c);
 
     p_includefile = fopen(p_tmpheader, "w");
     FAIL_IF(p_includefile == NULL);
@@ -461,7 +475,8 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     if (p_includefile)
         fclose(p_includefile);
     p_includefile = NULL;
-    FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
+    QUIET_FAIL_IF(compile_header_ok(p_context, p_tmpheader) != 0);
+    QUIET_FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
 
     p_inc = calloc(strlen(p_header) + 1 + sizeof(crepl_inc_t), 1);
     FAIL_IF(p_inc == NULL);

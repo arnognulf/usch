@@ -30,7 +30,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-// /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "usch.h"
 #include "crepl_debug.h"
 #include "bufstr.h"
@@ -389,55 +388,6 @@ end:
     return status;
 }
 
-#if 0
-static int pre_assign(char *p_input, char **pp_pre_assign)
-{
-    int status = 0;
-    char *p_pre_assign = NULL;
-    int i = 0;
-
-    p_pre_assign = strdup(p_input);
-
-    FAIL_IF(p_pre_assign == NULL);
-
-    i += count_spaces(p_pre_assign);
-    while (p_pre_assign[i] != '\0')
-    {
-        if (p_input[i] == '=')
-            p_pre_assign[i] = '\0';
-        i++;
-    }
-    trim_end_space(p_pre_assign);
-    *pp_pre_assign = p_pre_assign;
-    p_pre_assign = NULL;
-end:
-    free(p_pre_assign);
-    return status;
-}
-
-static int post_assign(char *p_input, char **pp_post_assign)
-{
-    int status = 0;
-    char *p_post_assign = NULL;
-    int i = 0;
-
-    p_post_assign = calloc(strlen(p_input) + 1, 1);
-
-    FAIL_IF(p_post_assign == NULL);
-
-    while (p_input[i] != '\0')
-    {
-        if (p_input[i] == '=')
-            strcpy(p_post_assign, &p_input[i+1]);
-        i++;
-    }
-    *pp_post_assign = p_post_assign;
-    p_post_assign = NULL;
-end:
-    free(p_post_assign);
-    return status;
-}
-#endif // 0
 #define usch_shell_cc(...) ucmd("gcc", ##__VA_ARGS__)
 
 int crepl_eval(crepl_t *p_context, char *p_input_line)
@@ -552,7 +502,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             FAIL_IF(preproc_cmd.p_str == NULL);
 
             bufstradd(&preproc_cmd, "\t(void)crepl_lib(p_crepl_context, \"");
-            ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#lib ")]);
             bufstradd(&preproc_cmd, "\");");
             free(input.p_str);
@@ -570,7 +519,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
             FAIL_IF(preproc_cmd.p_str == NULL);
 
             bufstradd(&preproc_cmd, "\t(void)crepl_include(p_crepl_context, \"");
-            ///usr/lib/x86_64-linux-gnu/libm.so"); // "m"
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#include ")]);
             bufstradd(&preproc_cmd, "\");");
             free(input.p_str);
@@ -623,7 +571,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
         for (i = 0; pp_cmds[i] != NULL; i++)
         {
             if (strcmp(pp_cmds[i], "cd") != 0 &&
-                strcmp(pp_cmds[i], "")   != 0) /* #include cmd leaves the definiton empty */
+                strcmp(definition.p_symname, "")   != 0) /* #include and #lib directives leaves the definiton empty */
             {
                 p_stmt = ustrjoin(&s, p_stmt,
                                       "#ifndef ", definition.p_symname,"\n"
@@ -721,8 +669,6 @@ end:
     free(p_context->p_defs_line);
     p_context->p_defs_line = NULL;
     uclear(&s);
-
-    //free(pp_cmds);
 
     if (p_stmt_c != NULL)
         fclose(p_stmt_c);
