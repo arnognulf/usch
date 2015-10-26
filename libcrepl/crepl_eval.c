@@ -41,8 +41,9 @@
 #include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
-#ifndef USCH_INSTALL_PREFIX
-#define USCH_INSTALL_PREFIX "/usr/local"
+#ifndef CMAKE_INSTALL_PREFIX
+#define CMAKE_INSTALL_PREFIX "/usr/local"
+#warning hardcoding CMAKE_INSTALL_PREFIX
 #endif
 
 #define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
@@ -688,7 +689,7 @@ static char* find_uschrc(ustash *p_stash)
     }
     else
     {
-        p_uschrc_cand = ustrjoin(p_stash, USCH_INSTALL_PREFIX, "/etc/uschrc.h");
+        p_uschrc_cand = ustrjoin(p_stash, CMAKE_INSTALL_PREFIX, "/etc/uschrc.h");
         if (stat(p_uschrc_cand, &sb) != -1)
         {
             p_fullpath_uschrc_h = p_uschrc_cand;
