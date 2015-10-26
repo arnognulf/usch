@@ -1,16 +1,7 @@
-USCH - C shell which uses the C language
-========================================
+USCH - C99 shell
+================
 
-USCH is a shell where C is the command language.
-
-
-Executables not colliding with definitions will be declared as variable argument macros with 0-n parameters.
-
-
-USCH allows for "aliases", running a function at startup, and prompt customization in /etc/uschrc.h or ~/.uschrc.h .
-
-
-There is also support for dynamically loading libraries and including headers.
+USCH is an experimental shell to make scripting and command execution in a REPL possible in straight C99.
 
 About
 -----
@@ -26,15 +17,18 @@ What differs USCH from other C REPL implementations is that it's fully Free Soft
 Usage
 -----
 USCH consists of the usch.h shell API and the REPL interpreter crepl.
-The USCH shell is started by entering:
+The USCH shell is started by entering the following at the shell prompt:
 
-    ./usch
+    usch
 
-At the shell prompt.
+A familar "c-shell" style prompt will be displayed:
+
+    user@host:/home/user% 
+
+This prompt can be changed by copying uschrc.h to your home directory as .uschrc.h and modifying it.
 
 
-
-For any identifiers that have not yet been defined, the command path is searched for a command with the name of the identifier.
+When entering a command, any identifiers that have not yet been defined, the command path is searched for a command with the name of the identifier.
 
 
 The command will then be defined as a variadic macro with zero or more arguments, where each argument is passed as a string.
@@ -76,6 +70,7 @@ Dynamic libraries can be loaded at the command prompt, with the #lib preprocesso
     #lib m
 
 After a library has been successfully loaded, its header can be loaded:
+
     #include <math.h>
 
 After the header has been loaded, all symbols will be resolved and trampoline functions calling into the dynamic library will be defined.
@@ -103,7 +98,7 @@ Saving the strings in the stash gives the benefit of not having to store all ret
 
 Available commands
 -------------------
-Within the REPL, all commands not colliding with C functions or macros are declared as:
+Within the REPL, all commands that can be represented as valid identifiers (that means no "7z", "./configure" and "gcc-4.8") and not colliding with C functions or macros are declared as:
 
     int cmd("arg1", "arg2", ..., "arg n");
 
@@ -121,6 +116,11 @@ Within the REPL and when including usch.h in a standalone .c file the following 
     // run a command, and return stdout as a buffer
     char* ustrout(usch_stash_t *p_memstash, char *p_item1, ...)
 
+To run commands that can not be represented as valid identifiers, the ucmd() macro may be called with the command as its arguments:
+
+    ucmd("gcc-4.8", "foo.c", "-o", "bar.c")
+
+
 Using USCH as a scripting language
 ----------------------------------
 Creating an "alias" or enabling to call a command from a C99 file can be done as follows:
@@ -129,10 +129,10 @@ Creating an "alias" or enabling to call a command from a C99 file can be done as
 
 Similar to "for" in bash, iterating over a file matching pattern can be done as follows:
 
-    // usch_stash_t is a linked list where allocations are stashed
+    // ustash_t is a linked list where allocations are stashed
     ustash_t s = {NULL};
     char **hdrs;
-    // usch_strexp will never return NULL
+    // ustrexp will never return NULL
     for (hdrs = ustrexp(&s, "*.h"); *hdrs != NULL; hdrs++)
     {
         printf("%s\n", hdrs[i]);
