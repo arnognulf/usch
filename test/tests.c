@@ -61,8 +61,8 @@ static char * test_strexp()
         mu_assert("error: pp_out[3] != NULL", pp_out[3] == NULL);
     }
     {
-        char **pp_out = ustrexp(&s, "crepl_ev*.c");
-        mu_assert("error: pp_out[0] != crepl_eval.c", strcmp(pp_out[0], "crepl_eval.c") == 0);
+        char **pp_out = ustrexp(&s, "CMakeCa*.txt");
+        mu_assert("error: pp_out[0] != CMakeCache.txt", strcmp(pp_out[0], "CMakeCache.txt") == 0);
         mu_assert("error: pp_out[1] != NULL", pp_out[1] == NULL);
     }
 cleanup: 
@@ -93,13 +93,13 @@ cleanup:
 }
 #endif // 0
 
-#define test_num_args(...) ucmd("./test_num_args", ##__VA_ARGS__)
+#define test_num_args(...) ucmd("test/test_num_args", ##__VA_ARGS__)
 
 static char *test_ucmd()
 {
     char *p_message = NULL;
     int num_args;
-    num_args = test_num_args("testdir/*");
+    num_args = test_num_args("../test/testdir/*");
     mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 4);
     num_args = test_num_args("arg1");
     mu_assert("error: test_num_args(\"arg1\") != 2", num_args == 2);
@@ -121,7 +121,7 @@ static char *test_ucmd_pipe()
 {
     char *p_message = NULL;
     int num_args;
-    num_args = test_ls("testdir/*", "|", "wc", "-l");
+    num_args = test_ls("../test/testdir/*", "|", "wc", "-l");
     mu_assert("error: test_num_args(\"testdir/*\") != 4", num_args == 0);
 
     return NULL;
@@ -462,7 +462,7 @@ static char *test_ufiletostrv()
 {
     ustash s = {0};
     char *p_message = NULL;
-    char **pp_strv = ufiletostrv(&s, "testdir/a", "\n");
+    char **pp_strv = ufiletostrv(&s, "../test/testdir/a", "\n");
 
     mu_assert("error ufiletostrv()", strcmp(pp_strv[0], "abc") == 0);
     mu_assert("error ufiletostrv()", strcmp(pp_strv[1], "def") == 0);
