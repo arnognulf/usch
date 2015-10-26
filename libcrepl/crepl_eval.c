@@ -45,7 +45,7 @@
 #define USCH_INSTALL_PREFIX "/usr/local"
 #endif
 
-#define CREPL_DYN_FUNCNAME "usch_dyn_func"
+#define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
 
 static char* find_uschrc(ustash *p_stash);
 

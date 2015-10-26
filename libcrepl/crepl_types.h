@@ -2,7 +2,7 @@
 #include "../external/uthash/src/uthash.h"
 #include "usch.h"
 #include "crepl.h"
-#define CREPL_DYN_FUNCNAME "usch_dyn_func"
+#define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
 #define CREPL_DEFINE_SIZE 8
 typedef struct crepl_def_t
 {

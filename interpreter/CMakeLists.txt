@@ -5,6 +5,6 @@ add_executable (usch linenoise_main.c)
 # Link the executable to the Hello library. Since the Hello library has
 # public include directories we will use those link directories when building
 # helloDemo
-target_link_libraries (usch LINK_PUBLIC crepl)
+target_link_libraries (usch LINK_PUBLIC crepl commander linenoise dl clang)
 
 install(TARGETS usch RUNTIME DESTINATION bin)
