@@ -39,7 +39,16 @@ typedef struct
     int single_instance;
 } crepl_options;
 
-int crepl_create(struct crepl_t **p_crepl, crepl_options options);
+/**
+ * @brief Create crepl context object
+ *  
+ * Create crepl context object with specified options
+ *   
+ * @param pp_crepl created context object
+ * @param options creation options
+ */
+int crepl_create(struct crepl_t **pp_crepl, crepl_options options);
+
 int crepl_eval(struct crepl_t *p_crepl, char *p_input);
 void crepl_destroy(struct crepl_t *p_crepl);
 
@@ -69,8 +78,19 @@ CREPL_STATE_PREPROCESSOR = 4,
 } crepl_state_t;
 int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line);
 
-int crepl_finalize(struct crepl_t *p_context, char *p_unfinalized, char **pp_finalized);
-int crepl_preparse(struct crepl_t *p_crepl, const char *p_input, crepl_state_t *p_state);
+int crepl_finalize(struct crepl_t *p_crepl,
+                   char *p_unfinalized,
+                   char **pp_finalized);
+
+int crepl_preparse(struct crepl_t *p_crepl,
+                   const char *p_input,
+                   crepl_state_t *p_state);
+
+int crepl_complete(struct crepl_t *p_crepl,
+                   const char *p_input,
+                   int *p_num_results,
+                   char **pp_results);
+
 #if DUMMY_VIM_FIX_NEEDED
 {
 #endif // DUMMY_VIM_FIX_NEEDED

@@ -316,7 +316,6 @@ char* stripwhite(char *string)
    return p_s;
 }
 
- 
 static int is_system_cmd(char *p_cmd)
 {
     struct stat sb;

@@ -389,7 +389,7 @@ end:
     return status;
 }
 
-#define usch_shell_cc(...) ucmd("gcc", ##__VA_ARGS__)
+#define usch_shell_cc(...) ucmd("clang", ##__VA_ARGS__)
 
 int crepl_eval(crepl_t *p_context, char *p_input_line)
 {
@@ -614,7 +614,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     p_tempdylib[tempdir_len] = '/';
     strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
     p_tempdylib[dylib_length-1] = '\0';
-    if (usch_shell_cc("-I/home/arno/Workspace/usch2/src", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
+    if (usch_shell_cc("-O0", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
         ENDOK_IF(1);
