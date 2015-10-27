@@ -1,7 +1,7 @@
-USCH - C99 shell
-================
+USCH - C shell with vanilla C syntax
+====================================
 
-USCH is an experimental shell to make scripting and command execution in a REPL possible in straight C99.
+USCH is an experimental shell to make scripting and command execution in a REPL possible in vanilla C.
 
 About
 -----
