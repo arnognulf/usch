@@ -37,6 +37,7 @@ extern "C" {
 #include <sys/stat.h> // for stat
 #include <sys/wait.h> // for WCONTINUED, WIFCONTINUED, etc
 #include <unistd.h>   // for dup2, close, chdir, etc
+#include <limits.h>
 
 
 /**************************** public declarations ***************************/
@@ -60,11 +61,13 @@ typedef struct ustash
 
 typedef enum
 {
+    E_USCH_MIN = INT_MIN,
     E_USCH_WAT = -3,
     E_USCH_PARAM = -2,
     E_USCH_ALLOC_FAIL = -1,
     E_USCH_UNDEFINED = 0,
     E_USCH_OK = 1,
+    E_USCH_MAX = INT_MAX
 } E_USCH;
 
 #define E_USCH_HANDLE_NOP    0x0
@@ -184,7 +187,7 @@ static int priv_usch_waitforall(int n);
 #define USCH_FD_READ  0
 #define USCH_FD_WRITE 1
 
-/******************************* implementations **********************************/
+/**************************** implementations ******************************/
 
 static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item *p_stashitem)
 {

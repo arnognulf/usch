@@ -210,8 +210,7 @@ static char *test_crepl_vars()
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
-    error = crepl_create(&p_context, options);
-    mu_assert("error: crepl_create(&p_context) != 0", error == 0);
+    mu_assert("error: crepl_create(&p_context) != 0", CREPL_OK(crepl_create(&p_context, options)));
     error = crepl_define(p_context, sizeof(int_test), "int int_test");
     mu_assert("error: crepl_define(p_context, sizeof(int_test) != 0", error == 0);
     crepl_undef(p_context, "int int_test");
@@ -271,8 +270,7 @@ static char *test_crepl_dyld()
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
-    error = crepl_create(&p_context, options);
-    mu_assert("error: crepl_create(&p_context) != 0", error == 0);
+    mu_assert("error: crepl_create(&p_context) != 0", CREPL_OK(crepl_create(&p_context, options)));
 #ifdef __x86_64__
     error = crepl_lib(p_context, "/usr/lib/x86_64-linux-gnu/libm.so"); // "m"
 #else
@@ -500,6 +498,20 @@ cleanup:
     uclear(&s);
     return p_message;
 }
+    
+static char *test_creplcomplete()
+{
+    char *p_message = NULL;
+    struct crepl_t *p_crepl = NULL;
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
+    mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
+cleanup:
+    
+    return NULL;
+}
+
+
 static char * all_tests()
 {
     mu_run_test(test_strexp);
@@ -518,6 +530,7 @@ static char * all_tests()
     mu_run_test(test_ustrjoin);
     mu_run_test(test_ufiletostrv);
     mu_run_test(test_ustrvtofile);
+    mu_run_test(test_creplcomplete);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }

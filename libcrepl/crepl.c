@@ -29,8 +29,8 @@
 #include <dirent.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <clang-c/Index.h>
 
-// /usr/lib/llvm-3.4/include/clang-c/Index.h
 #include "usch.h"
 #include "crepl_debug.h"
 #include "crepl_parser.h"
@@ -49,7 +49,7 @@
 
 static void copy_options(crepl_t* p_context, crepl_options *p_options);
 
-int crepl_create(crepl_t **pp_context, crepl_options options)
+E_CREPL crepl_create(crepl_t **pp_context, crepl_options options)
 {
     int status = 0;
     crepl_t *p_context = NULL;
@@ -60,6 +60,13 @@ int crepl_create(crepl_t **pp_context, crepl_options options)
     char dir_template[] = "/tmp/crepl-XXXXXX";
     char *p_tempdir = NULL;
     char **pp_ldpath = NULL;
+    CXIndex p_idx = NULL;
+
+    if (pp_context == NULL)
+        return E_CREPL_PARAM;
+
+    p_idx = clang_createIndex(0, 0);
+    FAIL_IF(p_idx == NULL);
 
     p_context = calloc(sizeof(crepl_t) + strlen(dir_template) + 1, 1);
     FAIL_IF(p_context == NULL);
@@ -109,7 +116,10 @@ end:
     free(p_sym);
     free(p_def);
     free(p_context);
-    return status;
+    if (status != 0)
+        return E_CREPL_WAT;
+
+    return E_CREPL_OK;
 }
 // http://stackoverflow.com/questions/2256945/removing-a-non-empty-directory-programmatically-in-c-or-c
 static int remove_directory(const char *p_path)

@@ -89,7 +89,7 @@ end:
     return pp_ldpath;
 }
 
-static enum CXChildVisitResult clang_visitor(
+static enum CXChildVisitResult visitorImpl(
         CXCursor cursor, 
         CXCursor parent, 
         CXClientData p_client_data)
@@ -412,7 +412,7 @@ static int loadsyms_from_header_ok(crepl_t *p_context, char *p_includefile)
 
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
-            clang_visitor,
+            visitorImpl,
             (void*)p_context);
     QUIET_FAIL_IF(visitorstatus != 0);
 end:

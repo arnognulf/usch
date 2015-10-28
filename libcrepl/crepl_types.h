@@ -2,6 +2,8 @@
 #include "../external/uthash/src/uthash.h"
 #include "usch.h"
 #include "crepl.h"
+#include <clang-c/Index.h>
+
 #define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
 #define CREPL_DEFINE_SIZE 8
 typedef struct crepl_def_t
@@ -48,7 +50,7 @@ typedef struct crepl_inc_t
     char incname[];
 } crepl_inc_t;
 
-typedef struct crepl_t 
+typedef struct crepl_t
 {
     char **pp_ldpath;
     char **pp_cmds;
@@ -62,6 +64,8 @@ typedef struct crepl_t
     char *p_prompt;
     ustash prompt_stash;
     char is_initialized;
+    CXIndex p_idx;
+    CXTranslationUnit p_tu;
     crepl_options options;
     char tmpdir[];
 } crepl_t;

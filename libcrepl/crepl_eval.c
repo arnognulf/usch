@@ -43,7 +43,7 @@
 
 #ifndef CMAKE_INSTALL_PREFIX
 #define CMAKE_INSTALL_PREFIX "/usr/local"
-#warning hardcoding CMAKE_INSTALL_PREFIX
+//#warning hardcoding CMAKE_INSTALL_PREFIX
 #endif
 
 #define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
@@ -216,11 +216,10 @@ end:
 
 
 
-static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
+static int write_definitions_h(ustash *p_s, crepl_t *p_context, char *p_tempdir)
 {
     int status = 0;
     char definitions_h_filename[] = "definitions.h";
-    size_t filename_length;
     size_t tempdir_len;
     char *p_definitionsfile = NULL;
     FILE *p_definitions_h = NULL;
@@ -236,15 +235,8 @@ static int write_definitions_h(crepl_t *p_context, char *p_tempdir)
 
     p_defs = p_context->p_defs;
     tempdir_len = strlen(p_tempdir);
-    filename_length = tempdir_len + 1 + strlen(definitions_h_filename) + 1;
-    p_definitionsfile = calloc(filename_length, 1);
-    FAIL_IF(p_definitionsfile == NULL);
 
-    strcpy(p_definitionsfile, p_tempdir);
-
-    p_definitionsfile[tempdir_len] = '/';
-    strcpy(&p_definitionsfile[tempdir_len + 1], definitions_h_filename);
-    p_definitionsfile[filename_length-1] = '\0';
+    p_definitionsfile = ustrjoin(p_s, p_tempdir, "/", definitions_h_filename);
     p_definitions_h = fopen(p_definitionsfile, "w+");
     FAIL_IF(p_definitions_h == NULL);
     bufstradd(&definitions_h, p_context->p_defs_line);
@@ -294,7 +286,6 @@ end:
     free(definitions_h.p_str);
     if(p_definitions_h)
         fclose(p_definitions_h);
-    free(p_definitionsfile);
     return status;
 }
 
@@ -352,6 +343,7 @@ end:
 static int write_trampolines_h(crepl_t *p_context, char *p_tempdir)
 {
     int status = 0;
+    ustash s = {0};
     char trampolines_h_filename[] = "trampolines.h";
     size_t filename_length;
     size_t tempdir_len;
@@ -364,14 +356,9 @@ static int write_trampolines_h(crepl_t *p_context, char *p_tempdir)
     p_dyfns = p_context->p_dyfns;
     tempdir_len = strlen(p_tempdir);
     filename_length = tempdir_len + 1 + strlen(trampolines_h_filename) + 1;
-    p_trampolinesfile = calloc(filename_length, 1);
-    FAIL_IF(p_trampolinesfile == NULL);
 
-    strcpy(p_trampolinesfile, p_tempdir);
 
-    p_trampolinesfile[tempdir_len] = '/';
-    strcpy(&p_trampolinesfile[tempdir_len + 1], trampolines_h_filename);
-    p_trampolinesfile[filename_length-1] = '\0';
+    p_trampolinesfile = ustrjoin(&s, p_tempdir, "/", trampolines_h_filename);
     p_trampolines_h = fopen(p_trampolinesfile, "w+");
     FAIL_IF(p_trampolines_h == NULL);
     HASH_ITER(hh, p_dyfns, p_dyfn, p_tmp)
@@ -385,7 +372,7 @@ static int write_trampolines_h(crepl_t *p_context, char *p_tempdir)
 end:
     if(p_trampolines_h)
         fclose(p_trampolines_h);
-    free(p_trampolinesfile);
+    uclear(&s);
     return status;
 }
 
@@ -407,8 +394,6 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     char *p_error = NULL;
     char **pp_path = NULL;
     char **pp_cmds = NULL;
-    size_t filename_length;
-    size_t dylib_length;
     bufstr_t input;
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
@@ -438,14 +423,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     FAIL_IF(pp_path[0] == NULL);
     p_tempdir = p_context->tmpdir;
     FAIL_IF(p_tempdir == NULL);
-    tempdir_len = strlen(p_tempdir);
-    filename_length = tempdir_len + 1 + strlen(expr_c_filename) + 1;
-    p_tempfile = malloc(filename_length);
-    FAIL_IF(p_tempfile == NULL);
-    strcpy(p_tempfile, p_tempdir);
-    p_tempfile[tempdir_len] = '/';
-    strcpy(&p_tempfile[tempdir_len + 1], expr_c_filename);
-    p_tempfile[filename_length-1] = '\0';
+    p_tempfile = ustrjoin(&s, p_tempdir, "/", expr_c_filename);
     p_stmt_c = fopen(p_tempfile, "w+");
     FAIL_IF(p_stmt_c == NULL);
 
@@ -535,7 +513,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
 
 
     FAIL_IF(write_includes_h(p_context, p_tempdir) != 0);
-    FAIL_IF(write_definitions_h(p_context, p_tempdir) != 0);
+    FAIL_IF(write_definitions_h(&s, p_context, p_tempdir) != 0);
     FAIL_IF(write_trampolines_h(p_context, p_tempdir) != 0);
 
     FAIL_IF(parse_line(input.p_str, &definition) < 1);
@@ -607,13 +585,7 @@ int crepl_eval(crepl_t *p_context, char *p_input_line)
     fclose(p_stmt_c);
     p_stmt_c = NULL;
     p_stmt = NULL;
-    dylib_length = tempdir_len + 1 + strlen(dylib_filename) + 1;
-    p_tempdylib = malloc(dylib_length);
-    FAIL_IF(p_tempdylib == NULL);
-    strcpy(p_tempdylib, p_tempdir);
-    p_tempdylib[tempdir_len] = '/';
-    strcpy(&p_tempdylib[tempdir_len + 1], dylib_filename);
-    p_tempdylib[dylib_length-1] = '\0';
+    p_tempdylib = ustrjoin(&s, p_tempdir, "/", dylib_filename);
     if (usch_shell_cc("-O0", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_tempfile) != 0) 
     {
         fprintf(stderr, "usch: compile error\n");
@@ -661,7 +633,6 @@ end:
     free(definition.p_symname);
     if (p_handle)
         dlclose(p_handle);
-    free(p_tempfile);
     free(p_pre_assign);
     free(p_post_assign);
     free(input.p_str);

@@ -29,6 +29,20 @@ extern "C" {
 }
 #endif // DUMMY_VIM_FIX_NEEDED
 #include <stdlib.h>
+#include <limits.h>
+
+// CREPL error codes
+typedef enum
+{
+    E_CREPL_MIN = INT_MIN,
+    E_CREPL_WAT = -3,
+    E_CREPL_PARAM = -2,
+    E_CREPL_ALLOC_FAIL = -1,
+    E_CREPL_UNDEFINED = 0,
+    E_CREPL_OK = 1,
+    E_CREPL_MAX = INT_MAX
+} E_CREPL;
+#define CREPL_OK(x) (x) == E_CREPL_OK
 
 struct crepl_t;
 
@@ -39,6 +53,17 @@ typedef struct
     int single_instance;
 } crepl_options;
 
+// CREPL parser states
+typedef enum
+{
+CREPL_STATE_ERROR = 0,
+CREPL_STATE_CPARSER = 1,
+CREPL_STATE_CMDSTART = 2,
+CREPL_STATE_CMDARG = 3,
+CREPL_STATE_PREPROCESSOR = 4,
+} crepl_state_t;
+
+
 /**
  * @brief Create crepl context object
  *  
@@ -47,7 +72,7 @@ typedef struct
  * @param pp_crepl created context object
  * @param options creation options
  */
-int crepl_create(struct crepl_t **pp_crepl, crepl_options options);
+E_CREPL crepl_create(struct crepl_t **pp_crepl, crepl_options options);
 
 int crepl_eval(struct crepl_t *p_crepl, char *p_input);
 void crepl_destroy(struct crepl_t *p_crepl);
@@ -69,13 +94,6 @@ int crepl_include(struct crepl_t *p_crepl, char *p_header);
 char **crepl_getldpath();
 const char* crepl_getprompt(struct crepl_t *p_crepl);
 
-typedef enum {
-CREPL_STATE_ERROR = 0,
-CREPL_STATE_CPARSER = 1,
-CREPL_STATE_CMDSTART = 2,
-CREPL_STATE_CMDARG = 3,
-CREPL_STATE_PREPROCESSOR = 4,
-} crepl_state_t;
 int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line);
 
 int crepl_finalize(struct crepl_t *p_crepl,
@@ -86,10 +104,12 @@ int crepl_preparse(struct crepl_t *p_crepl,
                    const char *p_input,
                    crepl_state_t *p_state);
 
-int crepl_complete(struct crepl_t *p_crepl,
+E_CREPL crepl_complete(struct crepl_t *p_crepl,
                    const char *p_input,
-                   int *p_num_results,
-                   char **pp_results);
+                   char **pp_results,
+                   int *p_num_results);
+
+E_CREPL crepl_reload_tu(struct crepl_t *p_crepl);
 
 #if DUMMY_VIM_FIX_NEEDED
 {

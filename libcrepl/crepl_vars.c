@@ -57,6 +57,7 @@ void crepl_undef(crepl_t *p_context, char *p_defname)
     }
     return;
 }
+
 int crepl_load(crepl_t *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
@@ -75,6 +76,7 @@ int crepl_load(crepl_t *p_context, char *p_defname, void *p_data)
     }
     return status;
 }
+
 size_t get_type_len(char *p_defname)
 {
     size_t i;
@@ -105,8 +107,6 @@ static char *get_symname(char *p_defname)
     }
     return p_symname + 1;
 }
-
-
 
 static void print_updated_variables(char *p_defname, void *p_data)
 {
@@ -193,5 +193,4 @@ end:
     free(p_def);
     return status;
 }
-
 
