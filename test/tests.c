@@ -502,6 +502,7 @@ cleanup:
 static char *test_creplcomplete()
 {
     char *p_message = NULL;
+    (void)p_message;
     struct crepl_t *p_crepl = NULL;
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));

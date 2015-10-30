@@ -455,20 +455,20 @@ static enum CXChildVisitResult clang_preparseVisitor(
     CXString cxstr;
     CXString cxparstr;
     preparse_userdata_t *p_userdata = NULL;
-    struct crepl_t *p_context = NULL;
+    struct crepl_t *p_crepl = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
     cxparstr = clang_getCursorSpelling(parent);
     p_userdata = (preparse_userdata_t*)p_client_data;
     FAIL_IF(p_userdata == NULL);
     FAIL_IF(p_userdata->p_context == NULL);
-    p_context = p_userdata->p_context ;
+    p_crepl = p_userdata->p_context ;
 
     switch (cursor.kind) 
     {
         case CXCursor_FunctionDecl:
             {
-                if (crepl_getoptions(p_context).verbosity >= 11)
+                if (crepl_getoptions(p_crepl).verbosity >= 11)
                     fprintf(stderr, "clang_preparseVisitor: clang_getCString(cxstr): \"%s\"\n", clang_getCString(cxstr));
 
                 if ((strncmp(clang_getCString(cxstr), p_userdata->p_cur_id, strlen(p_userdata->p_cur_id)) == 0) && strlen(clang_getCString(cxstr)) == strlen(p_userdata->p_cur_id))
@@ -542,7 +542,7 @@ static const char* set_preparsefile_content(ustash *p_s, char* p_line, char **pp
     return p_content;
 }
 
-static int resolve_identifier(struct crepl_t *p_context,
+static int resolve_identifier(struct crepl_t *p_crepl,
                  char *p_parsefile_fullname,
                  char *p_line,
                  preparse_userdata_t *p_userdata,
@@ -564,7 +564,7 @@ static int resolve_identifier(struct crepl_t *p_context,
 
     p_parsefile = fopen(p_parsefile_fullname, "w");
     FAIL_IF(p_parsefile == NULL);
-    if (crepl_getoptions(p_context).verbosity >= 11)
+    if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "resolve_identifier: p_filecontent: \"%s\"\n", p_filecontent);
 
     FAIL_IF(!fwrite_ok(p_filecontent, p_parsefile));
@@ -575,7 +575,7 @@ static int resolve_identifier(struct crepl_t *p_context,
     p_tu = clang_parseTranslationUnit(p_idx, p_parsefile_fullname, NULL, 0, NULL, 0, 0);
     FAIL_IF(p_tu == NULL);
 
-    p_userdata->p_context = p_context;
+    p_userdata->p_context = p_crepl;
 
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
@@ -588,7 +588,7 @@ static int resolve_identifier(struct crepl_t *p_context,
     p_tu = NULL;
     p_idx = NULL;
 
-    if (crepl_getoptions(p_context).verbosity >= 11)
+    if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "resolve_identifier: p_parsefile_fullname: \"%s\" found: %d\n", p_userdata->p_cur_id, p_userdata->found_cur_id);
 
 
@@ -684,9 +684,9 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
     }
 }
 
-int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
+int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line_c)
 {
-    (void)p_context;
+    (void)p_crepl;
     int status = 0;
     int i = 0;
     int start = 0;
@@ -696,11 +696,11 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
     int num_defs = 0;
     char *p_line = NULL;
 
-    FAIL_IF(p_context == NULL || p_line_c == NULL);
-    free(p_context->p_nodef_line);
-    p_context->p_nodef_line = NULL;
-    free(p_context->p_defs_line);
-    p_context->p_defs_line = NULL;
+    FAIL_IF(p_crepl == NULL || p_line_c == NULL);
+    free(p_crepl->p_nodef_line);
+    p_crepl->p_nodef_line = NULL;
+    free(p_crepl->p_defs_line);
+    p_crepl->p_defs_line = NULL;
 
     p_line = strdup(p_line_c);
     FAIL_IF(p_line == NULL);
@@ -783,11 +783,11 @@ int crepl_parsedefs(struct crepl_t *p_context, char *p_line_c)
         }
         i++;
     }
-    if (crepl_getoptions(p_context).verbosity >= 11)
+    if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "crepl_parsedefs(): p_defs: \"%s\n\"", p_defs);
-    p_context->p_nodef_line = p_line;
+    p_crepl->p_nodef_line = p_line;
     p_line = NULL;
-    p_context->p_defs_line = p_defs;
+    p_crepl->p_defs_line = p_defs;
     p_defs = NULL;
 end:
     free(p_defs);
@@ -795,7 +795,7 @@ end:
     return status;
 }
 
-int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t *p_state)
+int crepl_preparse(struct crepl_t *p_crepl, const char *p_input, crepl_state_t *p_state)
 {
     int i;
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -824,7 +824,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
     p_line_copy = strdup(p_input);
     FAIL_IF(p_line_copy == NULL);
     p_line = stripwhite(p_line_copy);
-    if (p_context->options.verbosity >= 11)
+    if (p_crepl->options.verbosity >= 11)
         fprintf(stderr, "crepl_preparse(): p_line=%s\n", p_line);
     
     status = get_identifiers(p_line, &num_identifiers, &pp_identifiers);
@@ -838,11 +838,11 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
         // NULL terminate vector before it's content
         pp_cmds[num_identifiers] = NULL;
 
-        p_parsefile_fullname = calloc(strlen(p_context->tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
+        p_parsefile_fullname = calloc(strlen(p_crepl->p_tmpdir) + 1 + strlen(preparse_filename) + 1, 1);
         FAIL_IF(p_parsefile_fullname == NULL);
-        strcpy(p_parsefile_fullname, p_context->tmpdir);
-        p_parsefile_fullname[strlen(p_context->tmpdir)] = '/';
-        strcpy(&p_parsefile_fullname[strlen(p_context->tmpdir) + 1], preparse_filename);
+        strcpy(p_parsefile_fullname, p_crepl->p_tmpdir);
+        p_parsefile_fullname[strlen(p_crepl->p_tmpdir)] = '/';
+        strcpy(&p_parsefile_fullname[strlen(p_crepl->p_tmpdir) + 1], preparse_filename);
 
         for (i = 0; pp_identifiers[i] != NULL; i++)
         {
@@ -852,7 +852,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
             userdata.p_cur_id = pp_identifiers[i];
             userdata.found_cur_id = 0;
 
-            FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, p_null_identifier));
+            FAIL_IF(resolve_identifier(p_crepl, p_parsefile_fullname, p_line, &userdata, p_null_identifier));
 
             // identifier is not defined
             if (userdata.found_cur_id == 0)
@@ -891,7 +891,7 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
                     // try to define the identifier as a function
 
                     userdata.found_cur_id = 0;
-                    FAIL_IF(resolve_identifier(p_context, p_parsefile_fullname, p_line, &userdata, pp_identifiers));
+                    FAIL_IF(resolve_identifier(p_crepl, p_parsefile_fullname, p_line, &userdata, pp_identifiers));
                     
 
                     // unknown error
@@ -942,10 +942,10 @@ int crepl_preparse(struct crepl_t *p_context, const char *p_input, crepl_state_t
         }
     }
     *p_state = state;
-    if (p_context->options.verbosity >= 11)
+    if (p_crepl->options.verbosity >= 11)
         fprintf(stderr, "crepl_preparse(): state=%d\n", (unsigned int)state);
-    free(p_context->pp_cmds);
-    p_context->pp_cmds = pp_cmds;
+    free(p_crepl->pp_cmds);
+    p_crepl->pp_cmds = pp_cmds;
     pp_cmds = NULL;
 end:
     p_cmds = NULL;
@@ -957,7 +957,7 @@ end:
 
     return status;
 }
-static size_t find_matching(struct crepl_t *p_context, char end, char *p_incomplete)
+static size_t find_matching(struct crepl_t *p_crepl, char end, char *p_incomplete)
 {
     // TODO: why 1?
     size_t i = 1;
@@ -967,7 +967,7 @@ static size_t find_matching(struct crepl_t *p_context, char end, char *p_incompl
     if (p_incomplete[0] == '\0')
 	return 0;
 
-    if (p_context->options.verbosity >= 11)
+    if (p_crepl->options.verbosity >= 11)
         fprintf(stderr, "find_matching(): p_incomplete=%s\n", p_incomplete);
 
     while (p_incomplete[i] != '\0')
@@ -1003,27 +1003,27 @@ static size_t find_matching(struct crepl_t *p_context, char end, char *p_incompl
         {
             case '{':
                 {
-                    i += find_matching(p_context, '}', &p_incomplete[i]);
+                    i += find_matching(p_crepl, '}', &p_incomplete[i]);
                     break;
                 }
             case '(':
                 {
-                    i += find_matching(p_context, ')', &p_incomplete[i]);
+                    i += find_matching(p_crepl, ')', &p_incomplete[i]);
                     break;
                 }
             case '[':
                 {
-                    i += find_matching(p_context, ']', &p_incomplete[i]);
+                    i += find_matching(p_crepl, ']', &p_incomplete[i]);
                     break;
                 }
             case '"':
                 {
-                    i += find_matching(p_context, '"', &p_incomplete[i]);
+                    i += find_matching(p_crepl, '"', &p_incomplete[i]);
                     break;
                 }
             case '\'':
                 {
-                    i += find_matching(p_context, '\'', &p_incomplete[i]);
+                    i += find_matching(p_crepl, '\'', &p_incomplete[i]);
                     break;
                 }
             default:
@@ -1040,12 +1040,12 @@ static size_t find_matching(struct crepl_t *p_context, char end, char *p_incompl
     }
     return i;
 }
-int crepl_finalize(struct crepl_t *p_context, char *p_unfinalized, char **pp_finalized)
+int crepl_finalize(struct crepl_t *p_crepl, char *p_unfinalized, char **pp_finalized)
 {
     int status = 0;
     char *p_finalized = NULL;
 
-    if (p_context->options.verbosity >= 11)
+    if (p_crepl->options.verbosity >= 11)
         fprintf(stderr, "crepl_finalize(): p_unfinalized = %s\n", p_unfinalized);
 
 
@@ -1053,9 +1053,9 @@ int crepl_finalize(struct crepl_t *p_context, char *p_unfinalized, char **pp_fin
     FAIL_IF(p_finalized == NULL);
     memcpy(p_finalized, p_unfinalized, strlen(p_unfinalized));
 
-    find_matching(p_context, '\0', p_finalized);
+    find_matching(p_crepl, '\0', p_finalized);
 
-    if (p_context->options.verbosity >= 11)
+    if (p_crepl->options.verbosity >= 11)
         fprintf(stderr, "crepl_finalize(): p_finalized = %s\n", p_finalized);
 
     *pp_finalized = p_finalized;

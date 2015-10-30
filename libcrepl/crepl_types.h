@@ -4,8 +4,19 @@
 #include "crepl.h"
 #include <clang-c/Index.h>
 
+#define CREPL_STMT_C_FN       "stmt.c"
+#define CREPL_DEFS_H_FN       "defs.h"
+#define CREPL_INCS_H_FN       "incs.h"
+#define CREPL_TRAMPOLINES_H_FN "trampolines.h"
 #define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
 #define CREPL_DEFINE_SIZE 8
+
+#ifndef CMAKE_INSTALL_PREFIX
+#define CMAKE_INSTALL_PREFIX "/usr/local"
+//#warning hardcoding CMAKE_INSTALL_PREFIX
+#endif
+
+
 typedef struct crepl_def_t
 {
     UT_hash_handle hh;
@@ -52,6 +63,7 @@ typedef struct crepl_inc_t
 
 typedef struct crepl_t
 {
+    ustash stash;
     char **pp_ldpath;
     char **pp_cmds;
     char *p_nodef_line;
@@ -67,7 +79,12 @@ typedef struct crepl_t
     CXIndex p_idx;
     CXTranslationUnit p_tu;
     crepl_options options;
-    char tmpdir[];
+    char *p_tmpdir;
+    char *p_stmt_c;
+    char *p_defs_h;
+    char *p_incs_h;
+    char *p_trampolines_h;
+    char *p_stmt_header;
 } crepl_t;
 
 struct usch_ids

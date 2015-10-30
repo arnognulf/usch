@@ -51,6 +51,22 @@ E_CREPL crepl_complete(struct crepl_t *p_crepl,
         return E_CREPL_PARAM;
 
     CXTranslationUnit p_tu = p_crepl->p_tu;
+    struct CXUnsavedFile unsaved_contents;
+
+    unsaved_contents.FileName = p_crepl->p_stmt_c;
+    unsaved_contents.Contents = p_crepl->p_stmt_c;
+    unsaved_contents.Length = 0;
+
+    CXCodeCompleteResults* clang_codeCompleteAt(
+            p_tu,
+            p_crepl->p_stmt_c /* const char *complete_filename, */
+            /* unsigned    complete_line */,
+            /* unsigned    complete_column */,
+            struct CXUnsavedFile *  unsaved_files,
+            1,
+            0 /* unsigned    options */
+            )
+
 
     return E_CREPL_OK;
 }

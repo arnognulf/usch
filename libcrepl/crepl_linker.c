@@ -10,7 +10,7 @@
 #include "strutils.h"
 #include "usch.h"
 
-static int validate_symbol(struct crepl_t *p_context, const char* p_sym);
+static int validate_symbol(struct crepl_t *p_crepl, const char* p_sym);
 
 char **crepl_getldpath()
 {
@@ -103,12 +103,12 @@ static enum CXChildVisitResult visitorImpl(
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr;
     CXString cxid = {NULL, 0}; 
-    crepl_t *p_context = NULL;
+    crepl_t *p_crepl = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
-    p_context = (crepl_t*)p_client_data;
-    FAIL_IF(p_context == NULL);
-    p_dyfns = p_context->p_dyfns;
+    p_crepl = (crepl_t*)p_client_data;
+    FAIL_IF(p_crepl == NULL);
+    p_dyfns = p_crepl->p_dyfns;
     (void)p_dyfns;
     switch (cursor.kind) 
     {
@@ -119,7 +119,7 @@ static enum CXChildVisitResult visitorImpl(
                 CXType return_type;
 
                 ENDOK_IF(strncmp(clang_getCString(cxstr), "__builtin_", strlen("__builtin_")) == 0);
-                QUIET_FAIL_IF(validate_symbol(p_context, clang_getCString(cxstr)) == 1);
+                QUIET_FAIL_IF(validate_symbol(p_crepl, clang_getCString(cxstr)) == 1);
                 bufstr.p_str = calloc(1024, 1);
                 bufstr.len = 1024;
                 FAIL_IF(bufstr.p_str == NULL);
@@ -227,7 +227,7 @@ end:
     return res;
 }
 
-static int validate_symbol(struct crepl_t *p_context, const char* p_sym) 
+static int validate_symbol(struct crepl_t *p_crepl, const char* p_sym) 
 {
     int status = 0;
     int symbol_found = 0;
@@ -236,7 +236,7 @@ static int validate_symbol(struct crepl_t *p_context, const char* p_sym)
     int (*dyn_func)();
     crepl_lib_t *p_lib = NULL;
 
-    p_lib = p_context->p_libs;
+    p_lib = p_crepl->p_libs;
     
     if (p_lib == NULL)
         fprintf(stderr, "usch: error: cannot resolve header symbols without at least one library added.\n");
@@ -265,7 +265,7 @@ end:
         symbol_found = 1;
     return symbol_found;
 }
-static char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
+static char *get_fullname(struct crepl_t *p_crepl, char *p_libname_in)
 {
     bufstr_t namecand;
     struct stat sb;
@@ -278,7 +278,7 @@ static char *get_fullname(struct crepl_t *p_context, char *p_libname_in)
     namecand.len = 256;
     namecand.p_str = calloc(namecand.len, 1);
 
-    pp_ldpath = p_context->pp_ldpath;
+    pp_ldpath = p_crepl->pp_ldpath;
     FAIL_IF(pp_ldpath == NULL);
 
     if (stat(p_libname_in, &sb) == 0)
@@ -354,7 +354,7 @@ end:
 
 }
 
-int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
+int crepl_lib(struct crepl_t *p_crepl, char *p_libname_in)
 {
     int status = 0;
     crepl_lib_t *p_lib = NULL;
@@ -362,9 +362,9 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
     void *p_handle = NULL;
     char *p_libname = NULL;
 
-    FAIL_IF(p_context == NULL || p_libname_in == NULL);
+    FAIL_IF(p_crepl == NULL || p_libname_in == NULL);
    
-    p_libname = get_fullname(p_context, p_libname_in);
+    p_libname = get_fullname(p_crepl, p_libname_in);
     QUIET_FAIL_IF(p_libname == NULL);
 
     p_handle = dlopen(p_libname, RTLD_LAZY);
@@ -376,7 +376,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
     p_lib->p_handle = p_handle;
     strcpy(p_lib->libname, p_libname);
 
-    p_current_lib = p_context->p_libs;
+    p_current_lib = p_crepl->p_libs;
 
     if (p_current_lib != NULL)
     {
@@ -388,7 +388,7 @@ int crepl_lib(struct crepl_t *p_context, char *p_libname_in)
     }
     else
     {
-        p_context->p_libs = p_lib;
+        p_crepl->p_libs = p_lib;
     }
     p_lib = NULL;
 end:
@@ -397,7 +397,7 @@ end:
     return status;
 }
 
-static int loadsyms_from_header_ok(crepl_t *p_context, char *p_includefile)
+static int loadsyms_from_header_ok(crepl_t *p_crepl, char *p_includefile)
 {
     int status = 0;
     CXTranslationUnit p_tu = NULL;
@@ -413,7 +413,7 @@ static int loadsyms_from_header_ok(crepl_t *p_context, char *p_includefile)
     visitorstatus = clang_visitChildren(
             clang_getTranslationUnitCursor(p_tu),
             visitorImpl,
-            (void*)p_context);
+            (void*)p_crepl);
     QUIET_FAIL_IF(visitorstatus != 0);
 end:
     clang_disposeTranslationUnit(p_tu);
@@ -421,12 +421,12 @@ end:
     return status;
 }
 
-static int compile_header_ok(crepl_t *p_context, char *p_includefile)
+static int compile_header_ok(crepl_t *p_crepl, char *p_includefile)
 {
-    (void)p_context;
+    (void)p_crepl;
     int status = 0;
     ustash s = {0};
-    char *p_tmp_s = ustrjoin(&s, p_context->tmpdir, "/tmp.s");
+    char *p_tmp_s = ustrjoin(&s, p_crepl->p_tmpdir, "/tmp.s");
 
     QUIET_FAIL_IF(ucmd("cc", "-S", "-pipe", p_includefile, "-o", p_tmp_s) != 0);
     ucmd("rm", "-f", p_tmp_s);
@@ -436,7 +436,7 @@ end:
 }
 
 
-int crepl_include(struct crepl_t *p_context, char *p_header)
+int crepl_include(struct crepl_t *p_crepl, char *p_header)
 {
     int status = 0;
     char *p_tmpheader = NULL;
@@ -446,10 +446,10 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     crepl_inc_t *p_inc = NULL;
     crepl_inc_t *p_incs = NULL;
 
-    FAIL_IF(p_context == NULL || p_header == NULL);
+    FAIL_IF(p_crepl == NULL || p_header == NULL);
 
-    p_incs = p_context->p_incs;
-    p_tmpdir = p_context->tmpdir;
+    p_incs = p_crepl->p_incs;
+    p_tmpdir = p_crepl->p_tmpdir;
     p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_c) + 1, 1);
     HASH_FIND_STR(p_incs, p_header, p_inc);
     FAIL_IF(p_inc != NULL);
@@ -475,8 +475,8 @@ int crepl_include(struct crepl_t *p_context, char *p_header)
     if (p_includefile)
         fclose(p_includefile);
     p_includefile = NULL;
-    QUIET_FAIL_IF(compile_header_ok(p_context, p_tmpheader) != 0);
-    QUIET_FAIL_IF(loadsyms_from_header_ok(p_context, p_tmpheader) != 0);
+    QUIET_FAIL_IF(compile_header_ok(p_crepl, p_tmpheader) != 0);
+    QUIET_FAIL_IF(loadsyms_from_header_ok(p_crepl, p_tmpheader) != 0);
 
     p_inc = calloc(strlen(p_header) + 1 + sizeof(crepl_inc_t), 1);
     FAIL_IF(p_inc == NULL);
@@ -490,18 +490,18 @@ end:
         fclose(p_includefile);
     return status;
 }
-void* crepl_getdyfnhandle(crepl_t *p_context, const char *p_id)
+void* crepl_getdyfnhandle(crepl_t *p_crepl, const char *p_id)
 {
     int status = 0;
     crepl_dyfn_t *p_dyfns = NULL;
     crepl_dyfn_t *p_dyfn = NULL;
     void *p_handle = NULL;
 
-    if (p_context == NULL || p_id == NULL)
+    if (p_crepl == NULL || p_id == NULL)
         return NULL;
 
-    FAIL_IF(p_context->p_dyfns == NULL);
-    p_dyfns = p_context->p_dyfns;
+    FAIL_IF(p_crepl->p_dyfns == NULL);
+    p_dyfns = p_crepl->p_dyfns;
 
     HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
     FAIL_IF(p_dyfn == NULL);
