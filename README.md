@@ -150,12 +150,6 @@ Similar to "for" in bash, iterating over a file matching pattern can be done as 
     // hdrs is now already free'd 
     hdrs = NULL;
 
-Debugging USCH
---------------
-USCH forks off a process which will be respawned if crashed; thus to debug USCH; start gdb with:
-
-    gdb --args ./usch -s
-
 BUGS
 ----
 Report bugs at: https://github.com/arnognulf/usch/issues
