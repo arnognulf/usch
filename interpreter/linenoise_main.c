@@ -34,7 +34,7 @@
 #include "../external/commander/src/commander.h"
 
 static crepl_options options;
-static struct crepl_t *p_global_context = NULL;
+static struct crepl *p_global_context = NULL;
 static void handle_sigint(int sig)
 {
     (void)sig;
@@ -243,7 +243,7 @@ int main(int argc, char **pp_argv) {
     (void)argc;
     memset(&options, 0, sizeof(crepl_options));
     char *p_line = NULL;
-    struct crepl_t *p_crepl = NULL;
+    struct crepl *p_crepl = NULL;
     char *p_history = NULL;
     ustash s = {0};
     const char *p_prompt = NULL;

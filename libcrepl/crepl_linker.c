@@ -10,7 +10,7 @@
 #include "strutils.h"
 #include "usch.h"
 
-static int validate_symbol(struct crepl_t *p_crepl, const char* p_sym);
+static int validate_symbol(struct crepl *p_crepl, const char* p_sym);
 
 char **crepl_getldpath()
 {
@@ -103,10 +103,10 @@ static enum CXChildVisitResult visitorImpl(
     enum CXChildVisitResult res = CXChildVisit_Recurse;
     CXString cxstr;
     CXString cxid = {NULL, 0}; 
-    crepl_t *p_crepl = NULL;
+    crepl *p_crepl = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
-    p_crepl = (crepl_t*)p_client_data;
+    p_crepl = (crepl*)p_client_data;
     FAIL_IF(p_crepl == NULL);
     p_dyfns = p_crepl->p_dyfns;
     (void)p_dyfns;
@@ -227,7 +227,7 @@ end:
     return res;
 }
 
-static int validate_symbol(struct crepl_t *p_crepl, const char* p_sym) 
+static int validate_symbol(struct crepl *p_crepl, const char* p_sym) 
 {
     int status = 0;
     int symbol_found = 0;
@@ -265,7 +265,7 @@ end:
         symbol_found = 1;
     return symbol_found;
 }
-static char *get_fullname(struct crepl_t *p_crepl, char *p_libname_in)
+static char *get_fullname(struct crepl *p_crepl, char *p_libname_in)
 {
     bufstr_t namecand;
     struct stat sb;
@@ -354,7 +354,7 @@ end:
 
 }
 
-int crepl_lib(struct crepl_t *p_crepl, char *p_libname_in)
+int crepl_lib(struct crepl *p_crepl, char *p_libname_in)
 {
     int status = 0;
     crepl_lib_t *p_lib = NULL;
@@ -397,7 +397,7 @@ end:
     return status;
 }
 
-static int loadsyms_from_header_ok(crepl_t *p_crepl, char *p_includefile)
+static int loadsyms_from_header_ok(crepl *p_crepl, char *p_includefile)
 {
     int status = 0;
     CXTranslationUnit p_tu = NULL;
@@ -421,7 +421,7 @@ end:
     return status;
 }
 
-static int compile_header_ok(crepl_t *p_crepl, char *p_includefile)
+static int compile_header_ok(crepl *p_crepl, char *p_includefile)
 {
     (void)p_crepl;
     int status = 0;
@@ -436,7 +436,7 @@ end:
 }
 
 
-int crepl_include(struct crepl_t *p_crepl, char *p_header)
+int crepl_include(struct crepl *p_crepl, char *p_header)
 {
     int status = 0;
     char *p_tmpheader = NULL;
@@ -490,7 +490,7 @@ end:
         fclose(p_includefile);
     return status;
 }
-void* crepl_getdyfnhandle(crepl_t *p_crepl, const char *p_id)
+void* crepl_getdyfnhandle(crepl *p_crepl, const char *p_id)
 {
     int status = 0;
     crepl_dyfn_t *p_dyfns = NULL;

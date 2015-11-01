@@ -80,7 +80,7 @@ static char *get_symname(char *p_defname)
 }
 
 
-static int append_definitions(crepl_t *p_crepl, bufstr_t *p_bufstr, char *p_defs_line_in)
+static int append_definitions(crepl *p_crepl, bufstr_t *p_bufstr, char *p_defs_line_in)
 {
     (void)p_crepl;
     int status = 0;
@@ -142,7 +142,7 @@ end:
     return status;
 }
 
-static int append_storedefs(crepl_t *p_crepl, bufstr_t *p_bufstr, char *p_defs_line_in)
+static int append_storedefs(crepl *p_crepl, bufstr_t *p_bufstr, char *p_defs_line_in)
 {
     int status = 0;
     (void)p_crepl;
@@ -206,7 +206,7 @@ end:
     return status;
 }
 
-static int write_definitions_h(crepl_t *p_crepl)
+static int write_definitions_h(crepl *p_crepl)
 {
     int status = 0;
     FILE *p_definitions_h = NULL;
@@ -234,7 +234,7 @@ static int write_definitions_h(crepl_t *p_crepl)
             bufstradd(&definitions_h, ";\n");
         }
     }
-    bufstradd(&definitions_h, "\nvoid crepl_load_vars(struct crepl_t *p_crepl)\n{\n");
+    bufstradd(&definitions_h, "\nvoid crepl_load_vars(struct crepl *p_crepl)\n{\n");
     FAIL_IF(append_definitions(p_crepl, &definitions_h, p_crepl->p_defs_line));
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
@@ -250,7 +250,7 @@ static int write_definitions_h(crepl_t *p_crepl)
 
     bufstradd(&definitions_h, "\n}\n");
 
-    bufstradd(&definitions_h, "\nvoid crepl_store_vars(struct crepl_t *p_crepl)\n{\n");
+    bufstradd(&definitions_h, "\nvoid crepl_store_vars(struct crepl *p_crepl)\n{\n");
     HASH_ITER(hh, p_defs, p_def, p_tmp)
     {
         if (strcmp(p_def->defname, "") != 0)
@@ -274,7 +274,7 @@ end:
     return status;
 }
 
-static int write_includes_h(crepl_t *p_crepl)
+static int write_includes_h(crepl *p_crepl)
 {
     int status = 0;
     FILE *p_includes_h = NULL;
@@ -311,7 +311,7 @@ end:
 }
 
 
-static int write_trampolines_h(crepl_t *p_crepl)
+static int write_trampolines_h(crepl *p_crepl)
 {
     int status = 0;
     FILE *p_trampolines_h = NULL;
@@ -339,17 +339,17 @@ end:
 
 #define usch_shell_cc(...) ucmd("clang", ##__VA_ARGS__)
 
-int crepl_eval(crepl_t *p_crepl, char *p_input_line)
+int crepl_eval(crepl *p_crepl, char *p_input_line)
 {
     int i = 0;
     int status = 0;
     usch_def_t definition = {0};
     FILE *p_stmt_file = NULL;
     void *p_handle = NULL;
-    int (*dyn_func)(crepl_t*);
-    int (*set_context)(crepl_t*);
-    int (*crepl_store_vars)(crepl_t*);
-    int (*crepl_load_vars)(crepl_t*);
+    int (*dyn_func)(crepl*);
+    int (*set_context)(crepl*);
+    int (*crepl_store_vars)(crepl*);
+    int (*crepl_load_vars)(crepl*);
     char* (*uschrc_prompt)(ustash*);
     void (*uschrc_init)(ustash*);
     char *p_error = NULL;
@@ -490,7 +490,7 @@ int crepl_eval(crepl_t *p_crepl, char *p_input_line)
     }
 
     p_stmt = ustrjoin(&s, p_stmt,
-                      "int ", CREPL_DYN_FUNCNAME, "(struct crepl_t *p_crepl)\n", \
+                      "int ", CREPL_DYN_FUNCNAME, "(struct crepl *p_crepl)\n", \
                       "{\n", \
                       CREPL_INDENT, input.p_str, ";\n", \
                       CREPL_INDENT, "return 0;\n", \

@@ -63,7 +63,7 @@ typedef struct crepl_inc_t
     char incname[];
 } crepl_inc_t;
 
-typedef struct crepl_t
+typedef struct crepl
 {
     ustash stash;
     char **pp_ldpath;
@@ -89,7 +89,7 @@ typedef struct crepl_t
     CXIndex p_idx;
     CXTranslationUnit p_tu;
     CXCodeCompleteResults *p_completion_results;
-} crepl_t;
+} crepl;
 
 struct usch_ids
 {
@@ -101,6 +101,6 @@ typedef struct
 {
     char *p_cur_id;
     int found_cur_id;
-    struct crepl_t *p_context;
+    struct crepl *p_context;
 } preparse_userdata_t;
 

@@ -455,7 +455,7 @@ static enum CXChildVisitResult clang_preparseVisitor(
     CXString cxstr;
     CXString cxparstr;
     preparse_userdata_t *p_userdata = NULL;
-    struct crepl_t *p_crepl = NULL;
+    struct crepl *p_crepl = NULL;
 
     cxstr = clang_getCursorSpelling(cursor);
     cxparstr = clang_getCursorSpelling(parent);
@@ -502,7 +502,7 @@ static const char* set_preparsefile_content(ustash *p_s, char* p_line, char **pp
     const char *p_content = ustrjoin(p_s, "#ifndef CREPL_PARSER\n",
                                    "#define CREPL_PARSER\n",
                                    "#endif // CREPL_PARSER\n",
-                                   "struct crepl_t;\n",
+                                   "struct crepl;\n",
                                    "#include <usch.h>\n",
                                    "#include \"includes.h\"\n",
                                    "#include \"definitions.h\"\n",
@@ -542,7 +542,7 @@ static const char* set_preparsefile_content(ustash *p_s, char* p_line, char **pp
     return p_content;
 }
 
-static int resolve_identifier(struct crepl_t *p_crepl,
+static int resolve_identifier(struct crepl *p_crepl,
                  char *p_parsefile_fullname,
                  char *p_line,
                  preparse_userdata_t *p_userdata,
@@ -684,7 +684,7 @@ static void store_and_clear_definition(char *p_line, char *p_defs, char **pp_def
     }
 }
 
-int crepl_parsedefs(struct crepl_t *p_crepl, char *p_line_c)
+int crepl_parsedefs(struct crepl *p_crepl, char *p_line_c)
 {
     (void)p_crepl;
     int status = 0;
@@ -795,7 +795,7 @@ end:
     return status;
 }
 
-int crepl_preparse(struct crepl_t *p_crepl, const char *p_input, crepl_state_t *p_state)
+int crepl_preparse(struct crepl *p_crepl, const char *p_input, crepl_state_t *p_state)
 {
     int i;
     crepl_state_t state = CREPL_STATE_CPARSER;
@@ -957,7 +957,7 @@ end:
 
     return status;
 }
-static size_t find_matching(struct crepl_t *p_crepl, char end, char *p_incomplete)
+static size_t find_matching(struct crepl *p_crepl, char end, char *p_incomplete)
 {
     // TODO: why 1?
     size_t i = 1;
@@ -1040,7 +1040,7 @@ static size_t find_matching(struct crepl_t *p_crepl, char end, char *p_incomplet
     }
     return i;
 }
-int crepl_finalize(struct crepl_t *p_crepl, char *p_unfinalized, char **pp_finalized)
+int crepl_finalize(struct crepl *p_crepl, char *p_unfinalized, char **pp_finalized)
 {
     int status = 0;
     char *p_finalized = NULL;

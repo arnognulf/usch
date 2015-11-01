@@ -3,7 +3,7 @@
 #include "crepl_types.h"
 #include "crepl_debug.h"
 
-int crepl_define(crepl_t *p_context, size_t var_size, char *p_defname)
+int crepl_define(crepl *p_context, size_t var_size, char *p_defname)
 {
     int status = 0;
     if (p_context == NULL || p_defname == NULL)
@@ -40,7 +40,7 @@ end:
     free(p_def);
     return status;
 }
-void crepl_undef(crepl_t *p_context, char *p_defname)
+void crepl_undef(crepl *p_context, char *p_defname)
 {
     if (p_context == NULL || p_defname == NULL)
         return;
@@ -58,7 +58,7 @@ void crepl_undef(crepl_t *p_context, char *p_defname)
     return;
 }
 
-int crepl_load(crepl_t *p_context, char *p_defname, void *p_data)
+int crepl_load(crepl *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
     if (p_context == NULL || p_defname == NULL)
@@ -128,7 +128,7 @@ static void print_updated_variables(char *p_defname, void *p_data)
 
 }
 
-int crepl_store(crepl_t *p_context, char *p_defname, void *p_data)
+int crepl_store(crepl *p_context, char *p_defname, void *p_data)
 {
     int status = 0;
     uint8_t tmp[CREPL_DEFINE_SIZE] = {0};
@@ -163,7 +163,7 @@ int crepl_store(crepl_t *p_context, char *p_defname, void *p_data)
     return status;
 }
 
-int crepl_define_fn(struct crepl_t *p_context, char *p_fndefname, char *p_body)
+int crepl_define_fn(struct crepl *p_context, char *p_fndefname, char *p_body)
 {
     int status = 0;
     if (p_context == NULL || p_fndefname == NULL || p_body == NULL)

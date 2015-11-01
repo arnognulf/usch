@@ -47,8 +47,8 @@
 #include "crepl.h"
 #include "../external/uthash/src/uthash.h"
 
-static void copy_options(crepl_t* p_crepl, crepl_options *p_options);
-static void set_filenames(crepl_t* p_crepl, const char *dir_template)
+static void copy_options(crepl* p_crepl, crepl_options *p_options);
+static void set_filenames(crepl* p_crepl, const char *dir_template)
 {
     p_crepl->p_tmpdir = ustrjoin(&p_crepl->stash, dir_template);
     p_crepl->p_stmt_c = ustrjoin(&p_crepl->stash, p_crepl->p_tmpdir, "/", CREPL_STMT_C_FN);
@@ -90,7 +90,7 @@ error:
     return NULL;
 }
 
-static void set_header(crepl_t* p_crepl)
+static void set_header(crepl* p_crepl)
 {
     int status = 0;
     ustash s = {0};
@@ -98,7 +98,7 @@ static void set_header(crepl_t* p_crepl)
     FAIL_IF(p_fullpath_uschrc_h == NULL);
 
     p_crepl->p_stmt_header = ustrjoin(&p_crepl->stash,
-                    "struct crepl_t;\n", \
+                    "struct crepl;\n", \
                     "#include <usch.h>\n", \
                     "#include <crepl.h>\n", \
                     "#include \"", CREPL_INCS_H_FN, "\"\n", \
@@ -108,8 +108,8 @@ static void set_header(crepl_t* p_crepl)
                     "#ifndef cd\n", \
                     "#define cd(...) ucmd(\"cd\", ##__VA_ARGS__)\n", \
                     "#endif // cd\n", \
-                    "static struct crepl_t *p_crepl_context = NULL;\n", \
-                    "void crepl_set_context(struct crepl_t *p_crepl)\n", \
+                    "static struct crepl *p_crepl_context = NULL;\n", \
+                    "void crepl_set_context(struct crepl *p_crepl)\n", \
                     "{\n", \
                     "    p_crepl_context = p_crepl;\n", \
                     "}\n");
@@ -119,17 +119,17 @@ end:
 }
 
 #if 0
-static void set_footer(crepl_t* p_crepl)
+static void set_footer(crepl* p_crepl)
 {
     (void)p_crepl;
 
 }
 #endif // 0
 
-E_CREPL crepl_create(crepl_t **pp_crepl, crepl_options options)
+E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
 {
     int status = 0;
-    crepl_t *p_crepl = NULL;
+    crepl *p_crepl = NULL;
     crepl_def_t *p_def = NULL;
     crepl_sym_t *p_sym = NULL;
     crepl_dyfn_t *p_dyfn = NULL;
@@ -145,7 +145,7 @@ E_CREPL crepl_create(crepl_t **pp_crepl, crepl_options options)
     p_idx = clang_createIndex(0, 0);
     FAIL_IF(p_idx == NULL);
 
-    p_crepl = calloc(sizeof(crepl_t), 1);
+    p_crepl = calloc(sizeof(crepl), 1);
     FAIL_IF(p_crepl == NULL);
 
     p_tempdir = mkdtemp(dir_template);
@@ -262,7 +262,7 @@ static int remove_directory(const char *p_path)
 
     return r;
 }
-void crepl_destroy(crepl_t *p_crepl)
+void crepl_destroy(crepl *p_crepl)
 {
     if (p_crepl)
     {
@@ -325,7 +325,7 @@ void crepl_destroy(crepl_t *p_crepl)
     return;
 }
 
-const char* crepl_getprompt(crepl_t *p_crepl)
+const char* crepl_getprompt(crepl *p_crepl)
 {
     char *p_prompt = NULL;
     static char prompt[1];
@@ -344,7 +344,7 @@ const char* crepl_getprompt(crepl_t *p_crepl)
     return p_prompt;
 }
 
-crepl_options crepl_getoptions(crepl_t *p_crepl)
+crepl_options crepl_getoptions(crepl *p_crepl)
 {
     crepl_options options;
     memset(&options, 0x0, sizeof(crepl_options));
@@ -353,7 +353,7 @@ crepl_options crepl_getoptions(crepl_t *p_crepl)
 
     return p_crepl->options;
 }
-static void copy_options(crepl_t* p_crepl, crepl_options *p_options)
+static void copy_options(crepl* p_crepl, crepl_options *p_options)
 {
     p_crepl->options = *p_options;
 }

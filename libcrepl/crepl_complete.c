@@ -54,7 +54,7 @@ static int count_lines(const char *p_string)
     return num_lines;
 }
 
-E_CREPL crepl_complete(struct crepl_t *p_crepl,
+E_CREPL crepl_complete(struct crepl *p_crepl,
                    const char *p_input,
                    char **pp_results,
                    int *p_num_results)
@@ -74,7 +74,7 @@ E_CREPL crepl_complete(struct crepl_t *p_crepl,
 
     unsaved_files.Filename = p_crepl->p_stmt_c;
     unsaved_files.Contents = ustrjoin(&s, p_crepl->p_stmt_header, \
-                                          "int ", CREPL_DYN_FUNCNAME, "(struct crepl_t *p_crepl)\n", \
+                                          "int ", CREPL_DYN_FUNCNAME, "(struct crepl *p_crepl)\n", \
                                           "{\n", \
                                           CREPL_INDENT, p_input, ";\n", \
                                           CREPL_INDENT, "return 0;\n", \
@@ -99,14 +99,14 @@ end:
     return estatus;
 }
 
-void crepl_complete_dispose(struct crepl_t *p_crepl)
+void crepl_complete_dispose(struct crepl *p_crepl)
 {
     if (p_crepl == NULL)
         return;
     (void)clang_disposeCodeCompleteResults(p_crepl->p_completion_results);
 }
 
-E_CREPL crepl_reload_tu(struct crepl_t *p_crepl)
+E_CREPL crepl_reload_tu(struct crepl *p_crepl)
 {
     E_CREPL estatus = 0;
     CXTranslationUnit p_new_tu = NULL;

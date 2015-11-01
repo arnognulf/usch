@@ -206,7 +206,7 @@ static char *test_crepl_vars()
     char right_str[] = "right";
     char wrong_str[] = "wrong";
     char *p_str = NULL;
-    struct crepl_t *p_context = NULL;
+    struct crepl *p_context = NULL;
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
@@ -266,7 +266,7 @@ static char *test_crepl_dyld()
 {
     char *p_message = NULL;
     int error = 0;
-    struct crepl_t *p_context = NULL;
+    struct crepl *p_context = NULL;
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
@@ -315,7 +315,7 @@ static char *test_crepl_parse()
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
-    struct crepl_t *p_context = NULL;
+    struct crepl *p_context = NULL;
     error = crepl_create(&p_context, options);
     crepl_state_t state = CREPL_STATE_CPARSER;
 #if 0
@@ -388,7 +388,7 @@ static char *test_crepl_parsedefs()
 {
     char *p_message = NULL;
     int error;
-    struct crepl_t *p_context = NULL;
+    struct crepl *p_context = NULL;
     error = crepl_create(&p_context);
     mu_assert("error != 0", error == 0);
     error = crepl_parsedefs(p_context, "ls(); int i = 0; i++; sizeof int; int a; char **p = NULL; char* q = NULL; long long int *p = NULL");
@@ -409,7 +409,7 @@ static char *test_crepl_finalize()
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
 
-    struct crepl_t *p_context = NULL;
+    struct crepl *p_context = NULL;
     error = crepl_create(&p_context, options);
     char *p_finalized = NULL;
     if (error)
@@ -506,7 +506,7 @@ static char *test_complete()
     char *p_results = NULL;
     int num_results = 0;
     (void)p_message;
-    struct crepl_t *p_crepl = NULL;
+    struct crepl *p_crepl = NULL;
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
     mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
