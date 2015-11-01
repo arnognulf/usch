@@ -26,6 +26,7 @@
 #include <dirent.h>
 #include <stddef.h>                     // for size_t
 #include <sys/stat.h>                   // for stat, S_IFDIR, S_IFMT
+#include <sys/ptrace.h>
 
 #include "usch.h"
 #include "crepl.h"
@@ -38,6 +39,50 @@ static void handle_sigint(int sig)
 {
     (void)sig;
     return;
+}
+
+int gdb_connected()
+{
+    int pid = fork();
+    int status;
+    int res;
+
+    if (pid == -1)
+    {
+        perror("fork");
+        return -1;
+    }
+
+    if (pid == 0)
+    {
+        int ppid = getppid();
+
+        /* Child */
+        if (ptrace(PTRACE_ATTACH, ppid, NULL, NULL) == 0)
+        {
+            /* Wait for the parent to stop and continue it */
+            waitpid(ppid, NULL, 0);
+            ptrace(PTRACE_CONT, NULL, NULL);
+
+            /* Detach */
+            ptrace(PTRACE_DETACH, getppid(), NULL, NULL);
+
+            /* We were the tracers, so gdb is not present */
+            res = 0;
+        }
+        else
+        {
+            /* Trace failed so gdb is present */
+            res = 1;
+        }
+        exit(res);
+    }
+    else
+    {
+        waitpid(pid, &status, 0);
+        res = WEXITSTATUS(status);
+    }
+    return res;
 }
 
 void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
@@ -211,6 +256,12 @@ int main(int argc, char **pp_argv) {
     command_option(&cmd, "-v", "--verbose", "enable verbose stuff", verbose);
     command_option(&cmd, "-s", "--single-instance", "enable single instance (for debugging)", single_instance);
     command_parse(&cmd, argc, pp_argv);
+
+    if (gdb_connected())
+    {
+        fprintf(stderr, "usch: gdb detected, enabling single instance mode.\n");
+        single_instance(NULL);
+    }
 
     if (options.single_instance)
     {

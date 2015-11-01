@@ -27,6 +27,7 @@
 #include <malloc.h>
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+// deprecated function, use ustrjoin instead
 int bufstradd(bufstr_t *p_bufstr, const char *p_addstr)
 {
     int status = 0;

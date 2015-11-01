@@ -37,8 +37,22 @@ CINDEX_LINKAGE CXCodeCompleteResults* clang_codeCompleteAt  (   CXTranslationUni
 // how do we get a CXCursor (which can give us an CXTranslationUnit)??? Traverse the tree?
 #endif // 0
 
+#include "crepl_types.h"
+#include "crepl_debug.h"
 #include <crepl.h>
 #include <clang-c/Index.h>
+
+static int count_lines(const char *p_string)
+{
+    int num_lines = 1;
+    while (*p_string != '\0')
+    {
+        if (*p_string == '\n')
+            num_lines++;
+        p_string++;
+    }
+    return num_lines;
+}
 
 E_CREPL crepl_complete(struct crepl_t *p_crepl,
                    const char *p_input,
@@ -46,51 +60,72 @@ E_CREPL crepl_complete(struct crepl_t *p_crepl,
                    int *p_num_results)
 {
     if (p_crepl == NULL ||
+        p_input == NULL ||
         pp_results == NULL ||
         p_num_results == NULL)
         return E_CREPL_PARAM;
+    E_CREPL estatus = E_CREPL_OK;
+    
+    ustash s = {0};
 
     CXTranslationUnit p_tu = p_crepl->p_tu;
-    struct CXUnsavedFile unsaved_contents;
+    CXCodeCompleteResults* results = NULL;
+    struct CXUnsavedFile unsaved_files;
 
-    unsaved_contents.FileName = p_crepl->p_stmt_c;
-    unsaved_contents.Contents = p_crepl->p_stmt_c;
-    unsaved_contents.Length = 0;
+    unsaved_files.Filename = p_crepl->p_stmt_c;
+    unsaved_files.Contents = ustrjoin(&s, p_crepl->p_stmt_header, \
+                                          "int ", CREPL_DYN_FUNCNAME, "(struct crepl_t *p_crepl)\n", \
+                                          "{\n", \
+                                          CREPL_INDENT, p_input, ";\n", \
+                                          CREPL_INDENT, "return 0;\n", \
+                                          "}\n");
 
-    CXCodeCompleteResults* clang_codeCompleteAt(
+    unsaved_files.Length = strlen(unsaved_files.Contents);
+
+    results = clang_codeCompleteAt(
             p_tu,
-            p_crepl->p_stmt_c /* const char *complete_filename, */
-            /* unsigned    complete_line */,
-            /* unsigned    complete_column */,
-            struct CXUnsavedFile *  unsaved_files,
-            1,
-            0 /* unsigned    options */
-            )
+            p_crepl->p_stmt_c,
+            count_lines(p_crepl->p_stmt_header), // line
+            sizeof(CREPL_INDENT) - 1 + strlen(p_input), // col
+            &unsaved_files,
+            1, // num unsaved files
+            clang_defaultCodeCompleteOptions()
+            );
+    E_FAIL_IF(results == NULL);
+    p_crepl->p_completion_results = results;
 
-
-    return E_CREPL_OK;
+end:
+    uclear(&s);
+    return estatus;
 }
 
-int crepl_reload_tu(struct crepl_t *p_crepl)
+void crepl_complete_dispose(struct crepl_t *p_crepl)
 {
-    int status = 0;
-    CXTranslationUnit p_tu = NULL;
-    unsigned int visitorstatus = 0;
+    if (p_crepl == NULL)
+        return;
+    (void)clang_disposeCodeCompleteResults(p_crepl->p_completion_results);
+}
+
+E_CREPL crepl_reload_tu(struct crepl_t *p_crepl)
+{
+    E_CREPL estatus = 0;
+    CXTranslationUnit p_new_tu = NULL;
 
     if (p_crepl == NULL)
         return E_CREPL_PARAM;
     
-    p_new_tu = clang_parseTranslationUnit(p_crepl->p_idx,
-                                      p_crepl->p_includefile,
+    p_new_tu = clang_parseTranslationUnit(
+                                      p_crepl->p_idx,
+                                      p_crepl->p_incs_h,
                                       NULL,
                                       0,
                                       NULL,
                                       0,
                                       0);
-    FAIL_IF(p_tu == NULL);
+    E_FAIL_IF(p_new_tu == NULL);
     (void)clang_disposeTranslationUnit(p_crepl->p_tu);
     p_crepl->p_tu = p_new_tu;
 end:
-    return E_CREPL_OK;
+    return estatus;
 }
 

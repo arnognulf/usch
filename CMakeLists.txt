@@ -14,7 +14,7 @@ ENDIF()
 
 IF(CMAKE_BUILD_TYPE MATCHES Debug)
       message("Debug build.")
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -ggdb -D_BSD_SOURCE -std=gnu99 -pedantic -Wno-gnu-zero-variadic-macro-arguments -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -ggdb -D_BSD_SOURCE -std=gnu99 -pedantic -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"")
 endif()
 
 if( DEFINED USCH_LLVM_INCLUDE_PATH AND DEFINED USCH_LLVM_LIB_PATH )

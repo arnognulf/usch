@@ -74,6 +74,9 @@ typedef enum
 #define E_USCH_HANDLE_WARN   0x1
 #define E_USCH_HANDLE_ASSERT 0x2
 
+#define USCH_TRUE 1
+#define USCH_FALSE 1
+#define USCH_BOOL int
 /**
  * @brief free allocated memory referenced by p_ustash.
  *  
@@ -87,17 +90,16 @@ static inline void uclear(ustash *p_ustash);
 
 /**
  * @brief splits a string
- *  
- *  <Longer description>
- *  <May span multiple lines or paragraphs as needed>
+ *
+ * Split a string by specified delemiters
  *   
- *   @param p_ustash Stash holding allocations.
- *   @param p_in A string to split.
- *   @param p_delims Delimiting characters where the string should be split.
- *   @return A NULL-terminated array of pointers to the substrings. 
- *   @remarks returns 1 element NULL terminated vector upon error.
- *   @remarks return value must not be freed.
- *   */
+ * @param p_ustash Stash holding allocations.
+ * @param p_in A string to split.
+ * @param p_delims Delimiting characters where the string should be split.
+ * @return A NULL-terminated array of pointers to the substrings. 
+ * @remarks returns 1 element NUL terminated vector upon error.
+ * @remarks return value must not be freed.
+ */
 static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p_delims);
 
 /* @brief command stdout to buffer
@@ -152,7 +154,28 @@ struct priv_usch_glob_list;
 static inline int priv_usch_stash(ustash *p_ustash, struct priv_usch_stash_item *p_stashitem);
 static inline const char **priv_usch_globexpand(const char **pp_orig_argv, size_t num_args, /* out */ struct priv_usch_glob_list **pp_glob_list);
 static inline void   priv_usch_free_globlist(struct priv_usch_glob_list *p_glob_list);
-static inline int ustreq(const char *p_a, const char *p_b);
+
+/* @brief  test if two strings are equal
+ *
+ * Test if two strings are equal
+ *
+ * @param p_a pointer to first string
+ * @param p_a pointer to second string
+ * @return 1 if equal, 0 if not equal or if any parameter is NULL
+ */
+static inline USCH_BOOL ustreq(const char *p_a, const char *p_b);
+
+/* @brief  test if two strings are equal
+ *
+ * Test if two strings are equal up to "len" characters
+ *
+ * @param p_a pointer to first string
+ * @param p_a pointer to second string
+ * @param len number of characters to test for equality
+ * @return 1 if equal, 0 if not equal or if any parameter is NULL or len is 0
+ */
+static inline USCH_BOOL ustrneq(const char *p_a, const char *p_b, size_t len);
+
 static inline int    priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in, 
         struct priv_usch_stash_item **pp_out,
         struct priv_usch_stash_item **pp_err,
@@ -956,27 +979,22 @@ static int priv_usch_waitforall(int child_pid)
 
 
         if (WIFEXITED(status)) {
-            //printf("child exited, status=%d\n", WEXITSTATUS(status));
             child_status = WEXITSTATUS(status);
 
 
         } else if (WIFSIGNALED(status)) {
-            //printf("child killed (signal %d)\n", WTERMSIG(status));
             child_status = -1;
 
 
         } else if (WIFSTOPPED(status)) {
-            //printf("child stopped (signal %d)\n", WSTOPSIG(status));
             child_status = -1;
 
 
-#ifdef WIFCONTINUED     /* Not all implementations support this */
+#ifdef WIFCONTINUED
         } else if (WIFCONTINUED(status)) {
-            //printf("child continued\n");
             child_status = -1;
 #endif
-        } else {    /* Non-standard case -- may never happen */
-            //printf("Unexpected status (0x%x)\n", status);
+        } else {
             child_status = -1;
         }
     } while (!WIFEXITED(status) && !WIFSIGNALED(status));
@@ -1022,7 +1040,6 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
         goto cleanup;
     p_str = malloc(len+1);
     if (!p_str) goto cleanup;
-    //if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
 
     if (fread(p_str, 1, len, p_file) != len) goto cleanup;
     delims_len = strlen(p_delims);
@@ -1039,7 +1056,6 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
     }
     pp_strv = malloc((num_delims+1)*sizeof(char*));
     if (!pp_strv) goto cleanup;
-    //if (!priv_usch_stash(p_ustash, p_stashitem)) goto cleanup;
 
     pp_strv[vpos++] = p_str;
     for (i = 0; i < len; i++)
@@ -1097,16 +1113,41 @@ cleanup:
     return res;
 }
 
-static inline int ustreq(const char *p_a, const char *p_b)
+static inline USCH_BOOL ustreq(const char *p_a, const char *p_b)
 {
-    const char empty[] = "";
-    if (p_a == NULL)
-        p_a = empty;
-    if (p_b == NULL)
-        p_b = empty;
+    if (p_a == NULL ||
+        p_b == NULL)
+        return USCH_FALSE;
 
     return !strcmp(p_a, p_b);
 }
+
+static inline USCH_BOOL ustrneq(const char *p_a, const char *p_b, size_t len)
+{
+    if (p_a == NULL ||
+        p_b == NULL ||
+        len == 0)
+        return USCH_FALSE;
+
+    size_t a_len = strlen(p_a);
+    size_t b_len = strlen(p_b);
+
+    if (a_len != b_len &&
+       (a_len < len || b_len < len))
+       return USCH_FALSE;
+    
+    int equal = USCH_TRUE;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        if (*p_a++ != *p_b++)
+        {
+            equal = USCH_FALSE;
+        }
+    }
+    return equal;
+}
+
 
 #if NEED_VIM_WORKAROUND
 {

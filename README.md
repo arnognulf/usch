@@ -82,12 +82,20 @@ After this, you can do stuff like:
     // and recieve the updated variable reply:
     %a = 0.877583
 
-Stashed memory
---------------
-Usch introduces the concept of stashed memory (ustash), a linked list of allocations which may be cleared when the strings are out of scope.
+REPL-friendly string functions
+------------------------------
+A few REPL-friendly functions to simplify string concatenation in the REPL environment is included in usch.h:
 
+Pros:
+ * not having to declare and keep track of returned strings.
+ * being able to free strings at a later point. 
+ * use 1-n argument macro (as used in ucmd) to enable concatenation of multiple strings at once.
+ * operate on regular C strings.
+ * returns empty string upon error.
+ * treats input strings as immutable.
 
-Saving the strings in the stash gives the benefit of not having to store all returned strings from string functions, which gives cleaner code and is simpler to use in a REPL.
+Cons:
+ * always allocates new strings (performance/memory gotcha)
 
     ustash s = {0};
     char myfile[] = "my_stuffs.txt";
@@ -142,10 +150,14 @@ Similar to "for" in bash, iterating over a file matching pattern can be done as 
     // hdrs is now already free'd 
     hdrs = NULL;
 
+Debugging USCH
+--------------
+USCH forks off a process which will be respawned if crashed; thus to debug USCH; start gdb with:
+
+    gdb --args ./usch -s
+
 BUGS
 ----
-Usch cannot be compiled with -pedantic. This is a limitation of the 0-n arg macro.
-
 Report bugs at: https://github.com/arnognulf/usch/issues
 
 Contributing

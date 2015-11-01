@@ -10,6 +10,8 @@
 #define CREPL_TRAMPOLINES_H_FN "trampolines.h"
 #define CREPL_DYN_FUNCNAME "crepl_eval_stmt"
 #define CREPL_DEFINE_SIZE 8
+#define CREPL_INDENT "    "
+
 
 #ifndef CMAKE_INSTALL_PREFIX
 #define CMAKE_INSTALL_PREFIX "/usr/local"
@@ -76,8 +78,6 @@ typedef struct crepl_t
     char *p_prompt;
     ustash prompt_stash;
     char is_initialized;
-    CXIndex p_idx;
-    CXTranslationUnit p_tu;
     crepl_options options;
     char *p_tmpdir;
     char *p_stmt_c;
@@ -85,6 +85,10 @@ typedef struct crepl_t
     char *p_incs_h;
     char *p_trampolines_h;
     char *p_stmt_header;
+    // clang data
+    CXIndex p_idx;
+    CXTranslationUnit p_tu;
+    CXCodeCompleteResults *p_completion_results;
 } crepl_t;
 
 struct usch_ids
@@ -99,5 +103,4 @@ typedef struct
     int found_cur_id;
     struct crepl_t *p_context;
 } preparse_userdata_t;
-
 

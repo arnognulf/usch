@@ -377,7 +377,6 @@ int crepl_eval(crepl_t *p_crepl, char *p_input_line)
 
     pp_path = ustrsplit(&s, getenv("PATH"), ":");
     FAIL_IF(pp_path[0] == NULL);
-    printf("test: %s\n", p_crepl->p_stmt_c);
     p_stmt_file = fopen(p_crepl->p_stmt_c, "w+");
     FAIL_IF(p_stmt_file == NULL);
 
@@ -443,7 +442,7 @@ int crepl_eval(crepl_t *p_crepl, char *p_input_line)
         }
         else if (strncmp(&input.p_str[i], "#lib", strlen("#lib")) == 0)
         { 
-             printf("usch: invalid #lib macro directive. usage:\n#lib /path/to/library.so\n");
+             fprintf(stderr, "usch: invalid #lib macro directive. usage:\n#lib /path/to/library.so\n");
         }
         if (strncmp(&input.p_str[i], "#include ", strlen("#include ")) == 0)
         {
@@ -461,7 +460,7 @@ int crepl_eval(crepl_t *p_crepl, char *p_input_line)
         }
         else if (strncmp(&input.p_str[i], "#include", strlen("#include")) == 0)
         { 
-             printf("usch: invalid #include macro directive. usage:\n#include <header.h>\nor:\n#include \"header.h\"\n");
+             fprintf(stderr, "usch: invalid #include macro directive. usage:\n#include <header.h>\nor:\n#include \"header.h\"\n");
         }
     }
 
@@ -493,8 +492,8 @@ int crepl_eval(crepl_t *p_crepl, char *p_input_line)
     p_stmt = ustrjoin(&s, p_stmt,
                       "int ", CREPL_DYN_FUNCNAME, "(struct crepl_t *p_crepl)\n", \
                       "{\n", \
-                      "    ", input.p_str, ";\n", \
-                      "    ", "return 0;\n", \
+                      CREPL_INDENT, input.p_str, ";\n", \
+                      CREPL_INDENT, "return 0;\n", \
                       "}\n");
 
     p_stmt = ustrjoin(&s, p_stmt, \
