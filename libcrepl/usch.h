@@ -201,8 +201,8 @@ static int priv_usch_run(const char **pp_argv,
                          int first,
                          int last,
                          int *p_child_pid,
-                         struct priv_usch_stash_item **pp_out);
-static int n = 0; /* TODO: killkillkill */ /* number of calls to 'priv_usch_command' */
+                         struct priv_usch_stash_item **pp_out,
+                         int *p_num_calls);
 static int priv_usch_command(const char **pp_argv, int input, int first, int last, int *p_child_pid, struct priv_usch_stash_item **pp_out);
 
 static int priv_usch_waitforall(int n);
@@ -782,6 +782,7 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
     int status = 0;
     int i = 0;
     int child_pid = 0;
+    int num_calls = 0;
 
     pp_argv = priv_usch_globexpand(pp_orig_argv, num_args, &p_glob_list);
     if (pp_argv == NULL)
@@ -820,7 +821,7 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
                     last = 0;
                 j++;
             }
-            input = priv_usch_run(&pp_argv[i], input, first, last, &child_pid, pp_out);
+            input = priv_usch_run(&pp_argv[i], input, first, last, &child_pid, pp_out, &num_calls);
 
             first = 0;
             while (i < argc && pp_argv[i] != NULL)
@@ -834,11 +835,11 @@ static inline int priv_usch_cmd_arr(struct priv_usch_stash_item **pp_in,
         }
         if (pp_argv[i] == NULL && pp_out == NULL)
         {
-            priv_usch_run(&pp_argv[i], input, first, 1, &child_pid, pp_out);
+            priv_usch_run(&pp_argv[i], input, first, 1, &child_pid, pp_out, &num_calls);
         }
 
         status = priv_usch_waitforall(child_pid);
-        n = 0;
+        num_calls = 0;
     }
 end:
     priv_usch_free_globlist(p_glob_list);
@@ -1007,10 +1008,11 @@ static int priv_usch_run(const char **pp_argv,
                          int first,
                          int last,
                          int *p_child_pid,
-                         struct priv_usch_stash_item **pp_out)
+                         struct priv_usch_stash_item **pp_out,
+                         int *p_num_calls)
 {
     if (pp_argv[0] != NULL) {
-        n += 1;
+        *p_num_calls += 1;
         return priv_usch_command(pp_argv, input, first, last, p_child_pid, pp_out);
     }
     return 0;
