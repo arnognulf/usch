@@ -128,7 +128,7 @@ static void set_footer(crepl* p_crepl)
 
 E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
 {
-    int status = 0;
+    E_CREPL estatus = E_CREPL_OK;
     crepl *p_crepl = NULL;
     crepl_def_t *p_def = NULL;
     crepl_sym_t *p_sym = NULL;
@@ -142,26 +142,27 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     if (pp_crepl == NULL)
         return E_CREPL_PARAM;
 
-    p_idx = clang_createIndex(0, 0);
-    FAIL_IF(p_idx == NULL);
-
     p_crepl = calloc(sizeof(crepl), 1);
-    FAIL_IF(p_crepl == NULL);
+    E_FAIL_IF(p_crepl == NULL);
+
+    p_idx = clang_createIndex(0, 0);
+    E_FAIL_IF(p_idx == NULL);
+    p_crepl->p_idx  = p_idx;
 
     p_tempdir = mkdtemp(dir_template);
-    FAIL_IF(p_tempdir == NULL);
+    E_FAIL_IF(p_tempdir == NULL);
 
     p_def = calloc(sizeof(crepl_def_t) + 1, 1);
-    FAIL_IF(p_def == NULL);
+    E_FAIL_IF(p_def == NULL);
 
     p_sym = calloc(sizeof(crepl_sym_t) + 1, 1);
-    FAIL_IF(p_sym == NULL);
+    E_FAIL_IF(p_sym == NULL);
 
     p_dyfn = calloc(sizeof(crepl_dyfn_t) + 1, 1);
-    FAIL_IF(p_dyfn == NULL);
+    E_FAIL_IF(p_dyfn == NULL);
 
     p_inc = calloc(sizeof(crepl_inc_t) + 1, 1);
-    FAIL_IF(p_inc == NULL);
+    E_FAIL_IF(p_inc == NULL);
 
     HASH_ADD_STR(p_crepl->p_defs, defname, p_def);
     HASH_ADD_STR(p_crepl->p_syms, symname, p_sym);
@@ -169,7 +170,7 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     HASH_ADD_STR(p_crepl->p_incs, incname, p_inc);
 
     pp_ldpath = crepl_getldpath();
-    FAIL_IF(pp_ldpath == NULL);
+    E_FAIL_IF(pp_ldpath == NULL);
     p_crepl->pp_ldpath = pp_ldpath;
 
     copy_options(p_crepl, &options);
@@ -177,9 +178,11 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     set_header(p_crepl);
     set_filenames(p_crepl, dir_template);
 
+    E_FAIL_IF(!CREPL_OK(crepl_reload_tu(p_crepl)));
+
     if (p_crepl->options.interactive)
     {
-        FAIL_IF(crepl_eval(p_crepl, "") != 0);
+        E_FAIL_IF(crepl_eval(p_crepl, "") != 0);
     }
 
     *pp_crepl = p_crepl;
@@ -195,10 +198,8 @@ end:
     free(p_sym);
     free(p_def);
     free(p_crepl);
-    if (status != 0)
-        return E_CREPL_WAT;
 
-    return E_CREPL_OK;
+    return estatus;
 }
 // http://stackoverflow.com/questions/2256945/removing-a-non-empty-directory-programmatically-in-c-or-c
 static int remove_directory(const char *p_path)
@@ -319,6 +320,7 @@ void crepl_destroy(crepl *p_crepl)
         free(p_crepl->p_nodef_line);
         free(p_crepl->p_defs_line);
         free(p_crepl->pp_ldpath);
+        (void)clang_disposeTranslationUnit(p_crepl->p_tu);
         uclear(&p_crepl->prompt_stash);
     }
     free(p_crepl);
