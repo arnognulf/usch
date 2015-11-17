@@ -1,3 +1,4 @@
+rm -rf debugbuild
 mkdir debugbuild
 cd debugbuild
 cmake .. -DCMAKE_BUILD_TYPE=Debug -DUSCH_LLVM_ROOT_PATH=/usr/lib/llvm-3.6/ || exit 22

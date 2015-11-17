@@ -113,17 +113,33 @@ E_CREPL crepl_reload_tu(struct crepl *p_crepl)
 
     if (p_crepl == NULL)
         return E_CREPL_PARAM;
-    
+
+    if (!p_crepl->p_tu)
+    {
+        int cxerr = clang_reparseTranslationUnit(p_crepl->p_tu,
+        0,
+        NULL,
+        clang_defaultEditingTranslationUnitOptions()
+        );
+        if (cxerr != 0)
+        {
+            clang_disposeTranslationUnit(p_crepl->p_tu);
+            p_crepl->p_tu = NULL;
+        }
+    }
+
+    if (!p_crepl->p_tu)
+    {
     p_new_tu = clang_parseTranslationUnit(
-                                      p_crepl->p_idx,
-                                      p_crepl->p_incs_h,
-                                      NULL,
-                                      0,
-                                      NULL,
-                                      0,
-                                      0);
+                             p_crepl->p_idx,
+                             p_crepl->p_stmt_c,
+                             NULL,
+                             0,
+                             NULL,
+                             0,
+                             clang_defaultEditingTranslationUnitOptions());
     E_FAIL_IF(p_new_tu == NULL);
-    (void)clang_disposeTranslationUnit(p_crepl->p_tu);
+    }
     p_crepl->p_tu = p_new_tu;
 end:
     return estatus;
