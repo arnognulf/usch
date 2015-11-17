@@ -499,7 +499,6 @@ cleanup:
     return p_message;
 }
     
-#if 0
 static char *test_complete()
 {
     char *p_message = NULL;
@@ -511,13 +510,13 @@ static char *test_complete()
     memset(&options, 0, sizeof(crepl_options));
     mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
     mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_comple", &p_results, &num_results)));
+    mu_assert("error completing", num_results == 1);
 
 cleanup:
+    crepl_destroy(p_crepl);
     
     return NULL;
 }
-#endif // 0
-
 
 static char * all_tests()
 {
@@ -537,7 +536,7 @@ static char * all_tests()
     mu_run_test(test_ustrjoin);
     mu_run_test(test_ufiletostrv);
     mu_run_test(test_ustrvtofile);
-    //mu_run_test(test_complete);
+    mu_run_test(test_complete);
     //mu_run_test(test_crepl_parsedefs);
     return 0;
 }

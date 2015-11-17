@@ -68,6 +68,9 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
     
     ustash s = {0};
 
+    if (!p_crepl->p_tu)
+        crepl_reload_tu(p_crepl);
+
     CXTranslationUnit p_tu = p_crepl->p_tu;
     CXCodeCompleteResults* results = NULL;
     struct CXUnsavedFile unsaved_files;
@@ -89,10 +92,37 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
             sizeof(CREPL_INDENT) - 1 + strlen(p_input), // col
             &unsaved_files,
             1, // num unsaved files
-            clang_defaultCodeCompleteOptions()
+            CXCodeComplete_IncludeMacros | CXCodeComplete_IncludeCodePatterns
             );
     E_FAIL_IF(results == NULL);
-    p_crepl->p_completion_results = results;
+    //p_crepl->p_completion_results = results;
+    int num_results = results->NumResults;
+    CXCompletionResult *p_comp_results = results->Results;
+
+    for (int x = 0; x < num_results; x++)
+    {
+        printf("CursorKind = %d\n", p_comp_results[x].CursorKind);
+#if 0
+
+        // <tab> for parameter: enter /* int x = */
+
+        CINDEX_LINKAGE CXString clang_getCompletionChunkText    (
+                CXCompletionString  completion_string,
+                unsigned    chunk_number 
+                )   
+            
+
+     CINDEX_LINKAGE enum CXCompletionChunkKind clang_getCompletionChunkKind  (
+                CXCompletionString  completion_string,
+                unsigned    chunk_number 
+
+
+CINDEX_LINKAGE unsigned     clang_getNumCompletionChunks (CXCompletionString completion_string)
+    Retrieve the number of chunks in the given code-completion string. 
+
+#endif // 0
+        printf("CompletionString = %s\n", p_comp_results[x].CompletionString);
+    }
 
 end:
     uclear(&s);
@@ -108,13 +138,12 @@ void crepl_complete_dispose(struct crepl *p_crepl)
 
 E_CREPL crepl_reload_tu(struct crepl *p_crepl)
 {
-    E_CREPL estatus = 0;
-    CXTranslationUnit p_new_tu = NULL;
+    E_CREPL estatus = E_CREPL_OK;
 
     if (p_crepl == NULL)
         return E_CREPL_PARAM;
 
-    if (!p_crepl->p_tu)
+    if (p_crepl->p_tu)
     {
         int cxerr = clang_reparseTranslationUnit(p_crepl->p_tu,
         0,
@@ -130,17 +159,17 @@ E_CREPL crepl_reload_tu(struct crepl *p_crepl)
 
     if (!p_crepl->p_tu)
     {
-    p_new_tu = clang_parseTranslationUnit(
-                             p_crepl->p_idx,
-                             p_crepl->p_stmt_c,
-                             NULL,
-                             0,
-                             NULL,
-                             0,
-                             clang_defaultEditingTranslationUnitOptions());
-    E_FAIL_IF(p_new_tu == NULL);
+        CXTranslationUnit p_new_tu = clang_parseTranslationUnit(
+                p_crepl->p_idx,
+                p_crepl->p_stmt_c,
+                NULL,
+                0,
+                NULL,
+                0,
+                clang_defaultEditingTranslationUnitOptions());
+        E_FAIL_IF(p_new_tu == NULL);
+        p_crepl->p_tu = p_new_tu;
     }
-    p_crepl->p_tu = p_new_tu;
 end:
     return estatus;
 }

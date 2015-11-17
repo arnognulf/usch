@@ -178,12 +178,10 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     set_header(p_crepl);
     set_filenames(p_crepl, dir_template);
 
-
-    if (p_crepl->options.interactive)
-    {
-        E_FAIL_IF(crepl_eval(p_crepl, "") != 0);
-        E_FAIL_IF(!CREPL_OK(crepl_reload_tu(p_crepl)));
-    }
+    // create stmt.c and accompaning header files
+    E_FAIL_IF(crepl_eval(p_crepl, "") != 0);
+    // load the translation unit
+    E_FAIL_IF(!CREPL_OK(crepl_reload_tu(p_crepl)));
 
     *pp_crepl = p_crepl;
     pp_ldpath = NULL;
@@ -279,7 +277,6 @@ void crepl_destroy(crepl *p_crepl)
         crepl_def_t *p_tmpdef = NULL;
         crepl_def_t *p_def = NULL;
         crepl_def_t *p_defs = p_crepl->p_defs;
-        (void)clang_disposeTranslationUnit(p_crepl->p_tu);
 
         HASH_ITER(hh, p_defs, p_def, p_tmpdef) {
             free(p_def->p_body_data);
