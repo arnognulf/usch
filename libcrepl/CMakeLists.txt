@@ -1,6 +1,6 @@
 # Create a library called "Hello" which includes the source file "hello.cxx".
 # The extension is already found. Any number of sources could be listed here.
-add_library (crepl SHARED bufstr.c crepl.c crepl_eval.c crepl_linker.c crepl_complete.cc crepl_parser.c crepl_vars.c strutils.c usch.h crepl.h)
+add_library (crepl SHARED bufstr.c crepl.c crepl_eval.c crepl_linker.c crepl_complete.c crepl_parser.c crepl_vars.c strutils.c usch.h crepl.h)
 
 # Make sure the compiler can find include files for our Hello library
 # when other libraries or executables link to Hello
