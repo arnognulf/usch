@@ -213,10 +213,19 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
                     }
                 }
 
-                char *p_tab_completion = ustrjoin(&tab_completion_stash, p_buf, &p_dirent->d_name[arglen - dirlen], p_trailing_slash);
+                char *p_tab_completion = ustrjoin(&tab_completion_stash,
+                                p_buf,
+                                &p_dirent->d_name[arglen - dirlen],
+                                p_trailing_slash);
                 linenoiseAddCompletion(lc, p_tab_completion);
             }
         }
+
+    }
+    else
+    {
+        // do C completion here
+        FAIL_IF(crepl_complete(p_buf));
 
     }
 end:
