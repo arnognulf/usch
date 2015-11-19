@@ -145,7 +145,7 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     p_crepl = calloc(sizeof(crepl), 1);
     E_FAIL_IF(p_crepl == NULL);
 
-    p_idx = clang_createIndex(0, 0);
+    p_idx = clang_createIndex(1, 0);
     E_FAIL_IF(p_idx == NULL);
     p_crepl->p_idx  = p_idx;
 
@@ -180,8 +180,6 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
 
     // create stmt.c and accompaning header files
     E_FAIL_IF(crepl_eval(p_crepl, "") != 0);
-    // load the translation unit
-    E_FAIL_IF(!CREPL_OK(crepl_reload_tu(p_crepl)));
 
     *pp_crepl = p_crepl;
     pp_ldpath = NULL;

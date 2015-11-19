@@ -509,7 +509,7 @@ static char *test_complete()
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
     mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
-    mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_comple", &p_results, &num_results)));
+    mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_creat", &p_results, &num_results)));
     mu_assert("error completing", num_results == 1);
 
 cleanup:

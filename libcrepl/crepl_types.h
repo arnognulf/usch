@@ -1,3 +1,7 @@
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 #include <ctype.h>
 #include "../external/uthash/src/uthash.h"
 #include "usch.h"
@@ -103,4 +107,8 @@ typedef struct
     int found_cur_id;
     struct crepl *p_context;
 } preparse_userdata_t;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
