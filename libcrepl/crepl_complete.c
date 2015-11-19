@@ -25,11 +25,15 @@ static int count_lines(const char *p_string)
     return num_lines;
 }
 
-static E_CREPL main_complete(struct crepl *p_crepl, const char *p_input)
+E_CREPL crepl_complete(struct crepl *p_crepl,
+                   const char *p_input,
+                   char **pp_results,
+                   int *p_num_results)
 {
-
+    (void)pp_results;
     E_CREPL estatus = E_CREPL_OK;
     ustash s = {0};
+    int num_results = 0;
 
     CXIndex idx = clang_createIndex(1, 0);
     E_FAIL_IF(!idx);
@@ -78,25 +82,18 @@ static E_CREPL main_complete(struct crepl *p_crepl, const char *p_input)
                 continue;
 
             const CXString out = clang_getCompletionChunkText(str, j);
-            printf("%s\n",clang_getCString(out)); 
+            const char *p_str = clang_getCString(out);
+            if (ustrneq(p_str, p_input, strlen(p_input)) == USCH_TRUE)
+            {
+                printf("%s %s\n", p_str, p_input); 
+                num_results++;
+            }
         }
-
     }
     clang_disposeCodeCompleteResults(res);
-
+    *p_num_results = num_results;
 end:
     return estatus;
-}
-E_CREPL crepl_complete(struct crepl *p_crepl,
-                   const char *p_input,
-                   char **pp_results,
-                   int *p_num_results)
-{
-    (void)p_input;
-    (void)pp_results;
-    (void)p_num_results;
-    main_complete(p_crepl, p_input);
-    return E_CREPL_OK;
 }
 
 

@@ -181,6 +181,20 @@ cleanup:
     return p_message;
 }
 
+static char *test_ustrneq()
+{
+    char *p_message = NULL;
+
+    mu_assert("error: ustrneq(\"FOO\", \"FOOBAR\"", ustrneq("FOO", "FOOBAR", strlen("FOO")) == USCH_TRUE);
+    mu_assert("error: ustrneq(\"FOO\", \"BAR\"", ustrneq("FOO", "BAR", strlen("FOO")) == USCH_FALSE);
+    mu_assert("error: ustrneq(\"FOO\", \"FOOBAR\", strlen(\"FOOBAR\")", ustrneq("FOO", "FOOBAR", strlen("FOOBAR")) == USCH_FALSE);
+    mu_assert("error: ustrneq(\"FOO\", NULL, strlen(\"FOOBAR\")", ustrneq("FOO", NULL, strlen("FOOBAR")) == USCH_FALSE);
+    mu_assert("error: ustrneq(NULL, \"FOO\", strlen(\"FOOBAR\")", ustrneq(NULL, "FOO", strlen("FOOBAR")) == USCH_FALSE);
+cleanup:
+    return p_message;
+}
+
+
 static char *test_ustrtrim()
 {
     char *p_message = NULL;
@@ -536,6 +550,7 @@ static char * all_tests()
     mu_run_test(test_ustrjoin);
     mu_run_test(test_ufiletostrv);
     mu_run_test(test_ustrvtofile);
+    mu_run_test(test_ustrneq);
     mu_run_test(test_complete);
     //mu_run_test(test_crepl_parsedefs);
     return 0;

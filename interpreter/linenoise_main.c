@@ -139,6 +139,7 @@ end:
 
 void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
 {
+    E_CREPL estatus = E_CREPL_OK;
     DIR *p_dir = NULL;
     struct dirent *p_dirent = NULL;
     int i;
@@ -225,8 +226,11 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     else
     {
         // do C completion here
-        FAIL_IF(crepl_complete(p_buf));
-
+        char **pp_results = NULL;
+        int num_results = 0;
+        estatus = crepl_complete(p_global_context, p_buf, pp_results, &num_results);
+        if (!CREPL_OK(estatus))
+                goto end;
     }
 end:
     if (p_dir)

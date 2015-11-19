@@ -42,6 +42,7 @@ typedef enum
     E_CREPL_OK = 1,
     E_CREPL_MAX = INT_MAX
 } E_CREPL;
+
 #define CREPL_OK(x) ((x) == E_CREPL_OK)
 
 struct crepl;

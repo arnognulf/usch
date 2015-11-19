@@ -75,7 +75,7 @@ typedef enum
 #define E_USCH_HANDLE_ASSERT 0x2
 
 #define USCH_TRUE 1
-#define USCH_FALSE 1
+#define USCH_FALSE 0
 #define USCH_BOOL int
 /**
  * @brief free allocated memory referenced by p_ustash.
@@ -1135,15 +1135,14 @@ static inline USCH_BOOL ustrneq(const char *p_a, const char *p_b, size_t len)
     size_t a_len = strlen(p_a);
     size_t b_len = strlen(p_b);
 
-    if (a_len != b_len &&
-       (a_len < len || b_len < len))
+    if (a_len < len || b_len < len)
        return USCH_FALSE;
     
     int equal = USCH_TRUE;
 
     for (size_t i = 0; i < len; i++)
     {
-        if (*p_a++ != *p_b++)
+        if (p_a[i] != p_b[i])
         {
             equal = USCH_FALSE;
         }
