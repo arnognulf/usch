@@ -125,10 +125,9 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
 static inline char **ustrexpv(ustash *p_ustash, const char **pp_strings);
 #define ustrexp(p_stash, ...) priv_ustrexp_impl((p_stash), sizeof((const char*[]){NULL, ##__VA_ARGS__})/sizeof(const char*), (const char*[]){NULL, ##__VA_ARGS__})
 
-/* @brief join 1-n strings to one string
+/* @brief Create a new string by concatenating 0-n strings
  *
- * Combine 1-n strings, and return it as a combined string.
- * All argument strings will be copied.
+ * Create a new string by concatenating 0-n strings.
  *
  * @param  p_ustash pointer to ustash structure.
  * @param  arguments to join into one string

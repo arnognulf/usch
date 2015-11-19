@@ -60,11 +60,9 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
     E_FAIL_IF(!u);
 
     int line = count_lines(unsaved_files.Contents);
-    // must point to beginning of identifier to be completed
+    // must point to beginning of identifier/after '>'/after '.' to be completed
     int column = (int)sizeof(CREPL_INDENT) - 1 + (int)strlen(p_input);
 
-    //int line = strtol(argv[2], 0, 10);
-    //int column = strtol(argv[3], 0, 10);
     CXCodeCompleteResults* res = clang_codeCompleteAt(
                                   u,
                                   p_crepl->p_stmt_c,
@@ -79,7 +77,9 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
 
         for (unsigned j = 0; j < clang_getNumCompletionChunks(str); j++) {
             if (clang_getCompletionChunkKind(str, j) != CXCompletionChunk_TypedText)
+            {
                 continue;
+            }
 
             const CXString out = clang_getCompletionChunkText(str, j);
             const char *p_str = clang_getCString(out);
