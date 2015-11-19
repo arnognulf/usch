@@ -350,7 +350,7 @@ static inline char **ustrsplit(ustash *p_ustash, const char* p_in, const char* p
                   + (len_in + 1)  * sizeof(char)
                   + (num_str + 1) * sizeof(char*);
     
-    p_stashitem = calloc(size, 1);
+    p_stashitem = (struct priv_usch_stash_item*)calloc(size, 1);
     if (p_stashitem == NULL)
         goto end;
 
@@ -421,7 +421,7 @@ static inline char **ustrexpv(ustash *p_ustash, const char **pp_strings)
 
     num_globbed_args = i;
 
-    p_blob = calloc(sizeof(struct priv_usch_stash_item)
+    p_blob = (struct priv_usch_stash_item*)calloc(sizeof(struct priv_usch_stash_item)
                     + (num_globbed_args + 1) * sizeof(char*) + total_len, 1);
     if (p_blob == NULL)
         goto end;
@@ -476,7 +476,7 @@ static inline char *udirname(ustash *p_ustash, const char *p_str)
 
     if (last_slash == 0)
     {
-        p_blob = calloc(2 + sizeof(struct priv_usch_stash_item), 1);
+        p_blob = (struct priv_usch_stash_item*)calloc(2 + sizeof(struct priv_usch_stash_item), 1);
         p_blob->str[0] = '/';
         p_blob->str[1] = '\0';
 
@@ -489,7 +489,7 @@ static inline char *udirname(ustash *p_ustash, const char *p_str)
     }
     else if (last_slash > 0)
     {
-        p_blob = calloc(last_slash + sizeof(struct priv_usch_stash_item), 1);
+        p_blob = (struct priv_usch_stash_item*)calloc(last_slash + sizeof(struct priv_usch_stash_item), 1);
 
         memcpy(p_blob->str, p_str, last_slash);
         p_blob->str[last_slash] = '\0';
@@ -536,7 +536,7 @@ static inline char *ustrtrim(ustash *p_ustash, const char *p_str)
     }
     end = i+1;
 
-    p_blob = calloc(end - start + 1 + sizeof(struct priv_usch_stash_item), 1);
+    p_blob = (struct priv_usch_stash_item*)calloc(end - start + 1 + sizeof(struct priv_usch_stash_item), 1);
     memcpy(p_blob->str, &p_str[start], end-start);
     p_blob->str[end] = '\0';
 
@@ -573,7 +573,7 @@ static inline char *ustrjoinv(ustash *p_ustash, const char **pp_strings)
         total_len += strlen(pp_strings[i]);
     }
 
-    p_blob = calloc(sizeof(struct priv_usch_stash_item) + sizeof(char) * total_len + 1, 1);
+    p_blob = (struct priv_usch_stash_item*)calloc(sizeof(struct priv_usch_stash_item) + sizeof(char) * total_len + 1, 1);
     if (p_blob == NULL)
         goto end;
 
@@ -621,7 +621,7 @@ static inline int priv_usch_cached_whereis(char** pp_cached_path, int path_items
             status = -1;
             goto end;
         }
-        p_item_copy = calloc(strlen(p_search_item), 1);
+        p_item_copy = (char*)calloc(strlen(p_search_item), 1);
         if (p_item_copy == NULL)
         {
             status = -1;
@@ -707,14 +707,14 @@ static inline const char **priv_usch_globexpand(const char **pp_orig_argv, size_
 
         if (p_current_glob_item == NULL)
         {
-            p_current_glob_item = calloc(1, sizeof(priv_usch_glob_list));
+            p_current_glob_item = (struct priv_usch_glob_list*)calloc(1, sizeof(priv_usch_glob_list));
             if (p_current_glob_item == NULL)
                 goto end;
             p_glob_list = p_current_glob_item;
         }
         else
         {
-            p_current_glob_item->p_next = calloc(1, sizeof(priv_usch_glob_list));
+            p_current_glob_item->p_next = (struct priv_usch_glob_list*)calloc(1, sizeof(priv_usch_glob_list));
             if (p_current_glob_item->p_next == NULL)
                 goto end;
             p_current_glob_item = p_current_glob_item->p_next;
@@ -726,7 +726,7 @@ static inline const char **priv_usch_globexpand(const char **pp_orig_argv, size_
         num_glob_items += p_current_glob_item->glob_data.gl_pathc;
         orig_arg_idx++;
     }
-    pp_expanded_argv = calloc(num_glob_items + num_args - orig_arg_idx + 1, sizeof(char*));
+    pp_expanded_argv = (const char**)calloc(num_glob_items + num_args - orig_arg_idx + 1, sizeof(char*));
     p_current_glob_item = p_glob_list;
 
     i = 0;
@@ -909,7 +909,7 @@ STDIN --> O --> O --> O --> STDOUT
     {
         size_t i = 0;
         size_t read_size = 1024;
-        p_priv_usch_stash_item = calloc(read_size + sizeof(struct priv_usch_stash_item), 1);
+        p_priv_usch_stash_item = (struct priv_usch_stash_item*)calloc(read_size + sizeof(struct priv_usch_stash_item), 1);
         if (p_priv_usch_stash_item == NULL)
             goto end;
         p_priv_usch_stash_item->p_next = NULL;
@@ -920,7 +920,7 @@ STDIN --> O --> O --> O --> STDOUT
             if (i >= read_size)
             {
                 read_size *= 2;
-                p_priv_usch_stash_item = realloc(p_priv_usch_stash_item, read_size + sizeof(struct priv_usch_stash_item));
+                p_priv_usch_stash_item = (struct priv_usch_stash_item*)realloc(p_priv_usch_stash_item, read_size + sizeof(struct priv_usch_stash_item));
                 if (p_priv_usch_stash_item == NULL)
                     goto end;
             }
@@ -1040,7 +1040,7 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
     p_file = fopen(p_filename, "rb");
     if (!p_file)
         goto cleanup;
-    p_str = malloc(len+1);
+    p_str = (char*)malloc(len+1);
     if (!p_str) goto cleanup;
 
     if (fread(p_str, 1, len, p_file) != len) goto cleanup;
@@ -1056,7 +1056,7 @@ static inline char **ufiletostrv(ustash *p_ustash, const char *p_filename, char 
             }
         }
     }
-    pp_strv = malloc((num_delims+1)*sizeof(char*));
+    pp_strv = (char**)malloc((num_delims+1)*sizeof(char*));
     if (!pp_strv) goto cleanup;
 
     pp_strv[vpos++] = p_str;
@@ -1082,6 +1082,8 @@ static inline int ustrvtofile(const char **pp_strv, const char *p_filename, cons
     FILE *p_file = NULL;
     if (!pp_strv || !p_filename || !p_delim)
         return -1;
+    
+    size_t delim_len = strlen(p_delim);
 
     p_file = fopen(p_filename, "w");
     if (!p_file)
@@ -1089,7 +1091,6 @@ static inline int ustrvtofile(const char **pp_strv, const char *p_filename, cons
         res = -1;
         goto cleanup;
     }
-    size_t delim_len = strlen(p_delim);
 
     while (pp_strv[i] != NULL)
     {
