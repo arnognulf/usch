@@ -353,7 +353,6 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
     char* (*uschrc_prompt)(ustash*);
     void (*uschrc_init)(ustash*);
     char *p_error = NULL;
-    char **pp_path = NULL;
     char **pp_cmds = NULL;
     bufstr_t input;
     // TODO: we need to determine wether stmt need to be usch-defined or not
@@ -375,8 +374,6 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
     FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
 
-    pp_path = ustrsplit(&s, getenv("PATH"), ":");
-    FAIL_IF(pp_path[0] == NULL);
     p_stmt_file = fopen(p_crepl->p_stmt_c, "w+");
     FAIL_IF(p_stmt_file == NULL);
 
@@ -554,7 +551,6 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
     p_crepl->p_prompt = (*uschrc_prompt)(&p_crepl->prompt_stash);
 
 end:
-    pp_path = NULL; // stashed
     free(definition.p_symname);
     if (p_handle)
         dlclose(p_handle);
