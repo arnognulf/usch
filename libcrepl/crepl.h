@@ -106,9 +106,11 @@ int crepl_preparse(struct crepl *p_crepl,
                    crepl_state_t *p_state);
 
 E_CREPL crepl_complete(struct crepl *p_crepl,
-                   const char *p_input,
-                   char **pp_results,
-                   int *p_num_results);
+                       const char *p_input,
+                       void(add_completion_callback(
+                               void * /* user_data */,
+                               char * /* completed_string */)),
+                       void *p_callback_data);
 
 E_CREPL crepl_reload_tu(struct crepl *p_crepl);
 

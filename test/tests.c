@@ -512,21 +512,32 @@ cleanup:
     uclear(&s);
     return p_message;
 }
-    
+
+static void add_completion_callback(void *p_data, char *p_completed_string)
+{
+    char *p_message = NULL;
+    (void)p_message;
+    char **p_str = (char**)p_data;
+    mu_assert("p_data == NULL", p_data != NULL);
+    *p_str = strdup(p_completed_string);
+cleanup:
+    return;
+}
+
 static char *test_complete()
 {
     char *p_message = NULL;
-    char *p_results = NULL;
-    int num_results = 0;
     (void)p_message;
     struct crepl *p_crepl = NULL;
     crepl_options options;
     memset(&options, 0, sizeof(crepl_options));
     mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
-    mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_creat", &p_results, &num_results)));
-    mu_assert("error completing", num_results == 1);
+    char *p_str = NULL;
+    mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_creat", add_completion_callback, &p_str)));
+    mu_assert("completion incorrect", ustreq(p_str, "crepl_create(/*struct crepl **pp_crepl*/"));
 
 cleanup:
+    free(p_str);
     crepl_destroy(p_crepl);
     
     return NULL;

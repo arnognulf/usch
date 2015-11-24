@@ -137,6 +137,17 @@ end:
     uclear(&s);
 }
 
+static void add_completion_callback(void *p_data, char *p_completion_string)
+{
+    if (p_data == NULL)
+        return;
+    if (p_completion_string == NULL)
+        return;
+
+    linenoiseCompletions *lc = (linenoiseCompletions*)p_data;
+    linenoiseAddCompletion(lc, p_completion_string);
+}
+
 void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
 {
     E_CREPL estatus = E_CREPL_OK;
@@ -226,9 +237,7 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
     else
     {
         // do C completion here
-        char **pp_results = NULL;
-        int num_results = 0;
-        estatus = crepl_complete(p_global_context, p_buf, pp_results, &num_results);
+        estatus = crepl_complete(p_global_context, p_buf, add_completion_callback, lc);
         if (!CREPL_OK(estatus))
                 goto end;
     }

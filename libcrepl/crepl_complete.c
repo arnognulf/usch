@@ -26,14 +26,12 @@ static int count_lines(const char *p_string)
 }
 
 E_CREPL crepl_complete(struct crepl *p_crepl,
-                   const char *p_input,
-                   char **pp_results,
-                   int *p_num_results)
+                       const char *p_input,
+                       void(add_completion_callback(void *, char *)),
+                       void *p_callback_data)
 {
-    (void)pp_results;
     E_CREPL estatus = E_CREPL_OK;
     ustash s = {0};
-    int num_results = 0;
 
     CXIndex idx = clang_createIndex(1, 0);
     E_FAIL_IF(!idx);
@@ -74,24 +72,58 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
 
     for (unsigned i = 0; i < res->NumResults; i++) {
         const CXCompletionString str = res->Results[i].CompletionString;
+        int match = -1;
 
         for (unsigned j = 0; j < clang_getNumCompletionChunks(str); j++) {
-            if (clang_getCompletionChunkKind(str, j) != CXCompletionChunk_TypedText)
+            const char *p_str = clang_getCString(clang_getCompletionChunkText(str, j));
+            if (clang_getCompletionChunkKind(str, j) \
+                    == CXCompletionChunk_TypedText && 
+                    ustrneq(p_str, p_input, strlen(p_input)))
             {
-                continue;
+                if (match == -1)
+                {
+                    match = j;
+                }
             }
+        }
 
-            const CXString out = clang_getCompletionChunkText(str, j);
-            const char *p_str = clang_getCString(out);
-            if (ustrneq(p_str, p_input, strlen(p_input)) == USCH_TRUE)
+#if 0
+str: crepl_create 1
+str: ( 6 
+str: struct crepl **pp_crepl 3
+str: ,  14
+str: crepl_options options 3
+str: ) 7 
+#endif // 0
+
+        for (unsigned j = match; j < clang_getNumCompletionChunks(str); j++) {
+
             {
-                printf("%s %s\n", p_str, p_input); 
-                num_results++;
+                if (clang_getCompletionChunkKind(str, j+1) == CXCompletionChunk_LeftParen && clang_getCompletionChunkKind(str, j+2) == CXCompletionChunk_Placeholder)
+                {
+#if 0
+                    printf("complete: \"%s%s/* %s */",
+                      clang_getCString(clang_getCompletionChunkText(str, j+0)),
+                      clang_getCString(clang_getCompletionChunkText(str, j+1)),
+                      clang_getCString(clang_getCompletionChunkText(str, j+2))
+                          );
+#endif // 0
+                    ustash s = {0};
+                    char *p_completed_string = ustrjoin(&s, 
+                      clang_getCString(clang_getCompletionChunkText(str, j+0)),
+                      clang_getCString(clang_getCompletionChunkText(str, j+1)),
+                      "/*",
+                      clang_getCString(clang_getCompletionChunkText(str, j+2)),
+                      "*/",
+                     );
+ 
+                    add_completion_callback(p_callback_data, p_completed_string);
+                }
             }
+            match = -1;
         }
     }
     clang_disposeCodeCompleteResults(res);
-    *p_num_results = num_results;
 end:
     return estatus;
 }
