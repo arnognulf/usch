@@ -7,3 +7,9 @@
 [submodule "external/commander"]
 	path = external/commander
 	url = https://github.com/arnognulf/commander.git
+[submodule "usch.h"]
+	path = usch.h
+	url = git://github.com/arnognulf/usch.h.git
+[submodule "usch_h"]
+	path = usch_h
+	url = git://github.com/arnognulf/usch.h.git
