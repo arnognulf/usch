@@ -8,7 +8,7 @@
 #include <clang-c/Index.h>
 #include "bufstr.h"
 #include "strutils.h"
-#include "usch.h"
+#include "../usch_h/usch.h"
 
 static int validate_symbol(struct crepl *p_crepl, const char* p_sym);
 

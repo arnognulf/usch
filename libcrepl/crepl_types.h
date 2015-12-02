@@ -4,7 +4,7 @@ extern "C" {
 
 #include <ctype.h>
 #include "../external/uthash/src/uthash.h"
-#include "usch.h"
+#include "../usch_h/usch.h"
 #include "crepl.h"
 #include <clang-c/Index.h>
 

@@ -30,7 +30,7 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include "usch.h"
+#include "../usch_h/usch.h"
 #include "crepl_debug.h"
 #include "bufstr.h"
 #include "crepl_parser.h"

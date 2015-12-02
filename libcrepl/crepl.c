@@ -31,7 +31,7 @@
 #include <stdlib.h>
 #include <clang-c/Index.h>
 
-#include "usch.h"
+#include "../usch_h/usch.h"
 #include "crepl_debug.h"
 #include "crepl_parser.h"
 #include "crepl_types.h"
