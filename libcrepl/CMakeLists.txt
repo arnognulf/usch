@@ -9,7 +9,7 @@ target_include_directories (crepl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 install(TARGETS crepl 
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION lib)
-install(FILES usch.h
+install(FILES ../usch_h/usch.h
         DESTINATION "include")
 install(FILES crepl.h
         DESTINATION "include")

@@ -28,7 +28,7 @@
 #include <sys/stat.h>                   // for stat, S_IFDIR, S_IFMT
 #include <sys/ptrace.h>
 
-#include "usch.h"
+#include "../usch_h/usch.h"
 #include "crepl.h"
 #include "../external/linenoise/linenoise.h"
 #include "../external/commander/src/commander.h"
@@ -287,42 +287,47 @@ int main(int argc, char **pp_argv) {
 
     if (options.single_instance)
     {
-	crepl_create(&p_crepl, options);
+        if(crepl_create(&p_crepl, options) != E_CREPL_OK)
+            goto cleanup;
 
-	p_global_context = p_crepl;
+        p_global_context = p_crepl;
 
-	signal(SIGQUIT, handle_sigint);
-	signal(SIGINT, handle_sigint);
+        signal(SIGQUIT, handle_sigint);
+        signal(SIGINT, handle_sigint);
 
-	p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
+        p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
 
-	linenoiseSetMultiLine(1);
-	linenoiseHistorySetMaxLen(100);
-	linenoiseSetCompletionCallback(tabCompletion);
-	linenoiseSetSpaceCompletionCallback(spaceCompletion);
-	linenoiseHistoryLoad(p_history); /* Load the history at startup */
+        linenoiseSetMultiLine(1);
+        linenoiseHistorySetMaxLen(100);
+        linenoiseSetCompletionCallback(tabCompletion);
+        linenoiseSetSpaceCompletionCallback(spaceCompletion);
+        linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
-	p_prompt = crepl_getprompt(p_crepl);
-	while((p_line = linenoise(p_prompt)) != NULL) 
-	{
-	    crepl_eval(p_crepl, p_line);
+        if(crepl_getprompt(p_crepl, &p_prompt) != E_CREPL_OK)
+            goto cleanup;
+        while((p_line = linenoise(p_prompt)) != NULL) 
+        {
+            if (crepl_eval(p_crepl, p_line) != E_CREPL_OK)
+                goto cleanup;
 
-	    if (p_line[0] != '\0') {
-	        linenoiseHistoryAdd(p_line); /* Add to the history. */
-	        linenoiseHistorySave(p_history); /* Save the history on disk. */
-	    }
-	    free(p_line);
-	    p_prompt = crepl_getprompt(p_crepl);
-	}
-	crepl_destroy(p_crepl);
+            if (p_line[0] != '\0') {
+                linenoiseHistoryAdd(p_line); /* Add to the history. */
+                linenoiseHistorySave(p_history); /* Save the history on disk. */
+            }
+            free(p_line);
+            if (crepl_getprompt(p_crepl, &p_prompt) != E_CREPL_OK)
+                goto cleanup;
+        }
+        crepl_destroy(p_crepl);
     }
     else
     {
-	while (ucmd(pp_argv[0], "--single-instance") != 0)
-	{
-		fprintf(stderr, "%s: CREPL crashed, all memory cleared\n", pp_argv[0]);
-	}
+        while (ucmd(pp_argv[0], "--single-instance") != 0)
+        {
+            fprintf(stderr, "%s: CREPL crashed, all memory cleared\n", pp_argv[0]);
+        }
     }
+cleanup:
     uclear(&s);
     command_free(&cmd);
     return 0;

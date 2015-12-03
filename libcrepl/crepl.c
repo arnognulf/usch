@@ -323,23 +323,19 @@ void crepl_destroy(crepl *p_crepl)
     return;
 }
 
-const char* crepl_getprompt(crepl *p_crepl)
+E_CREPL crepl_getprompt(struct crepl *p_crepl, const char **pp_prompt_out)
 {
-    char *p_prompt = NULL;
-    static char prompt[1];
-    memset(prompt, 0x00, 1);
+    if (p_crepl == NULL ||
+        pp_prompt_out == NULL)
+        return E_CREPL_PARAM;
+    if (p_crepl->p_prompt == NULL)
+        return E_CREPL_WAT;
 
-    if (!p_crepl)
-        return prompt;
     if (p_crepl->p_prompt)
     {
-        p_prompt = p_crepl->p_prompt;
+        *pp_prompt_out = p_crepl->p_prompt;
     }
-    else
-    {
-        p_prompt = prompt;
-    }
-    return p_prompt;
+    return E_CREPL_OK;
 }
 
 crepl_options crepl_getoptions(crepl *p_crepl)

@@ -67,15 +67,15 @@ CREPL_STATE_PREPROCESSOR = 4,
 
 /**
  * @brief Create crepl context object
- *  
+ *
  * Create crepl context object with specified options
- *   
+ *
  * @param pp_crepl created context object
  * @param options creation options
  */
 E_CREPL crepl_create(struct crepl **pp_crepl, crepl_options options);
 
-int crepl_eval(struct crepl *p_crepl, char *p_input);
+E_CREPL crepl_eval(struct crepl *p_crepl, char *p_input);
 void crepl_destroy(struct crepl *p_crepl);
 
 crepl_options crepl_getoptions(struct crepl *p_crepl);
@@ -93,7 +93,18 @@ int crepl_is_cmd(struct crepl *p_crepl, char *p_item);
 int crepl_lib(struct crepl *p_crepl, char *p_dynlib);
 int crepl_include(struct crepl *p_crepl, char *p_header);
 char **crepl_getldpath();
-const char* crepl_getprompt(struct crepl *p_crepl);
+
+/**
+ * @brief Get current prompt
+ *
+ * Get prompt to print
+ *
+ * @param p_crepl crepl context object
+ * @param pp_prompt_out prompt string pointer to assign
+ * @return E_CREPL_OK or specific crepl error
+ * @remarks assigned pointer must not be free'd
+ */
+E_CREPL crepl_getprompt(struct crepl *p_crepl, const char **pp_prompt_out);
 
 int crepl_parsedefs(struct crepl *p_crepl, char *p_line);
 
