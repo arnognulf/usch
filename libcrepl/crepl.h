@@ -35,6 +35,7 @@ extern "C" {
 typedef enum
 {
     E_CREPL_MIN = INT_MIN,
+    E_CREPL_SYNTAX_ERROR = -4,
     E_CREPL_WAT = -3,
     E_CREPL_PARAM = -2,
     E_CREPL_ALLOC_FAIL = -1,

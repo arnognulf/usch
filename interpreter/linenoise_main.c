@@ -90,53 +90,50 @@ void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
     char *p_full_completion = NULL;
     char *p_space_completion = NULL;
     crepl_state_t state = CREPL_STATE_CPARSER;
-    size_t len = 0;
-    const char space_completion[] = " ";
     ustash s = {0};
-
-    len = strlen(p_buf);
 
     crepl_preparse(p_global_context, p_buf, &state);
 
     if (state == CREPL_STATE_CMDSTART)
     {
-        const char completion[] = "(\"";
-        p_full_completion = calloc(len + strlen(completion) + 1, 1);
-        if (p_full_completion == NULL)
-            goto end;
-
-        memcpy(p_full_completion, p_buf, len);
-        memcpy(&p_full_completion[len], completion, strlen(completion) + /* last NUL */ 1);
-
-        linenoiseAddCompletion(lc, p_full_completion);
+	p_full_completion = ustrjoin(&s, p_buf, "(\"");
+	linenoiseAddCompletion(lc, p_full_completion);
     }
     else if (state == CREPL_STATE_CMDARG)
     {
-        const char completion[] = "\", \"";
-
-        p_full_completion = calloc(len + strlen(completion) + 1, 1);
-        if (p_full_completion == NULL)
-            goto end;
-
-        memcpy(p_full_completion, p_buf, len);
-        memcpy(&p_full_completion[len], completion, strlen(completion) + /* last NUL */ 1);
-
+        p_full_completion = ustrjoin(&s, p_buf, "\", \"");
         linenoiseAddCompletion(lc, p_full_completion);
     }
-    p_space_completion = calloc(len + strlen(space_completion) + 1, 1);
-    if (p_space_completion == NULL)
-        goto end;
 
-    memcpy(p_space_completion, p_buf, len);
-    memcpy(&p_space_completion[len], space_completion, strlen(space_completion) + /* last NUL */ 1);
-
+    p_space_completion = ustrjoin(&s, p_buf, " ");
     linenoiseAddCompletion(lc, p_space_completion);
-end:
-    free(p_full_completion);
-    free(p_space_completion);
     uclear(&s);
 }
 
+void reverseSpaceCompletion(const char *p_buf, linenoiseCompletions *lc)
+{
+    char *p_full_completion = NULL;
+    char *p_space_completion = NULL;
+    crepl_state_t state = CREPL_STATE_CPARSER;
+    ustash s = {0};
+
+    crepl_preparse(p_global_context, p_buf, &state);
+
+    p_space_completion = ustrjoin(&s, p_buf, " ");
+    linenoiseAddCompletion(lc, p_space_completion);
+
+    if (state == CREPL_STATE_CMDSTART)
+    {
+	p_full_completion = ustrjoin(&s, p_buf, "(\"");
+	linenoiseAddCompletion(lc, p_full_completion);
+    }
+    else if (state == CREPL_STATE_CMDARG)
+    {
+        p_full_completion = ustrjoin(&s, p_buf, "\", \"");
+        linenoiseAddCompletion(lc, p_full_completion);
+    }
+    uclear(&s);
+}
 static void add_completion_callback(void *p_data, char *p_completion_string)
 {
     if (p_data == NULL)
@@ -301,6 +298,7 @@ int main(int argc, char **pp_argv) {
         linenoiseHistorySetMaxLen(100);
         linenoiseSetCompletionCallback(tabCompletion);
         linenoiseSetSpaceCompletionCallback(spaceCompletion);
+        linenoiseSetReverseSpaceCompletionCallback(reverseSpaceCompletion);
         linenoiseHistoryLoad(p_history); /* Load the history at startup */
 
         if(crepl_getprompt(p_crepl, &p_prompt) != E_CREPL_OK)
