@@ -28,7 +28,7 @@
 #include "crepl.h"                      // for crepl_define, crepl_load, etc
 #include "crepl_parser.h"               // for stripwhite, identifier_pos
 #include "minunit.h"                    // for mu_assert, mu_run_test
-#include "usch.h"                       // for ucmd, uclear, etc
+#include "../usch_h/usch.h"             // for ucmd, uclear, etc
 
 int tests_run = 0;
 static char * test_strsplit() {

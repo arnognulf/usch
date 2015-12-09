@@ -487,6 +487,7 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
     }
 
     p_stmt = ustrjoin(&s, p_stmt,
+		      "struct crepl;\n",
                       "int ", CREPL_DYN_FUNCNAME, "(struct crepl *p_crepl)\n", \
                       "{\n", \
                       CREPL_INDENT, input.p_str, ";\n", \
