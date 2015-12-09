@@ -179,7 +179,7 @@ E_CREPL crepl_create(crepl **pp_crepl, crepl_options options)
     set_filenames(p_crepl, dir_template);
 
     // create stmt.c and accompaning header files
-    E_FAIL_IF(crepl_eval(p_crepl, "") != 0);
+    E_FAIL_IF(crepl_eval(p_crepl, "") != E_CREPL_OK);
 
     *pp_crepl = p_crepl;
     pp_ldpath = NULL;

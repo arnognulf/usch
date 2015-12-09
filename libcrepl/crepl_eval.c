@@ -25,10 +25,10 @@
 #include <stdlib.h>
 #include <dlfcn.h>
 #include <ctype.h>
-#include <assert.h>
 #include <dirent.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <libtcc.h>
 
 #include "../usch_h/usch.h"
 #include "crepl_debug.h"
@@ -339,48 +339,46 @@ end:
 
 #define usch_shell_cc(...) ucmd("clang", ##__VA_ARGS__)
 
-int crepl_eval(crepl *p_crepl, char *p_input_line)
+E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
 {
     int i = 0;
-    int status = 0;
+    E_CREPL estatus = E_CREPL_OK;
     usch_def_t definition = {0};
     FILE *p_stmt_file = NULL;
-    void *p_handle = NULL;
     int (*dyn_func)(crepl*);
     int (*set_context)(crepl*);
     int (*crepl_store_vars)(crepl*);
     int (*crepl_load_vars)(crepl*);
     char* (*uschrc_prompt)(ustash*);
     void (*uschrc_init)(ustash*);
-    char *p_error = NULL;
     char **pp_cmds = NULL;
     bufstr_t input;
     // TODO: we need to determine wether stmt need to be usch-defined or not
     // declare dummy function to get overridden errors
     // use macro to call the real function
     ustash s = {NULL};
+    TCCState *tcc;
+    void *mem = NULL;
 
-    char dylib_filename[] = "dyn_stmt";
-    char *p_tempdylib = NULL;
     char *p_pre_assign = NULL;
     char *p_post_assign = NULL;
     crepl_state_t state;
     char *p_stmt = NULL;
 
-    FAIL_IF(p_crepl == NULL || p_input_line == NULL);
+    E_FAIL_IF(p_crepl == NULL || p_input_line == NULL);
 
     input.p_str = NULL;
-    FAIL_IF(crepl_finalize(p_crepl, p_input_line, &input.p_str));
-    FAIL_IF(input.p_str == NULL);
+    E_FAIL_IF(crepl_finalize(p_crepl, p_input_line, &input.p_str));
+    E_FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
 
     p_stmt_file = fopen(p_crepl->p_stmt_c, "w+");
-    FAIL_IF(p_stmt_file == NULL);
+    E_FAIL_IF(p_stmt_file == NULL);
 
-    FAIL_IF(crepl_preparse(p_crepl, input.p_str, &state));
+    E_FAIL_IF(crepl_preparse(p_crepl, input.p_str, &state));
     if (state != CREPL_STATE_PREPROCESSOR)
     {
-        FAIL_IF(crepl_parsedefs(p_crepl, input.p_str));
+        E_FAIL_IF(crepl_parsedefs(p_crepl, input.p_str));
         free(input.p_str);
         input.p_str = p_crepl->p_nodef_line;
         input.len = strlen(p_crepl->p_nodef_line);
@@ -428,7 +426,7 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
         {
             preproc_cmd.len = 128;
             preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
-            FAIL_IF(preproc_cmd.p_str == NULL);
+            E_FAIL_IF(preproc_cmd.p_str == NULL);
 
             bufstradd(&preproc_cmd, "    (void)crepl_lib(p_crepl_context, \"");
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#lib ")]);
@@ -445,7 +443,7 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
         {
             preproc_cmd.len = 128;
             preproc_cmd.p_str = calloc(preproc_cmd.len, 1);
-            FAIL_IF(preproc_cmd.p_str == NULL);
+            E_FAIL_IF(preproc_cmd.p_str == NULL);
 
             bufstradd(&preproc_cmd, "    (void)crepl_include(p_crepl_context, \"");
             bufstradd(&preproc_cmd, &input.p_str[i+strlen("#include ")]);
@@ -461,11 +459,11 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
         }
     }
 
-    FAIL_IF(write_includes_h(p_crepl) != 0);
-    FAIL_IF(write_definitions_h(p_crepl) != 0);
-    FAIL_IF(write_trampolines_h(p_crepl) != 0);
+    E_FAIL_IF(write_includes_h(p_crepl) != 0);
+    E_FAIL_IF(write_definitions_h(p_crepl) != 0);
+    E_FAIL_IF(write_trampolines_h(p_crepl) != 0);
 
-    FAIL_IF(parse_line(input.p_str, &definition) < 1);
+    E_FAIL_IF(parse_line(input.p_str, &definition) < 1);
 
     p_stmt = ustrjoin(&s, p_crepl->p_stmt_header);
 
@@ -492,69 +490,51 @@ int crepl_eval(crepl *p_crepl, char *p_input_line)
                       "{\n", \
                       CREPL_INDENT, input.p_str, ";\n", \
                       CREPL_INDENT, "return 0;\n", \
-                      "}\n");
-
-    p_stmt = ustrjoin(&s, p_stmt, \
-            "const char* uschrc_prompt(ustash *p_stash) { return prompt(p_stash);}\n");
-
-    p_stmt = ustrjoin(&s, p_stmt, \
-            "void uschrc_init(ustash *p_stash) { return uschrc(p_stash);}\n");
+                      "}\n", \
+                      "const char* uschrc_prompt(ustash *p_stash) { return prompt(p_stash);}\n", \
+                      "void uschrc_init(ustash *p_stash) { uschrc(p_stash);}\n");
 
     if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "p_stmt = \\\n%s\n", p_stmt);
 
-    FAIL_IF(!fwrite_ok(p_stmt, p_stmt_file));
+    tcc = tcc_new();
+    E_FAIL_IF(tcc_add_include_path(tcc, p_crepl->p_tmpdir) != 0);
+    E_FAIL_IF(tcc_set_output_type(tcc, TCC_OUTPUT_MEMORY) != 0);
+    E_FAIL_IF(tcc_compile_string(tcc, p_stmt) != 0);
+    mem = malloc(tcc_relocate(tcc, NULL));
+    E_FAIL_IF(mem == NULL);
+    E_FAIL_IF(tcc_relocate(tcc, mem) != 0);
 
-    fclose(p_stmt_file);
-    p_stmt_file = NULL;
-    p_stmt = NULL;
-    p_tempdylib = ustrjoin(&s, p_crepl->p_tmpdir, "/", dylib_filename);
-    if (usch_shell_cc("-O0", "-rdynamic", "-Werror", "-shared", "-fPIC", "-o", p_tempdylib, p_crepl->p_stmt_c) != 0) 
-    {
-        fprintf(stderr, "usch: compile error\n");
-        ENDOK_IF(1);
-    }
-
-    p_handle = dlopen(p_tempdylib, RTLD_LAZY);
-    FAIL_IF(!p_handle);
-
-    dlerror();
-
-    *(void **) (&crepl_load_vars) = dlsym(p_handle, "crepl_load_vars");
-
-    FAIL_IF((p_error = dlerror()) != NULL);
+    *(void **) (&crepl_load_vars) = tcc_get_symbol(tcc, "crepl_load_vars");
+    E_FAIL_IF(crepl_load_vars == NULL);
     (*crepl_load_vars)(p_crepl);
 
-    *(void **) (&set_context) = dlsym(p_handle, "crepl_set_context");
-    FAIL_IF((p_error = dlerror()) != NULL);
+    *(void **) (&set_context) = tcc_get_symbol(tcc, "crepl_set_context");
+    E_FAIL_IF(set_context == NULL);
     (*set_context)(p_crepl);
 
     if (!p_crepl->is_initialized && p_crepl->options.interactive)
     {
-        *(void **) (&uschrc_init) = dlsym(p_handle, "uschrc_init");
-        FAIL_IF((p_error = dlerror()) != NULL);
-        (*uschrc_init)(&p_crepl->prompt_stash);
-        p_crepl->is_initialized = 1;
-    }
-
-    *(void **) (&dyn_func) = dlsym(p_handle, CREPL_DYN_FUNCNAME);
-    FAIL_IF((p_error = dlerror()) != NULL);
+        *(void **) (&uschrc_init) = tcc_get_symbol(tcc, "uschrc_init");
+	E_FAIL_IF(uschrc_init == NULL);
+        (*uschrc_init)(&p_crepl->prompt_stash); p_crepl->is_initialized = 1; } 
+    *(void **) (&dyn_func) = tcc_get_symbol(tcc, CREPL_DYN_FUNCNAME);
     (*dyn_func)(p_crepl);
 
-    *(void **) (&crepl_store_vars) = dlsym(p_handle, "crepl_store_vars");
-    FAIL_IF((p_error = dlerror()) != NULL);
+    *(void **) (&crepl_store_vars) = tcc_get_symbol(tcc, "crepl_store_vars");
+    E_FAIL_IF(crepl_store_vars == NULL);
     (*crepl_store_vars)(p_crepl);
 
     uclear(&p_crepl->prompt_stash);
     p_crepl->p_prompt = NULL;
-    *(void **) (&uschrc_prompt) = dlsym(p_handle, "uschrc_prompt");
-    FAIL_IF((p_error = dlerror()) != NULL);
+    *(void **) (&uschrc_prompt) = tcc_get_symbol(tcc, "uschrc_prompt");
+    E_FAIL_IF(uschrc_prompt == NULL);
     p_crepl->p_prompt = (*uschrc_prompt)(&p_crepl->prompt_stash);
 
 end:
+    tcc_delete(tcc);
+    free(mem);
     free(definition.p_symname);
-    if (p_handle)
-        dlclose(p_handle);
     free(p_pre_assign);
     free(p_post_assign);
     free(input.p_str);
@@ -567,7 +547,7 @@ end:
     if (p_stmt_file != NULL)
         fclose(p_stmt_file);
 
-    return status;
+    return estatus;
 }
 
 
