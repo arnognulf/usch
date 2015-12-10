@@ -342,6 +342,7 @@ end:
 E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
 {
     int i = 0;
+    int tccstatus = 0;
     E_CREPL estatus = E_CREPL_OK;
     usch_def_t definition = {0};
     FILE *p_stmt_file = NULL;
@@ -500,7 +501,13 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     tcc = tcc_new();
     E_FAIL_IF(tcc_add_include_path(tcc, p_crepl->p_tmpdir) != 0);
     E_FAIL_IF(tcc_set_output_type(tcc, TCC_OUTPUT_MEMORY) != 0);
-    E_FAIL_IF(tcc_compile_string(tcc, p_stmt) != 0);
+    tccstatus = tcc_compile_string(tcc, p_stmt);
+    if (tccstatus != 0)
+    {
+	if (crepl_getoptions(p_crepl).verbosity >= 1)
+            fprintf(stderr, "usch: compilation failed\n");
+	E_QUIET_FAIL_IF(tccstatus != 0);
+    }
     mem = malloc(tcc_relocate(tcc, NULL));
     E_FAIL_IF(mem == NULL);
     E_FAIL_IF(tcc_relocate(tcc, mem) != 0);

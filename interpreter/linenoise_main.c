@@ -305,8 +305,7 @@ int main(int argc, char **pp_argv) {
             goto cleanup;
         while((p_line = linenoise(p_prompt)) != NULL) 
         {
-            if (crepl_eval(p_crepl, p_line) != E_CREPL_OK)
-                goto cleanup;
+            (void)crepl_eval(p_crepl, p_line);
 
             if (p_line[0] != '\0') {
                 linenoiseHistoryAdd(p_line); /* Add to the history. */
