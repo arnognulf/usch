@@ -598,14 +598,18 @@ end:
         fclose(p_parsefile);
     return status;
 }
-static int is_builtin_cmd(char *p_str)
+static USCH_BOOL is_builtin_cmd(char *p_str)
 {
-    int is_builtin = 0;
-    if (strncmp(p_str, "cd", strlen("cd")) == 0 && strlen("cd") == strlen(p_str))
+    if (ustreq(p_str, "cd")      ||
+        ustreq(p_str, "ucmd")    ||
+        ustreq(p_str, "ucmdout"))
     {
-        is_builtin = 1;
+        return USCH_TRUE;
     }
-    return is_builtin;
+    else
+    {
+        return USCH_FALSE;
+    }
 }
 
 static void clear_range(char *p_line, int start, int end)

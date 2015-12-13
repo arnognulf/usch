@@ -1,3 +1,5 @@
+[enable HTML to render MarkDown]: <pre>
+
 USCH - C shell with vanilla C syntax
 ====================================
 

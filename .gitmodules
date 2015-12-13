@@ -13,3 +13,9 @@
 [submodule "usch_h"]
 	path = usch_h
 	url = git://github.com/arnognulf/usch.h.git
+[submodule "jr"]
+	path = jr
+	url = git@github.com:arnognulf/jr.git
+[submodule "external/jr"]
+	path = external/jr
+	url = git@github.com:arnognulf/jr.git
