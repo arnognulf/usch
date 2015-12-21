@@ -534,6 +534,7 @@ static char *test_complete()
     mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
     char *p_str = NULL;
     mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_creat", add_completion_callback, &p_str)));
+    printf("XXX: %s\n", p_str);
     //mu_assert("completion incorrect", ustreq(p_str, "crepl_create(/*struct crepl **pp_crepl*/"));
 
 cleanup:

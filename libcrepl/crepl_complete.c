@@ -43,6 +43,7 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
                                           "{\n", \
                                           CREPL_INDENT, p_input);
     unsaved_files.Length = strlen(unsaved_files.Contents);
+printf("YYY: %s\n", unsaved_files.Contents);
 
     CXTranslationUnit u = clang_parseTranslationUnit(idx,
                           p_crepl->p_stmt_c,
@@ -76,6 +77,7 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
 
         for (unsigned j = 0; j < clang_getNumCompletionChunks(str); j++) {
             const char *p_str = clang_getCString(clang_getCompletionChunkText(str, j));
+	    printf("XXX: %s\n", p_str);
             if (clang_getCompletionChunkKind(str, j) \
                     == CXCompletionChunk_TypedText && 
                     ustrneq(p_str, p_input, strlen(p_input)))
