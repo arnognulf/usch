@@ -358,7 +358,7 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     // declare dummy function to get overridden errors
     // use macro to call the real function
     ustash s = {NULL};
-    TCCState *tcc;
+    TCCState *p_tcc = NULL;
     void *mem = NULL;
 
     char *p_pre_assign = NULL;
@@ -498,48 +498,48 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "p_stmt = \\\n%s\n", p_stmt);
 
-    tcc = tcc_new();
-    E_FAIL_IF(tcc_add_include_path(tcc, p_crepl->p_tmpdir) != 0);
-    E_FAIL_IF(tcc_set_output_type(tcc, TCC_OUTPUT_MEMORY) != 0);
-    tccstatus = tcc_compile_string(tcc, p_stmt);
+    p_tcc = tcc_new();
+    E_FAIL_IF(tcc_add_include_path(p_tcc, p_crepl->p_tmpdir) != 0);
+    E_FAIL_IF(tcc_set_output_type(p_tcc, TCC_OUTPUT_MEMORY) != 0);
+    tccstatus = tcc_compile_string(p_tcc, p_stmt);
     if (tccstatus != 0)
     {
 	if (crepl_getoptions(p_crepl).verbosity >= 1)
             fprintf(stderr, "usch: compilation failed\n");
 	E_QUIET_FAIL_IF(tccstatus != 0);
     }
-    mem = malloc(tcc_relocate(tcc, NULL));
+    mem = malloc(tcc_relocate(p_tcc, NULL));
     E_FAIL_IF(mem == NULL);
-    E_FAIL_IF(tcc_relocate(tcc, mem) != 0);
+    E_FAIL_IF(tcc_relocate(p_tcc, mem) != 0);
 
-    *(void **) (&crepl_load_vars) = tcc_get_symbol(tcc, "crepl_load_vars");
+    *(void **) (&crepl_load_vars) = tcc_get_symbol(p_tcc, "crepl_load_vars");
     E_FAIL_IF(crepl_load_vars == NULL);
     (*crepl_load_vars)(p_crepl);
 
-    *(void **) (&set_context) = tcc_get_symbol(tcc, "crepl_set_context");
+    *(void **) (&set_context) = tcc_get_symbol(p_tcc, "crepl_set_context");
     E_FAIL_IF(set_context == NULL);
     (*set_context)(p_crepl);
 
     if (!p_crepl->is_initialized && p_crepl->options.interactive)
     {
-        *(void **) (&uschrc_init) = tcc_get_symbol(tcc, "uschrc_init");
+        *(void **) (&uschrc_init) = tcc_get_symbol(p_tcc, "uschrc_init");
 	E_FAIL_IF(uschrc_init == NULL);
         (*uschrc_init)(&p_crepl->prompt_stash); p_crepl->is_initialized = 1; } 
-    *(void **) (&dyn_func) = tcc_get_symbol(tcc, CREPL_DYN_FUNCNAME);
+    *(void **) (&dyn_func) = tcc_get_symbol(p_tcc, CREPL_DYN_FUNCNAME);
     (*dyn_func)(p_crepl);
 
-    *(void **) (&crepl_store_vars) = tcc_get_symbol(tcc, "crepl_store_vars");
+    *(void **) (&crepl_store_vars) = tcc_get_symbol(p_tcc, "crepl_store_vars");
     E_FAIL_IF(crepl_store_vars == NULL);
     (*crepl_store_vars)(p_crepl);
 
     uclear(&p_crepl->prompt_stash);
     p_crepl->p_prompt = NULL;
-    *(void **) (&uschrc_prompt) = tcc_get_symbol(tcc, "uschrc_prompt");
+    *(void **) (&uschrc_prompt) = tcc_get_symbol(p_tcc, "uschrc_prompt");
     E_FAIL_IF(uschrc_prompt == NULL);
     p_crepl->p_prompt = (*uschrc_prompt)(&p_crepl->prompt_stash);
 
 end:
-    tcc_delete(tcc);
+    tcc_delete(p_tcc);
     free(mem);
     free(definition.p_symname);
     free(p_pre_assign);

@@ -1,4 +1,4 @@
-rm -rf debugbuild
+rm -rf releasebuild
 mkdir releasebuild
 cd releasebuild
 cmake .. -DCMAKE_BUILD_TYPE=Release -DUSCH_LLVM_ROOT_PATH=/usr/lib/llvm-3.7/ || exit 22
