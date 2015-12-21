@@ -238,7 +238,7 @@ static int validate_symbol(struct crepl *p_crepl, const char* p_sym)
 
     p_lib = p_crepl->p_libs;
     
-    if (p_lib == NULL)
+    if (p_lib == NULL && p_crepl->options.verbosity)
         fprintf(stderr, "usch: error: cannot resolve header symbols without at least one library added.\n");
     QUIET_FAIL_IF(p_lib == NULL);
 
@@ -259,7 +259,7 @@ static int validate_symbol(struct crepl *p_crepl, const char* p_sym)
     } while (p_lib != NULL);
 
 end:
-    if (symbol_found == 1)
+    if (symbol_found == 1 && p_crepl->options.verbosity)
         fprintf(stderr, "usch: error: could not resolve: %s, did you forget to add the corresponding library?\n", p_sym);
     if (status != 0)
         symbol_found = 1;
@@ -342,7 +342,7 @@ static char *get_fullname(struct crepl *p_crepl, char *p_libname_in)
             namecand.p_str[0] = '\0';
         }
     }
-    if (p_foundlib == NULL)
+    if (p_foundlib == NULL && p_crepl->options.verbosity)
     {
         fprintf(stderr, "usch: error: could not find library\n");
     }

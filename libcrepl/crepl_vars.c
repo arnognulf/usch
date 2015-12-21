@@ -13,7 +13,8 @@ int crepl_define(crepl *p_context, size_t var_size, char *p_defname)
     void *p_alloc_data = NULL;
     HASH_FIND_STR(p_defs, p_defname, p_def);
 
-    fprintf(stderr, "usch: variable already defined\n");
+    if (p_def != NULL && p_context->options.verbosity)
+        fprintf(stderr, "usch: variable already defined\n");
     QUIET_FAIL_IF(p_def != NULL);
 
     p_def = calloc(sizeof(crepl_def_t) + strlen(p_defname) + 1, 1);
