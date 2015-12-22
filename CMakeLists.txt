@@ -16,11 +16,8 @@ IF(CMAKE_BUILD_TYPE MATCHES Debug)
       message("Debug build.")
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -ggdb -D_DEFAULT_SOURCE -std=gnu99 -pedantic -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"")
 else()
-      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -pg -D_DEFAULT_SOURCE -std=gnu99 -pedantic -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"")
+      set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O2 -D_DEFAULT_SOURCE -std=gnu99 -pedantic -Wall -Wextra -Werror -g3 -DUSCH_INSTALL_PREFIX=\"$(PREFIX)\"")
 endif()
-SET(CMAKE_C_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pg")
-SET(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -pg")
 
 if( DEFINED USCH_LLVM_INCLUDE_PATH AND DEFINED USCH_LLVM_LIB_PATH )
     # User provided include/lib paths, fall through

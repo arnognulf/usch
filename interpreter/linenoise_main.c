@@ -96,8 +96,8 @@ void spaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 
     if (state == CREPL_STATE_CMDSTART)
     {
-	p_full_completion = ustrjoin(&s, p_buf, "(\"");
-	linenoiseAddCompletion(lc, p_full_completion);
+    p_full_completion = ustrjoin(&s, p_buf, "(\"");
+    linenoiseAddCompletion(lc, p_full_completion);
     }
     else if (state == CREPL_STATE_CMDARG)
     {
@@ -124,8 +124,8 @@ void reverseSpaceCompletion(const char *p_buf, linenoiseCompletions *lc)
 
     if (state == CREPL_STATE_CMDSTART)
     {
-	p_full_completion = ustrjoin(&s, p_buf, "(\"");
-	linenoiseAddCompletion(lc, p_full_completion);
+    p_full_completion = ustrjoin(&s, p_buf, "(\"");
+    linenoiseAddCompletion(lc, p_full_completion);
     }
     else if (state == CREPL_STATE_CMDARG)
     {
@@ -267,6 +267,7 @@ int main(int argc, char **pp_argv) {
     ustash s = {0};
     const char *p_prompt = NULL;
     command_t cmd;
+    E_CREPL estatus = E_CREPL_OK;
 
     options.verbosity = 1;
     options.interactive = 1;
@@ -281,6 +282,9 @@ int main(int argc, char **pp_argv) {
         fprintf(stderr, "usch: gdb detected, enabling single instance mode.\n");
         single_instance(NULL);
     }
+    signal(SIGQUIT, handle_sigint);
+    signal(SIGINT, handle_sigint);
+
 
     if (options.single_instance)
     {
@@ -289,8 +293,8 @@ int main(int argc, char **pp_argv) {
 
         p_global_context = p_crepl;
 
-        signal(SIGQUIT, handle_sigint);
-        signal(SIGINT, handle_sigint);
+        //signal(SIGQUIT, handle_sigint);
+        //signal(SIGINT, handle_sigint);
 
         p_history = ustrjoin(&s, getenv("HOME"), "/.usch_history");
 
@@ -303,19 +307,22 @@ int main(int argc, char **pp_argv) {
 
         if(crepl_getprompt(p_crepl, &p_prompt) != E_CREPL_OK)
             goto cleanup;
-        while((p_line = linenoise(p_prompt)) != NULL) 
+
+        while(1) 
         {
-            (void)crepl_eval(p_crepl, p_line);
+            free(p_line);
+            p_line = linenoise(p_prompt);
+            estatus = crepl_eval(p_crepl, p_line);
+            if (estatus == E_CREPL_SYNTAX_ERROR)
+                continue;
 
             if (p_line[0] != '\0') {
                 linenoiseHistoryAdd(p_line); /* Add to the history. */
                 linenoiseHistorySave(p_history); /* Save the history on disk. */
             }
-            free(p_line);
             if (crepl_getprompt(p_crepl, &p_prompt) != E_CREPL_OK)
                 goto cleanup;
         }
-        crepl_destroy(p_crepl);
     }
     else
     {
@@ -326,6 +333,7 @@ int main(int argc, char **pp_argv) {
     }
 cleanup:
     uclear(&s);
+    crepl_destroy(p_crepl);
     command_free(&cmd);
     return 0;
 }

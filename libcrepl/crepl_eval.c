@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include <libtcc.h>
+#include <setjmp.h>
 
 #include "../usch_h/usch.h"
 #include "crepl_debug.h"
@@ -337,7 +338,15 @@ end:
     return status;
 }
 
-#define usch_shell_cc(...) ucmd("clang", ##__VA_ARGS__)
+static void tcc_error_handler(
+	void       *p_opaque,
+	const char *p_msg)
+{
+    crepl *p_crepl = (crepl*)p_opaque;
+    if (p_crepl->options.verbosity)
+	fprintf(stderr,"usch: tcc: %s\n", p_msg);
+    longjmp(p_crepl->jmploc, -1);
+}
 
 E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
 {
@@ -345,7 +354,6 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     int tccstatus = 0;
     E_CREPL estatus = E_CREPL_OK;
     usch_def_t definition = {0};
-    FILE *p_stmt_file = NULL;
     int (*dyn_func)(crepl*);
     int (*set_context)(crepl*);
     int (*crepl_store_vars)(crepl*);
@@ -359,22 +367,26 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     // use macro to call the real function
     ustash s = {NULL};
     TCCState *p_tcc = NULL;
-    void *mem = NULL;
+    void *p_mem = NULL;
 
     char *p_pre_assign = NULL;
     char *p_post_assign = NULL;
     crepl_state_t state;
     char *p_stmt = NULL;
 
-    E_FAIL_IF(p_crepl == NULL || p_input_line == NULL);
+    E_FAIL_IF(p_crepl == NULL);
+    
+    // ignore EOF (CTRL+D)
+    if (p_input_line == NULL)
+    {
+        estatus = E_CREPL_SYNTAX_ERROR;
+	goto end;
+    }
 
     input.p_str = NULL;
     E_FAIL_IF(crepl_finalize(p_crepl, p_input_line, &input.p_str));
     E_FAIL_IF(input.p_str == NULL);
     input.len = strlen(p_input_line);
-
-    p_stmt_file = fopen(p_crepl->p_stmt_c, "w+");
-    E_FAIL_IF(p_stmt_file == NULL);
 
     E_FAIL_IF(crepl_preparse(p_crepl, input.p_str, &state));
     if (state != CREPL_STATE_PREPROCESSOR)
@@ -498,19 +510,31 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "p_stmt = \\\n%s\n", p_stmt);
 
+    int jmpret = setjmp(p_crepl->jmploc);
+    if (jmpret == -1)
+    {
+	if (crepl_getoptions(p_crepl).verbosity >= 1)
+            fprintf(stderr, "usch: compilation failed\n");
+        estatus = E_CREPL_SYNTAX_ERROR;
+	goto end;
+    }
+
     p_tcc = tcc_new();
     E_FAIL_IF(tcc_add_include_path(p_tcc, p_crepl->p_tmpdir) != 0);
     E_FAIL_IF(tcc_set_output_type(p_tcc, TCC_OUTPUT_MEMORY) != 0);
+    tcc_set_error_func(p_tcc, p_crepl, tcc_error_handler);
+
     tccstatus = tcc_compile_string(p_tcc, p_stmt);
     if (tccstatus != 0)
     {
 	if (crepl_getoptions(p_crepl).verbosity >= 1)
             fprintf(stderr, "usch: compilation failed\n");
-	E_QUIET_FAIL_IF(tccstatus != 0);
+        estatus = E_CREPL_SYNTAX_ERROR;
+	goto end;
     }
-    mem = malloc(tcc_relocate(p_tcc, NULL));
-    E_FAIL_IF(mem == NULL);
-    E_FAIL_IF(tcc_relocate(p_tcc, mem) != 0);
+    p_mem = malloc(tcc_relocate(p_tcc, NULL));
+    E_FAIL_IF(p_mem == NULL);
+    E_FAIL_IF(tcc_relocate(p_tcc, p_mem) != 0);
 
     *(void **) (&crepl_load_vars) = tcc_get_symbol(p_tcc, "crepl_load_vars");
     E_FAIL_IF(crepl_load_vars == NULL);
@@ -540,7 +564,7 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
 
 end:
     tcc_delete(p_tcc);
-    free(mem);
+    free(p_mem);
     free(definition.p_symname);
     free(p_pre_assign);
     free(p_post_assign);
@@ -550,9 +574,6 @@ end:
     free(p_crepl->p_defs_line);
     p_crepl->p_defs_line = NULL;
     uclear(&s);
-
-    if (p_stmt_file != NULL)
-        fclose(p_stmt_file);
 
     return estatus;
 }
