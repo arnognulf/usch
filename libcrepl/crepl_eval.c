@@ -510,19 +510,24 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
     if (crepl_getoptions(p_crepl).verbosity >= 11)
         fprintf(stderr, "p_stmt = \\\n%s\n", p_stmt);
 
+    p_tcc = tcc_new();
+    E_FAIL_IF(tcc_add_include_path(p_tcc, p_crepl->p_tmpdir) != 0);
+    E_FAIL_IF(tcc_set_output_type(p_tcc, TCC_OUTPUT_MEMORY) != 0);
+    tcc_set_error_func(p_tcc, p_crepl, tcc_error_handler);
+
     int jmpret = setjmp(p_crepl->jmploc);
     if (jmpret == -1)
     {
 	if (crepl_getoptions(p_crepl).verbosity >= 1)
             fprintf(stderr, "usch: compilation failed\n");
         estatus = E_CREPL_SYNTAX_ERROR;
+
+        // FIXME/WORKAROUND/TODO:
+        // compile an empty string to reset tcc global state
+        // to a working environment
+	tccstatus = tcc_compile_string(p_tcc, "");
 	goto end;
     }
-
-    p_tcc = tcc_new();
-    E_FAIL_IF(tcc_add_include_path(p_tcc, p_crepl->p_tmpdir) != 0);
-    E_FAIL_IF(tcc_set_output_type(p_tcc, TCC_OUTPUT_MEMORY) != 0);
-    tcc_set_error_func(p_tcc, p_crepl, tcc_error_handler);
 
     tccstatus = tcc_compile_string(p_tcc, p_stmt);
     if (tccstatus != 0)
