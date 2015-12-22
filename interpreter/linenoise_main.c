@@ -312,6 +312,8 @@ int main(int argc, char **pp_argv) {
         {
             free(p_line);
             p_line = linenoise(p_prompt);
+            if(p_line == NULL)
+                continue;
             estatus = crepl_eval(p_crepl, p_line);
             if (estatus == E_CREPL_SYNTAX_ERROR)
                 continue;
