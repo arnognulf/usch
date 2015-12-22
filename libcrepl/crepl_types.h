@@ -8,6 +8,7 @@ extern "C" {
 #include "crepl.h"
 #include <clang-c/Index.h>
 #include <setjmp.h>
+#include <libtcc.h>
 
 #define CREPL_STMT_C_FN       "stmt.c"
 #define CREPL_DEFS_H_FN       "defs.h"
@@ -96,6 +97,8 @@ typedef struct crepl
     CXCodeCompleteResults *p_completion_results;
     // longjmp data
     jmp_buf jmploc;
+    TCCState *p_tcc;
+    void *p_mem;
 } crepl;
 
 struct usch_ids

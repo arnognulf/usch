@@ -38,7 +38,7 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
 {
     E_CREPL estatus = E_CREPL_OK;
     ustash s = {0};
-
+    CXCodeCompleteResults* res = NULL;
     CXIndex idx = clang_createIndex(1, 0);
     E_FAIL_IF(!idx);
 
@@ -70,13 +70,13 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
     // must point to beginning of identifier/after '>'/after '.' to be completed
     int column = (int)sizeof(CREPL_INDENT) - 1 + (int)strlen(p_input);
 
-    CXCodeCompleteResults* res = clang_codeCompleteAt(
-                                  u,
-                                  p_crepl->p_stmt_c,
-                                  line, column,
-                                  0, 0,
-                                  CXCodeComplete_IncludeMacros |
-                                  CXCodeComplete_IncludeCodePatterns);
+    res = clang_codeCompleteAt(
+                               u,
+                               p_crepl->p_stmt_c,
+                               line, column,
+                               0, 0,
+                               CXCodeComplete_IncludeMacros |
+                               CXCodeComplete_IncludeCodePatterns);
     E_FAIL_IF(!res);
 
     for (unsigned i = 0; i < res->NumResults; i++) {
