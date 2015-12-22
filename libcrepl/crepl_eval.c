@@ -382,7 +382,6 @@ E_CREPL crepl_eval(crepl *p_crepl, char *p_input_line)
         estatus = E_CREPL_SYNTAX_ERROR;
 	goto end;
     }
-
     input.p_str = NULL;
     E_FAIL_IF(crepl_finalize(p_crepl, p_input_line, &input.p_str));
     E_FAIL_IF(input.p_str == NULL);

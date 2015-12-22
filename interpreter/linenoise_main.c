@@ -215,8 +215,6 @@ void tabCompletion(const char *p_buf, linenoiseCompletions *lc)
                             p_trailing_slash = "/";
                         break;
                         }
-
-                        // case S_IFLNK:  printf("symlink\n");                 break;
                         default:
                              break;
                     }

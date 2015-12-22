@@ -6,12 +6,6 @@
 #include "crepl.h"
 #include "crepl_types.h"
 #include "crepl_debug.h"
-/*
- * Compile with:
- * g++ complete.cc -o complete -lclang -L/usr/lib/llvm
- * Run with:
- * LIBCLANG_TIMING=1 ./complete file.cc line column [clang args...]
- */
 
 static int count_lines(const char *p_string)
 {
@@ -23,6 +17,18 @@ static int count_lines(const char *p_string)
         p_string++;
     }
     return num_lines;
+}
+static E_CREPL write_contents(const char *p_filename, const char *p_contents, size_t contents_length)
+{
+   E_CREPL estatus = E_CREPL_OK;
+   FILE *p_file = NULL;
+
+   p_file = fopen(p_filename, "w+");
+   size_t written_bytes = fwrite(p_contents, 1, contents_length, p_file);
+   if (written_bytes != contents_length)
+       estatus = E_CREPL_WAT;
+   fclose(p_file);
+   return estatus;
 }
 
 E_CREPL crepl_complete(struct crepl *p_crepl,
@@ -43,7 +49,9 @@ E_CREPL crepl_complete(struct crepl *p_crepl,
                                           "{\n", \
                                           CREPL_INDENT, p_input);
     unsaved_files.Length = strlen(unsaved_files.Contents);
-printf("YYY: %s\n", unsaved_files.Contents);
+    estatus = write_contents(p_crepl->p_stmt_c, unsaved_files.Contents, unsaved_files.Length);
+    if (estatus != E_CREPL_OK)
+        goto end;
 
     CXTranslationUnit u = clang_parseTranslationUnit(idx,
                           p_crepl->p_stmt_c,
@@ -77,7 +85,6 @@ printf("YYY: %s\n", unsaved_files.Contents);
 
         for (unsigned j = 0; j < clang_getNumCompletionChunks(str); j++) {
             const char *p_str = clang_getCString(clang_getCompletionChunkText(str, j));
-	    printf("XXX: %s\n", p_str);
             if (clang_getCompletionChunkKind(str, j) \
                     == CXCompletionChunk_TypedText && 
                     ustrneq(p_str, p_input, strlen(p_input)))
@@ -89,27 +96,11 @@ printf("YYY: %s\n", unsaved_files.Contents);
             }
         }
 
-#if 0
-str: crepl_create 1
-str: ( 6 
-str: struct crepl **pp_crepl 3
-str: ,  14
-str: crepl_options options 3
-str: ) 7 
-#endif // 0
-
         for (unsigned j = match; j < clang_getNumCompletionChunks(str); j++) {
 
             {
                 if (clang_getCompletionChunkKind(str, j+1) == CXCompletionChunk_LeftParen && clang_getCompletionChunkKind(str, j+2) == CXCompletionChunk_Placeholder)
                 {
-#if 0
-                    printf("complete: \"%s%s/* %s */",
-                      clang_getCString(clang_getCompletionChunkText(str, j+0)),
-                      clang_getCString(clang_getCompletionChunkText(str, j+1)),
-                      clang_getCString(clang_getCompletionChunkText(str, j+2))
-                          );
-#endif // 0
                     ustash s = {0};
                     char *p_completed_string = ustrjoin(&s, 
                       clang_getCString(clang_getCompletionChunkText(str, j+0)),
@@ -125,8 +116,8 @@ str: ) 7
             match = -1;
         }
     }
-    clang_disposeCodeCompleteResults(res);
 end:
+    clang_disposeCodeCompleteResults(res);
     return estatus;
 }
 
