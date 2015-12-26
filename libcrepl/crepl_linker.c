@@ -259,12 +259,13 @@ static int validate_symbol(struct crepl *p_crepl, const char* p_sym)
     } while (p_lib != NULL);
 
 end:
-    if (symbol_found == 1 && p_crepl->options.verbosity)
-        fprintf(stderr, "usch: error: could not resolve: %s, did you forget to add the corresponding library?\n", p_sym);
+//    if (symbol_found == 1 && p_crepl->options.verbosity)
+//        fprintf(stderr, "usch: error: could not resolve: %s, did you forget to add the corresponding library?\n", p_sym);
     if (status != 0)
         symbol_found = 1;
     return symbol_found;
 }
+
 static char *get_fullname(struct crepl *p_crepl, char *p_libname_in)
 {
     bufstr_t namecand;
@@ -435,10 +436,9 @@ end:
     return status;
 }
 
-
-int crepl_include(struct crepl *p_crepl, char *p_header)
+E_CREPL crepl_include(struct crepl *p_crepl, char *p_header)
 {
-    int status = 0;
+    E_CREPL estatus = E_CREPL_OK;
     char *p_tmpheader = NULL;
     char tmp_c[] = "tmp.c";
     FILE *p_includefile = NULL;
@@ -446,40 +446,41 @@ int crepl_include(struct crepl *p_crepl, char *p_header)
     crepl_inc_t *p_inc = NULL;
     crepl_inc_t *p_incs = NULL;
 
-    FAIL_IF(p_crepl == NULL || p_header == NULL);
+    E_FAIL_IF(p_crepl == NULL || p_header == NULL);
 
     p_incs = p_crepl->p_incs;
     p_tmpdir = p_crepl->p_tmpdir;
     p_tmpheader = calloc(strlen(p_tmpdir) + 1 + strlen(tmp_c) + 1, 1);
     HASH_FIND_STR(p_incs, p_header, p_inc);
-    FAIL_IF(p_inc != NULL);
+    E_FAIL_IF(p_inc != NULL);
 
     strcpy(p_tmpheader, p_tmpdir);
     p_tmpheader[strlen(p_tmpheader)] = '/';
     strcpy(&p_tmpheader[strlen(p_tmpheader)], tmp_c);
 
     p_includefile = fopen(p_tmpheader, "w");
-    FAIL_IF(p_includefile == NULL);
+    E_FAIL_IF(p_includefile == NULL);
     if (p_header[0] == '<')
     {
-        FAIL_IF(!fwrite_ok("#include ", p_includefile));
-        FAIL_IF(!fwrite_ok(p_header, p_includefile));
-        FAIL_IF(!fwrite_ok("\n", p_includefile));
+        E_FAIL_IF(!fwrite_ok("#include ", p_includefile));
+        E_FAIL_IF(!fwrite_ok(p_header, p_includefile));
+        E_FAIL_IF(!fwrite_ok("\n", p_includefile));
     }
     else
     {
-        FAIL_IF(!fwrite_ok("#include \"", p_includefile));
-        FAIL_IF(!fwrite_ok(p_header, p_includefile));
-        FAIL_IF(!fwrite_ok("\"\n", p_includefile));
+        E_FAIL_IF(!fwrite_ok("#include \"", p_includefile));
+        E_FAIL_IF(!fwrite_ok(p_header, p_includefile));
+        E_FAIL_IF(!fwrite_ok("\"\n", p_includefile));
     }
     if (p_includefile)
         fclose(p_includefile);
     p_includefile = NULL;
-    QUIET_FAIL_IF(compile_header_ok(p_crepl, p_tmpheader) != 0);
-    QUIET_FAIL_IF(loadsyms_from_header_ok(p_crepl, p_tmpheader) != 0);
+    E_QUIET_FAIL_IF(compile_header_ok(p_crepl, p_tmpheader) != 0);
+    // TODO: check for header only libraries
+    loadsyms_from_header_ok(p_crepl, p_tmpheader);
 
     p_inc = calloc(strlen(p_header) + 1 + sizeof(crepl_inc_t), 1);
-    FAIL_IF(p_inc == NULL);
+    E_FAIL_IF(p_inc == NULL);
     strcpy(p_inc->incname, p_header);
     HASH_ADD_STR(p_incs, incname, p_inc);
     p_inc = NULL;
@@ -488,7 +489,7 @@ end:
     free(p_tmpheader);
     if (p_includefile)
         fclose(p_includefile);
-    return status;
+    return estatus;
 }
 void* crepl_getdyfnhandle(crepl *p_crepl, const char *p_id)
 {
@@ -500,13 +501,15 @@ void* crepl_getdyfnhandle(crepl *p_crepl, const char *p_id)
     if (p_crepl == NULL || p_id == NULL)
         return NULL;
 
-    FAIL_IF(p_crepl->p_dyfns == NULL);
-    p_dyfns = p_crepl->p_dyfns;
+    if (p_crepl->p_dyfns != NULL);
+    {
+        p_dyfns = p_crepl->p_dyfns;
 
-    HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
-    FAIL_IF(p_dyfn == NULL);
+        HASH_FIND_STR(p_dyfns, p_id, p_dyfn);
+        FAIL_IF(p_dyfn == NULL);
 
-    p_handle = p_dyfn->p_handle;
+        p_handle = p_dyfn->p_handle;
+    }
 end:
     (void)status;
     return p_handle;

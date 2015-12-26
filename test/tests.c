@@ -291,16 +291,14 @@ static char *test_crepl_dyld()
     error = crepl_lib(p_context, "/usr/lib/i386-linux-gnu/libm.so");
 #endif // 0
     mu_assert("error: crepl_lib() != 0", error == 0);
-    error = crepl_include(p_context, "<math.h>");
-    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
+    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", CREPL_OK(crepl_include(p_context, "<math.h>")));
     crepl_destroy(p_context);
     p_context = NULL;
 
     error = crepl_create(&p_context, options);
     error = crepl_lib(p_context, "m");
     mu_assert("error: crepl_lib() != 0", error == 0);
-    error = crepl_include(p_context, "<math.h>");
-    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", error == 0);
+    mu_assert("error: crepl_include(p_context, \"<math.h>\") != 0", CREPL_OK(crepl_include(p_context, "<math.h>")));
 
     crepl_destroy(p_context);
     p_context = NULL;
@@ -379,8 +377,6 @@ static char *test_crepl_parse()
     mu_assert("!has_trailing_open_parenthesis(\"foo(\")", has_trailing_open_parenthesis("foo("));
     mu_assert("!has_trailing_closed_parenthesis(\"foo()\")", has_trailing_closed_parenthesis("foo()"));
 #endif // 0
-#if 0
-#endif // 0
 
     error = crepl_preparse(p_context, "ls", &state);
     mu_assert("error != 0", error == 0);
@@ -396,7 +392,6 @@ cleanup:
     crepl_destroy(p_context);
     return p_message;
 }
-
 #if 0
 static char *test_crepl_parsedefs()
 {
@@ -414,7 +409,6 @@ cleanup:
     return p_message;
 }
 #endif // 0
-
 static char *test_crepl_finalize()
 {
     int status;
@@ -535,7 +529,7 @@ static char *test_complete()
     char *p_str = NULL;
     mu_assert("error completing", CREPL_OK(crepl_complete(p_crepl, "crepl_creat", add_completion_callback, &p_str)));
     mu_assert("completion incorrect", ustreq(p_str, "crepl_create(/*struct crepl **pp_crepl*/"));
-
+   
 cleanup:
     free(p_str);
     crepl_destroy(p_crepl);
@@ -543,8 +537,34 @@ cleanup:
     return NULL;
 }
 
+static char *test_complete2()
+{
+    char *p_message = NULL;
+    (void)p_message;
+    struct crepl *p_crepl = NULL;
+    crepl_options options;
+    memset(&options, 0, sizeof(crepl_options));
+    options.verbosity = 11;
+    ustash s = {0};
+    
+    mu_assert("error creating crepl", CREPL_OK(crepl_create(&p_crepl, options)));
+    crepl_lib(p_crepl, "m"); // WAT
+    char *p_cwd = getcwd(NULL, 1024);
+    printf("%s\n", p_cwd);
+    mu_assert("error including", CREPL_OK(crepl_include(p_crepl, ustrjoin(&s, p_cwd, "/../test/test_complete.h"))));
+
+#if 0
+    crepl_argnum(p_crepl, "completed_function(");
+    crepl_argnum(p_crepl, "completed_function(arg1,");
+    crepl_argnum(p_crepl, "completed_function(arg1, arg2,");
+#endif // 1
+cleanup:
+    return NULL;
+}
+
 static char * all_tests()
 {
+    mu_run_test(test_complete2);
     mu_run_test(test_strexp);
     mu_run_test(test_strsplit);
     mu_run_test(test_ucmd);

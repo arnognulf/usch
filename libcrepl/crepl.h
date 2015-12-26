@@ -92,7 +92,7 @@ int crepl_undef_fn(struct crepl *p_crepl, char *p_fndefname);
 int crepl_pathhash(struct crepl *p_crepl);
 int crepl_is_cmd(struct crepl *p_crepl, char *p_item);
 int crepl_lib(struct crepl *p_crepl, char *p_dynlib);
-int crepl_include(struct crepl *p_crepl, char *p_header);
+E_CREPL crepl_include(struct crepl *p_crepl, char *p_header);
 char **crepl_getldpath();
 
 /**

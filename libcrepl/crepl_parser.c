@@ -1069,4 +1069,10 @@ end:
     return status;
 }
 
+#if 0
+E_CREPL crepl_argnum(struct crepl *p_crepl, char *p_input, int *p_fnidx_out, int *p_argnum_out)
+{
 
+}
+
+#endif // 0
