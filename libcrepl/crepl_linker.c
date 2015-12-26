@@ -491,6 +491,7 @@ end:
         fclose(p_includefile);
     return estatus;
 }
+
 void* crepl_getdyfnhandle(crepl *p_crepl, const char *p_id)
 {
     int status = 0;
@@ -514,7 +515,5 @@ end:
     (void)status;
     return p_handle;
 }
-
-
 
 
